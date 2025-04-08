@@ -52,7 +52,6 @@ public class Event {
     @JsonView(GlobalView.EventView.class)
     private List<Reservation> reservations = new ArrayList<>();
 
-    @Transient // Indique que ce champ n'est pas persisté en base
     @JsonView(GlobalView.EventView.class)
     public int getPlaceTotal() {
         if (categories == null) return 0;
@@ -61,7 +60,6 @@ public class Event {
                 .sum();
     }
 
-    @Transient
     @JsonView(GlobalView.EventView.class)
     public int getPlaceReserve() {
         if (reservations == null) return 0;

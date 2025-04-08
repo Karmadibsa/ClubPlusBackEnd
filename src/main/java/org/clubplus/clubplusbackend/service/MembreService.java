@@ -40,5 +40,8 @@ public class MembreService {
         return membreRepository.existsById(id);
     }
 
+    public Optional<Membre> findById(Long id) {
+        return membreRepository.findById(id);
+    }
 
 }

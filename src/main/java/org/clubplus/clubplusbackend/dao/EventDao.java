@@ -6,4 +6,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface EventDao extends JpaRepository<Event, Long> {
+//    long countByDateDebutBetween(LocalDate start, LocalDate end);
+
+//    double calculateAverageParticipationRate();
 }
