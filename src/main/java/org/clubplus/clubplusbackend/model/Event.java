@@ -22,15 +22,15 @@ public class Event {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class})
+    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
     private Long id;
 
     @Column(nullable = false)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class})
+    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
     private String title;
 
     @Column(nullable = false)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class})
+    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
     private String start;
 
     @Column(nullable = false)
@@ -41,7 +41,7 @@ public class Event {
     @JsonView(GlobalView.EventView.class)
     private String description;
 
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class})
+    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
     private String location;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -51,6 +51,12 @@ public class Event {
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonView(GlobalView.EventView.class)
     private List<Reservation> reservations = new ArrayList<>();
+
+    // Relation avec le club organisateur (N Événements → 1 Club)
+    @ManyToOne
+    @JoinColumn(name = "organisateur_id")
+    @JsonView(GlobalView.EventView.class)
+    private Club organisateur;
 
     @JsonView(GlobalView.EventView.class)
     public int getPlaceTotal() {

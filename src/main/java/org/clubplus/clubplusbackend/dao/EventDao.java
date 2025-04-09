@@ -4,9 +4,10 @@ import org.clubplus.clubplusbackend.model.Event;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 @Repository
 public interface EventDao extends JpaRepository<Event, Long> {
-//    long countByDateDebutBetween(LocalDate start, LocalDate end);
+    List<Event> findByOrganisateurId(Long clubId);
 
-//    double calculateAverageParticipationRate();
 }

@@ -1,93 +1,107 @@
-INSERT INTO events (title, start, end, description, location)
-VALUES ('Tournoi de badminton', '2025-02-28 14:00:00', '2025-02-28 17:00:00',
-        'Compétition amicale avec les membres du club.', 'Gymnase municipal'),
-       ('Rencontre de tennis', '2025-02-29 10:00:00', '2025-02-29 12:00:00', 'Match amical entre adhérents.',
-        'Parc des Sports'),
-       ('Atelier Yoga', '2025-03-01 09:00:00', '2025-03-01 11:00:00', 'Séance de yoga pour débutants.',
-        'Salle polyvalente'),
-       ('Tournoi de football', '2025-03-02 16:00:00', '2025-03-02 19:00:00', 'Tournoi interclubs.',
-        'Complexe sportif'),
-       ('Randonnée en montagne', '2025-03-03 08:00:00', '2025-03-03 18:00:00', 'Excursion dans les Vosges.',
-        'Point de départ du sentier'),
-       ('Atelier de peinture', '2025-03-04 14:00:00', '2025-03-04 16:00:00',
-        'Séance créative pour peindre des paysages.', 'Centre culturel'),
-       ('Cours de cuisine italienne', '2025-03-05 18:00:00', '2025-03-05 20:00:00',
-        'Apprenez à préparer des plats italiens traditionnels.', 'École de cuisine'),
-       ('Tournoi d''échecs', '2025-03-06 10:00:00', '2025-03-06 13:00:00',
-        'Compétition amicale pour amateurs et confirmés.', 'Salle des fêtes'),
-       ('Conférence sur l''intelligence artificielle', '2025-03-07 15:00:00', '2025-03-07 17:00:00',
-        'Discussion sur les avancées en IA et leurs impacts.', 'Auditorium municipal'),
-       ('Soirée karaoké', '2025-03-08 20:00:00', '2025-03-08 23:00:00',
-        'Chantez vos chansons préférées avec vos amis.', 'Bar local'),
-       ('Atelier de poterie', '2025-04-10 10:00:00', '2025-04-10 12:00:00',
-        'Initiation à la poterie pour débutants.', 'Atelier créatif'),
-       ('Soirée jeux de société', '2025-04-11 18:00:00', '2025-04-11 22:00:00',
-        'Soirée conviviale autour de jeux de société.', 'Maison des associations'),
-       ('Cours de danse salsa', '2025-04-12 19:00:00', '2025-04-12 21:00:00',
-        'Initiation à la danse salsa pour débutants.', 'Studio de danse'),
-       ('Projection cinéma plein air', '2025-04-13 21:00:00', '2025-04-13 23:30:00',
-        'Projection d''un film en plein air.', 'Parc municipal'),
-       ('Tournoi de basket-ball', '2026-04-14 14:00:00', '2026-04-14 17:00:00',
-        'Compétition amicale entre équipes locales.', 'Gymnase municipal');
-
+INSERT INTO club (nom, date_creation, date_inscription, numero_voie, rue, codepostal, ville, telephone, email,
+                  code_club)
+VALUES ('Club Sportif de Paris',
+        '2000-04-08',
+        '2025-04-08',
+        '12',
+        'Rue des Sports',
+        '75015',
+        'Paris',
+        '0123456789',
+        'contact@clubparis.fr', 'CL0001');
+-- ID du membre administrateur
 
 INSERT INTO membre (nom, prenom, date_naissance, date_inscription, numero_voie, rue, codepostal, ville, telephone,
-                    email, password, role)
-VALUES ('Dupont', 'Jean', '1990-05-15', '2020-03-01', '123', 'Rue de Paris', '93000', 'Paris', '0123456789',
-        'jean.dupont@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin'),
-       ('Martin', 'Sophie', '1985-08-22', '2021-06-15', '45', 'Rue des Lilas', '69000', 'Lyon', '0169228008',
-        'sophie.martin@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre'),
-       ('Dubois', 'Pierre', '1978-03-10', '2019-11-30', '8', 'Rue de Paris', '59000', 'Lille', '0150648901',
-        'pierre.dubois@hotmail.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre'),
-       ('Lefebvre', 'Marie', '1992-12-05', '2022-02-28', '72', 'Rue de la Paix', '34000', 'Montpellier', '0138246091',
-        'marie.lefebvre@yahoo.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin'),
-       ('Garcia', 'Lucas', '1988-06-18', '2020-09-10', '15', 'Rue des Fleurs', '33000', 'Bordeaux', '0114924023',
-        'lucas.garcia@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin'),
+                    email, password, role, club_id)
+VALUES ('Dupont', 'Jean', '1990-05-15', '2025-03-01', '123', 'Rue de Paris', '93000', 'Paris', '0123456789',
+        'jean.dupont@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
+       ('Martin', 'Sophie', '1985-08-22', '2024-06-15', '45', 'Rue des Lilas', '69000', 'Lyon', '0169228008',
+        'sophie.martin@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1),
+       ('Dubois', 'Pierre', '1978-03-10', '2024-11-30', '8', 'Rue de Paris', '59000', 'Lille', '0150648901',
+        'pierre.dubois@hotmail.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1),
+       ('Lefebvre', 'Marie', '1992-12-05', '2024-02-28', '72', 'Rue de la Paix', '34000', 'Montpellier', '0138246091',
+        'marie.lefebvre@yahoo.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
+       ('Garcia', 'Lucas', '1988-06-18', '2024-09-10', '15', 'Rue des Fleurs', '33000', 'Bordeaux', '0114924023',
+        'lucas.garcia@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
        ('Roux', 'Emma', '1995-02-14', '2023-01-05', '29', 'Rue Saint-Honoré', '75000', 'Paris', '0134406931',
-        'emma.roux@outlook.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre'),
+        'emma.roux@outlook.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1),
        ('Fournier', 'Thomas', '1982-11-30', '2018-07-22', '55', 'Rue des Lilas', '34000', 'Montpellier', '0163452513',
-        'thomas.fournier@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin'),
+        'thomas.fournier@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
        ('Moreau', 'Chloé', '1991-09-08', '2024-03-17', '102', 'Rue de Paris', '06000', 'Nice', '0136991169',
-        'chloe.moreau@yahoo.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'reservation'),
-       ('Laurent', 'Antoine', '1987-04-25', '2022-11-09', '33', 'Rue des Fleurs', '75000', 'Paris', '0135302149',
-        'antoine.laurent@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin'),
-       ('Simon', 'Julie', '1993-07-12', '2021-05-30', '88', 'Rue de la Paix', '13000', 'Marseille', '0113729122',
-        'julie.simon@hotmail.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre'),
+        'chloe.moreau@yahoo.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'reservation', 1),
+       ('Laurent', 'Antoine', '1987-04-25', '2024-11-09', '33', 'Rue des Fleurs', '75000', 'Paris', '0135302149',
+        'antoine.laurent@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
+       ('Simon', 'Julie', '1993-07-12', '2024-05-30', '88', 'Rue de la Paix', '13000', 'Marseille', '0113729122',
+        'julie.simon@hotmail.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1),
        ('Michel', 'Nicolas', '1980-01-20', '2017-12-03', '17', 'Rue Saint-Honoré', '33000', 'Bordeaux', '0166233104',
-        'nicolas.michel@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin'),
+        'nicolas.michel@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
        ('Leroy', 'Camille', '1989-10-15', '2023-08-28', '61', 'Rue des Lilas', '69000', 'Lyon', '0140738980',
-        'camille.leroy@outlook.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'reservation'),
-       ('Martinez', 'Alexandre', '1986-03-05', '2020-10-11', '94', 'Rue de Paris', '59000', 'Lille', '0167192760',
-        'alexandre.martinez@yahoo.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre'),
-       ('Petit', 'Sarah', '1984-12-28', '2019-04-19', '39', 'Rue des Fleurs', '34000', 'Montpellier', '0174751947',
-        'sarah.petit@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'reservation'),
-       ('Robert', 'Maxime', '1990-08-07', '2022-01-25', '77', 'Rue de la Paix', '06000', 'Nice', '0162544409',
-        'maxime.robert@hotmail.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre');
+        'camille.leroy@outlook.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'reservation', 1),
+       ('Martinez', 'Alexandre', '1986-03-05', '2024-10-11', '94', 'Rue de Paris', '59000', 'Lille', '0167192760',
+        'alexandre.martinez@yahoo.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1),
+       ('Petit', 'Sarah', '1984-12-28', '2024-04-19', '39', 'Rue des Fleurs', '34000', 'Montpellier', '0174751947',
+        'sarah.petit@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'reservation', 1),
+       ('Robert', 'Maxime', '1990-08-07', '2024-01-25', '77', 'Rue de la Paix', '06000', 'Nice', '0162544409',
+        'maxime.robert@hotmail.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1);
 
+UPDATE club
+SET admin_id = 1
+WHERE id = 1; -- Jean Dupont comme admin
 
+INSERT INTO events (title, start, end, description, location, organisateur_id)
+VALUES ('Tournoi de badminton', '2025-02-28 14:00:00', '2025-02-28 17:00:00',
+        'Compétition amicale avec les membres du club.', 'Gymnase municipal', 1),
+       ('Rencontre de tennis', '2025-02-29 10:00:00', '2025-02-29 12:00:00', 'Match amical entre adhérents.',
+        'Parc des Sports', 1),
+       ('Atelier Yoga', '2025-03-01 09:00:00', '2025-03-01 11:00:00', 'Séance de yoga pour débutants.',
+        'Salle polyvalente', 1),
+       ('Tournoi de football', '2025-03-02 16:00:00', '2025-03-02 19:00:00', 'Tournoi interclubs.',
+        'Complexe sportif', 1),
+       ('Randonnée en montagne', '2025-03-03 08:00:00', '2025-03-03 18:00:00', 'Excursion dans les Vosges.',
+        'Point de départ du sentier', 1),
+       ('Atelier de peinture', '2025-03-04 14:00:00', '2025-03-04 16:00:00',
+        'Séance créative pour peindre des paysages.', 'Centre culturel', 1),
+       ('Cours de cuisine italienne', '2025-03-05 18:00:00', '2025-03-05 20:00:00',
+        'Apprenez à préparer des plats italiens traditionnels.', 'École de cuisine', 1),
+       ('Tournoi d''échecs', '2025-03-06 10:00:00', '2025-03-06 13:00:00',
+        'Compétition amicale pour amateurs et confirmés.', 'Salle des fêtes', 1),
+       ('Conférence sur l''intelligence artificielle', '2025-03-07 15:00:00', '2025-03-07 17:00:00',
+        'Discussion sur les avancées en IA et leurs impacts.', 'Auditorium municipal', 1),
+       ('Soirée karaoké', '2025-03-08 20:00:00', '2025-03-08 23:00:00',
+        'Chantez vos chansons préférées avec vos amis.', 'Bar local', 1),
+       ('Atelier de poterie', '2025-04-10 10:00:00', '2025-04-10 12:00:00',
+        'Initiation à la poterie pour débutants.', 'Atelier créatif', 1),
+       ('Soirée jeux de société', '2025-04-11 18:00:00', '2025-04-11 22:00:00',
+        'Soirée conviviale autour de jeux de société.', 'Maison des associations', 1),
+       ('Cours de danse salsa', '2025-04-12 19:00:00', '2025-04-12 21:00:00',
+        'Initiation à la danse salsa pour débutants.', 'Studio de danse', 1),
+       ('Projection cinéma plein air', '2025-04-13 21:00:00', '2025-04-13 23:30:00',
+        'Projection d''un film en plein air.', 'Parc municipal', 1),
+       ('Tournoi de basket-ball', '2026-04-14 14:00:00', '2026-04-14 17:00:00',
+        'Compétition amicale entre équipes locales.', 'Gymnase municipal', 1);
 -- Insertion des catégories pour les événements
 INSERT INTO categories (event_id, nom, capacite)
 VALUES
 -- Catégories pour le tournoi de badminton (event_id = 1)
-(1, 'Tribune Nord', 100),
-(1, 'Tribune Sud', 150),
+(1, 'Tribune Nord', 40),
+(1, 'Tribune Sud', 50),
 (1, 'Espace VIP', 30),
 
 -- Catégories pour la rencontre de tennis (event_id = 2)
-(2, 'Court Central', 80),
-(2, 'Gradins', 120),
+(2, 'Court Central', 40),
+(2, 'Gradins', 30),
 
 -- Catégories pour l'atelier Yoga (event_id = 3)
 (3, 'Débutants', 20),
 (3, 'Intermédiaires', 15),
 
 -- Catégories pour le tournoi de football (event_id = 4)
-(4, 'Tribune A', 200),
-(4, 'Tribune B', 200),
-(4, 'Pelouse', 500),
+(4, 'Tribune A', 25),
+(4, 'Tribune B', 25),
+(4, 'Pelouse', 25),
 
 -- Catégories pour la randonnée (event_id = 5)
-(5, 'Groupe Débutant', 15),
+(5, 'Groupe Débutant', 20),
 (5, 'Groupe Avancé', 10),
 
 -- Catégories pour l'atelier de peinture (event_id = 6)
@@ -102,11 +116,11 @@ VALUES
 (8, 'Spectateurs', 50),
 
 -- Catégories pour la conférence IA (event_id = 9)
-(9, 'Places Assises', 150),
+(9, 'Places Assises', 18),
 (9, 'Places Debout', 50),
 
 -- Catégories pour la soirée karaoké (event_id = 10)
-(10, 'Places Standard', 80),
+(10, 'Places Standard', 60),
 (10, 'Places VIP', 20),
 
 -- Catégories pour l'atelier de poterie (event_id = 11)
@@ -129,8 +143,8 @@ VALUES
 (14, 'Espace Premium', 30),
 
 -- Catégories pour le tournoi de basket-ball (event_id = 15)
-(15, 'Tribune Est', 120),
-(15, 'Tribune Ouest', 120),
+(15, 'Tribune Est', 28),
+(15, 'Tribune Ouest', 29),
 (15, 'Tribune Nord', 80),
 (15, 'Espace VIP', 25);
 

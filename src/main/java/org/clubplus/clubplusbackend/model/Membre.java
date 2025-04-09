@@ -19,17 +19,17 @@ import java.util.List;
 public class Membre {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class})
+    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
     private Long id;
 
     @Column(nullable = false)
     @NotBlank
-    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class})
+    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
     private String nom;
 
     @Column(nullable = false)
     @NotBlank
-    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class})
+    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
     private String prenom;
 
     @Column(nullable = false)
@@ -83,4 +83,8 @@ public class Membre {
     @JsonView(GlobalView.MembreView.class)
     private List<Reservation> reservations = new ArrayList<>();
 
+    @JsonView(GlobalView.MembreView.class)
+    @ManyToOne
+    @JoinColumn(name = "club_id")
+    private Club club;
 }

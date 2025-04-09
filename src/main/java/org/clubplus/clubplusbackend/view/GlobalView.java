@@ -20,5 +20,9 @@ public class GlobalView {
     // Vue pour les membres
     public interface MembreView extends Base {
     }
+
+    // Vue pour le club
+    public interface ClubView extends Base {
+    }
 }
 

@@ -1,13 +1,18 @@
 package org.clubplus.clubplusbackend.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import org.clubplus.clubplusbackend.dao.ClubDao;
+import org.clubplus.clubplusbackend.dao.MembreDao;
+import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.service.MembreService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 
@@ -17,9 +22,13 @@ import java.util.Map;
 public class MembreController {
 
     private final MembreService membreService;
+    private final ClubDao clubRepository;
+    private final MembreDao membreRepository;
 
-    public MembreController(MembreService membreService) {
+    public MembreController(MembreService membreService, ClubDao clubRepository, MembreDao membreRepository) {
         this.membreService = membreService;
+        this.clubRepository = clubRepository;
+        this.membreRepository = membreRepository;
     }
 
     // Récupérer un membre par son ID
@@ -120,5 +129,23 @@ public class MembreController {
         return ResponseEntity.ok(updatedMembre);
     }
 
+    @PostMapping("/inscription")
+    public ResponseEntity<Membre> registerMembre(
+            @RequestBody Membre membre,
+            @RequestParam String codeClub
+    ) {
+        Club club = clubRepository.findByCodeClub(codeClub)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Club introuvable"));
+
+        membre.setClub(club);
+        membre.setDate_inscription(String.valueOf(LocalDate.now()));
+        membre.setRole("membre");
+
+        // Hashage du mot de passe
+//        membre.setPassword(passwordEncoder.encode(membre.getPassword()));
+        membre.setPassword(membre.getPassword());
+
+        return ResponseEntity.ok(membreRepository.save(membre));
+    }
 
 }
