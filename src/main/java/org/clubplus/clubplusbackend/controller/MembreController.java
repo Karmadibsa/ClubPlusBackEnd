@@ -1,6 +1,7 @@
 package org.clubplus.clubplusbackend.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import jakarta.validation.Valid;
 import org.clubplus.clubplusbackend.dao.ClubDao;
 import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.model.Club;
@@ -14,7 +15,6 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 
 @CrossOrigin(origins = "*")
 @RestController
@@ -78,74 +78,26 @@ public class MembreController {
         return ResponseEntity.ok(updatedMembre);
     }
 
-    // Dans votre MembreController.java
-    @PatchMapping("/{id}")
+    // VÉRIFIEZ QUE VOTRE CODE RESSEMBLE EXACTEMENT À CECI :
+    @PostMapping("/inscription/{codeClub}") // <-- {codeClub} dans le chemin
     @JsonView(GlobalView.MembreView.class)
-    public ResponseEntity<Membre> updatePartialMembre(@PathVariable Long id, @RequestBody Map<String, Object> updates) {
-        // Vérifier si le membre existe
-        if (!membreService.existsById(id)) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
-        }
-
-        // Récupérer le membre existant
-        Membre existingMembre = membreService.findById(id).orElseThrow();
-
-        // Mettre à jour uniquement les champs fournis
-        if (updates.containsKey("nom")) {
-            existingMembre.setNom((String) updates.get("nom"));
-        }
-        if (updates.containsKey("prenom")) {
-            existingMembre.setPrenom((String) updates.get("prenom"));
-        }
-        if (updates.containsKey("date_naissance")) {
-            existingMembre.setDate_naissance((String) updates.get("date_naissance"));
-        }
-        if (updates.containsKey("email")) {
-            existingMembre.setEmail((String) updates.get("email"));
-        }
-        if (updates.containsKey("telephone")) {
-            existingMembre.setTelephone((String) updates.get("telephone"));
-        }
-        if (updates.containsKey("role")) {
-            existingMembre.setRole((String) updates.get("role"));
-            System.out.println("Role updated to: " + updates.get("role")); // Log pour vérifier
-        }
-
-        if (updates.containsKey("numero_voie")) {
-            existingMembre.setNumero_voie((String) updates.get("numero_voie"));
-        }
-        if (updates.containsKey("rue")) {
-            existingMembre.setRue((String) updates.get("rue"));
-        }
-        if (updates.containsKey("codepostal")) {
-            existingMembre.setCodepostal((String) updates.get("codepostal"));
-        }
-        if (updates.containsKey("ville")) {
-            existingMembre.setVille((String) updates.get("ville"));
-        }
-
-        // Sauvegarder les modifications
-        Membre updatedMembre = membreService.save(existingMembre);
-        return ResponseEntity.ok(updatedMembre);
-    }
-
-    @PostMapping("/inscription")
     public ResponseEntity<Membre> registerMembre(
-            @RequestBody Membre membre,
-            @RequestParam String codeClub
+            @Valid @RequestBody Membre membre, // <- Corps JSON SANS codeClub
+            @PathVariable String codeClub      // <- @PathVariable pour le code depuis l'URL
     ) {
+        // 1. Trouver le club avec le codeClub de l'URL
         Club club = clubRepository.findByCodeClub(codeClub)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Club introuvable"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Club introuvable avec code: " + codeClub));
 
+        // 2. Associer le club et définir les autres champs serveur
         membre.setClub(club);
         membre.setDate_inscription(String.valueOf(LocalDate.now()));
         membre.setRole("membre");
+        // Gérer le mot de passe...
+        membre.setPassword(membre.getPassword()); // Hacher si nécessaire
 
-        // Hashage du mot de passe
-//        membre.setPassword(passwordEncoder.encode(membre.getPassword()));
-        membre.setPassword(membre.getPassword());
-
-        return ResponseEntity.ok(membreRepository.save(membre));
+        // 3. Sauvegarder le membre
+        Membre savedMembre = membreRepository.save(membre);
+        return ResponseEntity.ok(savedMembre);
     }
-
 }
