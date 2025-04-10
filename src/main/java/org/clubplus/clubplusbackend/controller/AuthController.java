@@ -1,4 +1,4 @@
-package security;
+package org.clubplus.clubplusbackend.controller;
 
 import jakarta.validation.Valid;
 import org.clubplus.clubplusbackend.dao.MembreDao;

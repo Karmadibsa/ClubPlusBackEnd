@@ -1,4 +1,4 @@
-package security;
+package org.clubplus.clubplusbackend.security;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -17,11 +17,13 @@ import java.io.IOException;
 @Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    protected JwtUtils jwtUtils;
+    protected
+    JwtUtils jwtUtils;
     protected AppUserDetailService appUserDetailService;
 
     @Autowired
-    public JwtFilter(JwtUtils jwtUtils, AppUserDetailService appUserDetailService) {
+    public JwtFilter(
+            JwtUtils jwtUtils, AppUserDetailService appUserDetailService) {
         this.jwtUtils = jwtUtils;
         this.appUserDetailService = appUserDetailService;
     }

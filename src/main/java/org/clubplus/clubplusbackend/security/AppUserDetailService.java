@@ -1,4 +1,4 @@
-package security;
+package org.clubplus.clubplusbackend.security;
 
 import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.model.Membre;

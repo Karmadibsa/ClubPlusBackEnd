@@ -1,4 +1,4 @@
-package security;
+package org.clubplus.clubplusbackend.security;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;

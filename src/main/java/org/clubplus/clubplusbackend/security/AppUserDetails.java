@@ -1,4 +1,4 @@
-package security;
+package org.clubplus.clubplusbackend.security;
 
 import org.clubplus.clubplusbackend.model.Membre;
 import org.springframework.security.core.GrantedAuthority;
