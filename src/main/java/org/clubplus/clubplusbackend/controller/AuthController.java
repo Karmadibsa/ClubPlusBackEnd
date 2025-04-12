@@ -5,6 +5,7 @@ import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.AppUserDetails;
 import org.clubplus.clubplusbackend.security.JwtUtils;
+import org.clubplus.clubplusbackend.security.Role;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,7 +19,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 
 @CrossOrigin
 @RestController
@@ -39,29 +39,17 @@ public class AuthController {
 
 
     @PostMapping("/api/inscription")
-    public ResponseEntity<Membre> inscription(@RequestBody @Valid Membre membreRequest) {
-        // Création d'un nouveau membre avec les informations fournies
-        Membre membre = new Membre();
+    public ResponseEntity<Membre> inscription(@RequestBody @Valid Membre membre) {
 
-        // Définition explicite de chaque champ
-        membre.setNom(membreRequest.getNom());
-        membre.setPrenom(membreRequest.getPrenom());
-        membre.setDate_naissance(membreRequest.getDate_naissance());
-        membre.setNumero_voie(membreRequest.getNumero_voie());
-        membre.setRue(membreRequest.getRue());
-        membre.setCodepostal(membreRequest.getCodepostal());
-        membre.setVille(membreRequest.getVille());
-        membre.setTelephone(membreRequest.getTelephone());
-        membre.setEmail(membreRequest.getEmail());
 
         // Date d'inscription générée automatiquement (aujourd'hui)
-        membre.setDate_inscription(LocalDate.now().format(DateTimeFormatter.ISO_DATE));
+        membre.setDate_inscription(LocalDate.now());
 
         // Attribution du rôle par défaut
-        membre.setRole("membre");
+        membre.setRole(Role.MEMBRE);
 
         // Encodage du mot de passe
-        membre.setPassword(passwordEncoder.encode(membreRequest.getPassword()));
+        membre.setPassword(passwordEncoder.encode(membre.getPassword()));
 
         // Sauvegarde du membre
         membreDao.save(membre);

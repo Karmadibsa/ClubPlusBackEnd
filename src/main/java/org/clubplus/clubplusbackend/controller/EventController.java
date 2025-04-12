@@ -1,9 +1,10 @@
 package org.clubplus.clubplusbackend.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
-import org.clubplus.clubplusbackend.model.Categorie;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.model.Event;
-import org.clubplus.clubplusbackend.service.CategorieService;
 import org.clubplus.clubplusbackend.service.EventService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
@@ -12,98 +13,99 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/events")
+@RequiredArgsConstructor
+@CrossOrigin
 public class EventController {
 
     private final EventService eventService;
-    private final CategorieService categorieService;
 
-    public EventController(EventService eventService, CategorieService categorieService) {
-        this.eventService = eventService;
-        this.categorieService = categorieService;
+    // GET /api/events - Récupérer tous les événements (vue de base)
+    @GetMapping
+    @JsonView(GlobalView.Base.class)
+    public List<Event> getAllEvents() {
+        return eventService.findAllEvents();
     }
 
-    // Récupérer un événement avec ses catégories
+    // GET /api/events/{id} - Récupérer un événement par ID (vue détaillée)
     @GetMapping("/{id}")
     @JsonView(GlobalView.EventView.class)
-    public ResponseEntity<Event> getEvent(@PathVariable Long id) {
-        return eventService.getEventById(id)
+    public ResponseEntity<Event> getEventById(@PathVariable Integer id) {
+        return eventService.findEventById(id)
                 .map(ResponseEntity::ok)
-                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    // GET /api/events/upcoming - Récupérer les événements à venir (vue de base)
+    @GetMapping("/upcoming")
+    @JsonView(GlobalView.Base.class)
+    public List<Event> getUpcomingEvents() {
+        return eventService.findUpcomingEvents();
+    }
+
+    // GET /api/events/organisateur/{clubId} - Récupérer les événements par organisateur (vue de base)
+    @GetMapping("/organisateur/{clubId}")
+    @JsonView(GlobalView.Base.class)
+    public List<Event> getEventsByOrganisateur(@PathVariable Integer clubId) {
+        // Ajouter une validation pour vérifier si le clubId existe serait bien
+        return eventService.findEventsByOrganisateur(clubId);
+    }
+
+    @GetMapping("/organisateur/{clubId}/upcoming")
+    @JsonView(GlobalView.Base.class)
+    public List<Event> getUpcomingEventsByOrganisateur(@PathVariable Integer clubId) {
+        // Le service gère maintenant la logique de vérifier si le club existe (si implémenté)
+        // et de combiner les filtres.
+        return eventService.findUpcomingEventsByOrganisateur(clubId);
+        // Si le service lance une EntityNotFoundException pour un club inexistant,
+        // un @ControllerAdvice serait idéal pour la transformer en réponse 404.
     }
 
 
-    // Récupérer tous les events
-    @GetMapping
-    @JsonView(GlobalView.EventView.class)
-    public ResponseEntity<List<Event>> getAllEvents() {
-        List<Event> events = eventService.getAllEvents();
-        return ResponseEntity.ok(events);
-    }
-
-
-    // Créer un nouvel événement avec catégories
     @PostMapping
     @JsonView(GlobalView.EventView.class)
-    public ResponseEntity<Event> createEvent(@RequestBody Event event) {
-        Event nouveauEvent = eventService.createEvent(event);
-        return new ResponseEntity<>(nouveauEvent, HttpStatus.CREATED);
-    }
-
-
-    // Supprimer un event
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEvent(@PathVariable Long id) {
-        if (!eventService.existsById(id)) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    public ResponseEntity<Event> createEvent(@Valid @RequestBody Event event, @RequestParam Integer organisateurId) {
+        try {
+            Event createdEvent = eventService.createEvent(event, organisateurId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdEvent);
+        } catch (EntityNotFoundException e) { // Ex: Club organisateur non trouvé
+            // Idéalement, retourner un message d'erreur plus précis dans le corps
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null); // 400 Bad Request
+        } catch (IllegalArgumentException e) { // Ex: Dates invalides
+            // Idéalement, retourner le message de l'exception dans le corps
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null); // 400 Bad Request
         }
-        eventService.deleteEvent(id);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    // Mettre à jour un événement
+    // PUT /api/events/{id} - Mettre à jour un événement existant
     @PutMapping("/{id}")
     @JsonView(GlobalView.EventView.class)
-    public ResponseEntity<Event> updateEvent(@PathVariable Long id, @RequestBody Event event) {
-        return eventService.updateEvent(id, event)
-                .map(ResponseEntity::ok)
-                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
-    }
-
-//    Essai
-
-    // Récupérer les catégories d'un événement
-    @GetMapping("/{id}/categories")
-    @JsonView(GlobalView.CategorieView.class)
-    public ResponseEntity<List<Categorie>> getEventCategories(@PathVariable Long id) {
-        if (!eventService.existsById(id)) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    // @PreAuthorize("hasRole('ADMIN') or @securityService.isEventOwner(principal, #id)") // Vérifier si l'utilisateur est l'organisateur
+    public ResponseEntity<Event> updateEvent(@PathVariable Integer id, @Valid @RequestBody Event eventDetails) {
+        try {
+            Event updatedEvent = eventService.updateEvent(id, eventDetails);
+            return ResponseEntity.ok(updatedEvent);
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build();
+        } catch (IllegalArgumentException e) {
+            // Retourner un message d'erreur
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(null);
         }
-
-        List<Categorie> categories = categorieService.getCategoriesByEventId(id);
-        return ResponseEntity.ok(categories);
     }
 
-    // Ajouter une catégorie à un événement
-    @PostMapping("/{id}/categories")
-    @JsonView(GlobalView.CategorieView.class)
-    public ResponseEntity<Categorie> addCategorie(@PathVariable Long id, @RequestBody Categorie categorie) {
-        return categorieService.addCategorieToEvent(id, categorie)
-                .map(savedCategorie -> new ResponseEntity<>(savedCategorie, HttpStatus.CREATED))
-                .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
-    }
-
-    // Supprimer une catégorie
-    @DeleteMapping("/{eventId}/categories/{categorieId}")
-    public ResponseEntity<Void> deleteCategorie(@PathVariable Long eventId, @PathVariable Long categorieId) {
-        if (!eventService.existsById(eventId)) {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+    // DELETE /api/events/{id} - Supprimer un événement
+    @DeleteMapping("/{id}")
+    // @PreAuthorize("hasRole('ADMIN') or @securityService.isEventOwner(principal, #id)")
+    public ResponseEntity<Void> deleteEvent(@PathVariable Integer id) {
+        try {
+            eventService.deleteEvent(id);
+            return ResponseEntity.noContent().build(); // 204 No Content
+        } catch (EntityNotFoundException e) {
+            return ResponseEntity.notFound().build(); // 404 Not Found
+        } catch (IllegalStateException e) { // Ex: Si on empêche la suppression si réservations existent
+            return ResponseEntity.status(HttpStatus.CONFLICT).build(); // 409 Conflict
         }
-
-        categorieService.deleteCategorie(categorieId);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
-
+    
 }

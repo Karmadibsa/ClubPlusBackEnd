@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,26 +23,26 @@ public class Event {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
-    private Long id;
+    @JsonView(GlobalView.Base.class)
+    private Integer id;
 
     @Column(nullable = false)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
-    private String title;
+    @JsonView(GlobalView.Base.class)
+    private String nom;
 
     @Column(nullable = false)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
-    private String start;
+    @JsonView(GlobalView.Base.class)
+    private LocalDateTime start;
 
     @Column(nullable = false)
     @JsonView(GlobalView.EventView.class)
-    private String end;
+    private LocalDateTime end;
 
     @Column(nullable = false)
     @JsonView(GlobalView.EventView.class)
     private String description;
 
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
+    @JsonView(GlobalView.Base.class)
     private String location;
 
     @OneToMany(mappedBy = "event", cascade = CascadeType.ALL, orphanRemoval = true)
@@ -52,11 +53,14 @@ public class Event {
     @JsonView(GlobalView.EventView.class)
     private List<Reservation> reservations = new ArrayList<>();
 
-    // Relation avec le club organisateur (N Événements → 1 Club)
     @ManyToOne
     @JoinColumn(name = "organisateur_id")
     @JsonView(GlobalView.EventView.class)
     private Club organisateur;
+
+    @OneToMany(mappedBy = "event", cascade = CascadeType.ALL)
+    @JsonView(GlobalView.EventView.class)
+    private List<Notation> notations = new ArrayList<>();
 
     @JsonView(GlobalView.EventView.class)
     public int getPlaceTotal() {

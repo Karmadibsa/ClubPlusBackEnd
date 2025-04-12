@@ -2,22 +2,29 @@ package org.clubplus.clubplusbackend.dao;
 
 import org.clubplus.clubplusbackend.model.Reservation;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
+import java.util.Optional;
 
 @Repository
-public interface ReservationDao extends JpaRepository<Reservation, Long> {
-    List<Reservation> findByMembreId(Long membreId);
+public interface ReservationDao extends JpaRepository<Reservation, Integer> {
+    // Trouver toutes les réservations pour un membre spécifique
+    List<Reservation> findByMembreId(Integer membreId);
 
-    List<Reservation> findByEventId(Long eventId);
+    // Trouver toutes les réservations pour un événement spécifique
+    List<Reservation> findByEventId(Integer eventId);
 
-    List<Reservation> findByCategorieId(Long categorieId);
+    // Trouver toutes les réservations pour une catégorie spécifique
+    List<Reservation> findByCategorieId(Integer categorieId);
 
-    // Compter les réservations d'un membre pour un événement
-    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.membre.id = ?1 AND r.event.id = ?2")
-    int countByMembreIdAndEventId(Long membreId, Long eventId);
+    // Trouver une réservation spécifique pour un membre et un événement donnés
+    // Utile pour vérifier si un membre a déjà réservé pour cet événement (si 1 réservation/membre/événement)
+    Optional<Reservation> findByMembreIdAndEventId(Integer membreId, Integer eventId);
 
-    List<Reservation> findByMembreIdAndEventId(Long membreId, Long eventId);
+    // Compter les réservations pour une catégorie (pour vérifier la capacité)
+    // Note: On peut aussi obtenir la taille de la collection dans l'entité Categorie, mais ceci est une alternative BDD
+    long countByCategorieId(Integer categorieId);
+
+    long countByMembreIdAndEventId(Integer membreId, Integer eventId);
 }

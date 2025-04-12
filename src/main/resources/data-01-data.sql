@@ -1,270 +1,126 @@
+-- 1. Insertion du Club (admin_id sera mis à jour plus tard)
 INSERT INTO club (nom, date_creation, date_inscription, numero_voie, rue, codepostal, ville, telephone, email,
                   code_club)
-VALUES ('Club Sportif de Paris',
-        '2000-04-08',
-        '2025-04-08',
-        '12',
-        'Rue des Sports',
-        '75015',
-        'Paris',
-        '0123456789',
-        'contact@clubparis.fr', 'CL0001');
--- ID du membre administrateur
+VALUES ('Club Sportif Central', '2010-01-15', '2024-01-10', '1', 'Place du Sport', '75001', 'Paris', '0102030405',
+        'contact@csc.fr', 'CLUB-0001');
+-- Supposons que cet INSERT génère l'ID 1 pour le club.
 
+-- 2. Insertion des Membres (associés au club ID 1)
+-- Attention au hash du mot de passe ! Remplacer si nécessaire. Tous ont le même MDP ici.
 INSERT INTO membre (nom, prenom, date_naissance, date_inscription, numero_voie, rue, codepostal, ville, telephone,
                     email, password, role, club_id)
-VALUES ('Dupont', 'Jean', '1990-05-15', '2025-03-01', '123', 'Rue de Paris', '93000', 'Paris', '0123456789',
-        'jean.dupont@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
-       ('Martin', 'Sophie', '1985-08-22', '2024-06-15', '45', 'Rue des Lilas', '69000', 'Lyon', '0169228008',
-        'sophie.martin@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1),
-       ('Dubois', 'Pierre', '1978-03-10', '2024-11-30', '8', 'Rue de Paris', '59000', 'Lille', '0150648901',
-        'pierre.dubois@hotmail.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1),
-       ('Lefebvre', 'Marie', '1992-12-05', '2024-02-28', '72', 'Rue de la Paix', '34000', 'Montpellier', '0138246091',
-        'marie.lefebvre@yahoo.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
-       ('Garcia', 'Lucas', '1988-06-18', '2024-09-10', '15', 'Rue des Fleurs', '33000', 'Bordeaux', '0114924023',
-        'lucas.garcia@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
-       ('Roux', 'Emma', '1995-02-14', '2023-01-05', '29', 'Rue Saint-Honoré', '75000', 'Paris', '0134406931',
-        'emma.roux@outlook.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1),
-       ('Fournier', 'Thomas', '1982-11-30', '2018-07-22', '55', 'Rue des Lilas', '34000', 'Montpellier', '0163452513',
-        'thomas.fournier@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
-       ('Moreau', 'Chloé', '1991-09-08', '2024-03-17', '102', 'Rue de Paris', '06000', 'Nice', '0136991169',
-        'chloe.moreau@yahoo.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'reservation', 1),
-       ('Laurent', 'Antoine', '1987-04-25', '2024-11-09', '33', 'Rue des Fleurs', '75000', 'Paris', '0135302149',
-        'antoine.laurent@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
-       ('Simon', 'Julie', '1993-07-12', '2024-05-30', '88', 'Rue de la Paix', '13000', 'Marseille', '0113729122',
-        'julie.simon@hotmail.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1),
-       ('Michel', 'Nicolas', '1980-01-20', '2017-12-03', '17', 'Rue Saint-Honoré', '33000', 'Bordeaux', '0166233104',
-        'nicolas.michel@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'admin', 1),
-       ('Leroy', 'Camille', '1989-10-15', '2023-08-28', '61', 'Rue des Lilas', '69000', 'Lyon', '0140738980',
-        'camille.leroy@outlook.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'reservation', 1),
-       ('Martinez', 'Alexandre', '1986-03-05', '2024-10-11', '94', 'Rue de Paris', '59000', 'Lille', '0167192760',
-        'alexandre.martinez@yahoo.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1),
-       ('Petit', 'Sarah', '1984-12-28', '2024-04-19', '39', 'Rue des Fleurs', '34000', 'Montpellier', '0174751947',
-        'sarah.petit@gmail.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'reservation', 1),
-       ('Robert', 'Maxime', '1990-08-07', '2024-01-25', '77', 'Rue de la Paix', '06000', 'Nice', '0162544409',
-        'maxime.robert@hotmail.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'membre', 1);
+VALUES ('Admin', 'Alice', '1988-03-10', '2024-01-10', '10', 'Rue de Rivoli', '75001', 'Paris', '0601010101',
+        'alice.admin@csc.fr', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'ADMIN',
+        1), -- ID supposé: 1
+       ('Membre', 'Bob', '1995-11-25', '2024-05-20', '25', 'Avenue des Champs', '75008', 'Paris', '0602020202',
+        'bob.membre@email.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'MEMBRE',
+        1), -- ID supposé: 2
+       ('Resa', 'Charlie', '1992-07-01', '2024-08-15', '3', 'Boulevard St-Germain', '75006', 'Paris', '0603030303',
+        'charlie.resa@email.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'RESERVATION',
+        1), -- ID supposé: 3
+       ('Ancien', 'David', '1980-01-05', '2025-02-01', '44', 'Rue du Faubourg', '75010', 'Paris', '0604040404',
+        'david.ancien@email.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'MEMBRE',
+        1), -- ID supposé: 4
+       ('Nouveau', 'Eva', '2000-09-30', '2025-04-05', '5', 'Quai de Valmy', '75010', 'Paris', '0605050505',
+        'eva.nouveau@email.com', '$2y$10$Z8qF28Ev3TDElZ8f8Jq1cuqYPpL/LgD0O1DLAXRivxamdVqP5hVuq', 'MEMBRE', 1);
+-- ID supposé: 5
 
+-- 3. Mise à jour de l'admin du Club
 UPDATE club
-SET admin_id = 1
-WHERE id = 1; -- Jean Dupont comme admin
+SET admin_id = 1 -- Alice Admin (ID membre supposé 1)
+WHERE id = 1;
+-- Club ID 1
 
-INSERT INTO events (title, start, end, description, location, organisateur_id)
-VALUES ('Tournoi de badminton', '2025-02-28 14:00:00', '2025-02-28 17:00:00',
-        'Compétition amicale avec les membres du club.', 'Gymnase municipal', 1),
-       ('Rencontre de tennis', '2025-02-29 10:00:00', '2025-02-29 12:00:00', 'Match amical entre adhérents.',
-        'Parc des Sports', 1),
-       ('Atelier Yoga', '2025-03-01 09:00:00', '2025-03-01 11:00:00', 'Séance de yoga pour débutants.',
-        'Salle polyvalente', 1),
-       ('Tournoi de football', '2025-03-02 16:00:00', '2025-03-02 19:00:00', 'Tournoi interclubs.',
-        'Complexe sportif', 1),
-       ('Randonnée en montagne', '2025-03-03 08:00:00', '2025-03-03 18:00:00', 'Excursion dans les Vosges.',
-        'Point de départ du sentier', 1),
-       ('Atelier de peinture', '2025-03-04 14:00:00', '2025-03-04 16:00:00',
-        'Séance créative pour peindre des paysages.', 'Centre culturel', 1),
-       ('Cours de cuisine italienne', '2025-03-05 18:00:00', '2025-03-05 20:00:00',
-        'Apprenez à préparer des plats italiens traditionnels.', 'École de cuisine', 1),
-       ('Tournoi d''échecs', '2025-03-06 10:00:00', '2025-03-06 13:00:00',
-        'Compétition amicale pour amateurs et confirmés.', 'Salle des fêtes', 1),
-       ('Conférence sur l''intelligence artificielle', '2025-03-07 15:00:00', '2025-03-07 17:00:00',
-        'Discussion sur les avancées en IA et leurs impacts.', 'Auditorium municipal', 1),
-       ('Soirée karaoké', '2025-03-08 20:00:00', '2025-03-08 23:00:00',
-        'Chantez vos chansons préférées avec vos amis.', 'Bar local', 1),
-       ('Atelier de poterie', '2025-04-10 10:00:00', '2025-04-10 12:00:00',
-        'Initiation à la poterie pour débutants.', 'Atelier créatif', 1),
-       ('Soirée jeux de société', '2025-04-11 18:00:00', '2025-04-11 22:00:00',
-        'Soirée conviviale autour de jeux de société.', 'Maison des associations', 1),
-       ('Cours de danse salsa', '2025-04-12 19:00:00', '2025-04-12 21:00:00',
-        'Initiation à la danse salsa pour débutants.', 'Studio de danse', 1),
-       ('Projection cinéma plein air', '2025-04-13 21:00:00', '2025-04-13 23:30:00',
-        'Projection d''un film en plein air.', 'Parc municipal', 1),
-       ('Tournoi de basket-ball', '2026-04-14 14:00:00', '2026-04-14 17:00:00',
-        'Compétition amicale entre équipes locales.', 'Gymnase municipal', 1);
--- Insertion des catégories pour les événements
+-- 4. Insertion des Événements (organisés par le club ID 1)
+-- Inclure des événements passés et futurs
+INSERT INTO events (nom, start, end, description, location, organisateur_id)
+VALUES ('Tournoi Badminton Passé', '2025-02-15 14:00:00', '2025-02-15 18:00:00', 'Tournoi amical interne.',
+        'Gymnase Sud', 1),     -- ID supposé: 1 (PASSÉ)
+       ('Stage Tennis Février', '2025-02-22 09:00:00', '2025-02-24 17:00:00', 'Stage intensif weekend.',
+        'Courts Centraux', 1), -- ID supposé: 2 (PASSÉ)
+       ('Soirée Club Mars', '2025-03-20 19:00:00', '2025-03-20 23:00:00', 'Rencontre conviviale des membres.',
+        'Club House', 1),      -- ID supposé: 3 (PASSÉ)
+       ('Compétition Régionale Judo', '2025-04-05 08:00:00', '2025-04-06 19:00:00', 'Compétition officielle.',
+        'Dojo Régional', 1),   -- ID supposé: 4 (PASSÉ)
+       ('Sortie Vélo Mai', '2025-05-10 09:00:00', '2025-05-10 13:00:00', 'Balade dans la forêt de Marly.',
+        'Parking Forêt', 1),   -- ID supposé: 5 (FUTUR - DANS 30J)
+       ('Tournoi Foot Juin', '2025-06-07 10:00:00', '2025-06-07 17:00:00', 'Tournoi 7x7 inter-équipes.',
+        'Stade Municipal', 1), -- ID supposé: 6 (FUTUR)
+       ('Initiation Escalade Mai', '2025-05-18 14:00:00', '2025-05-18 16:00:00', 'Découverte de l''escalade en salle.',
+        'Salle GrimpUp', 1);
+-- ID supposé: 7 (FUTUR - DANS 30J)
+
+-- 5. Insertion des Catégories pour les événements
 INSERT INTO categories (event_id, nom, capacite)
 VALUES
--- Catégories pour le tournoi de badminton (event_id = 1)
-(1, 'Tribune Nord', 40),
-(1, 'Tribune Sud', 50),
-(1, 'Espace VIP', 30),
+-- Event 1 (Badminton Passé) - ID supposé 1
+(1, 'Simple Homme', 16),   -- ID Catégorie supposé: 1
+(1, 'Simple Femme', 16),   -- ID Catégorie supposé: 2
+(1, 'Double Mixte', 20),   -- ID Catégorie supposé: 3 (capa 10 paires)
+-- Event 2 (Tennis Février) - ID supposé 2
+(2, 'Court 1', 4),         -- ID Catégorie supposé: 4
+(2, 'Court 2', 4),         -- ID Catégorie supposé: 5
+-- Event 3 (Soirée Mars) - ID supposé 3
+(3, 'Entrée Générale', 50),-- ID Catégorie supposé: 6
+-- Event 4 (Judo Avril) - ID supposé 4
+(4, 'Moins de 60kg', 10),  -- ID Catégorie supposé: 7
+(4, 'Moins de 70kg', 10),  -- ID Catégorie supposé: 8
+(4, 'Spectateur', 30),     -- ID Catégorie supposé: 9
+-- Event 5 (Vélo Mai) - ID supposé 5
+(5, 'Groupe Loisir', 15),  -- ID Catégorie supposé: 10
+(5, 'Groupe Sportif', 10),-- ID Catégorie supposé: 11
+-- Event 6 (Foot Juin) - ID supposé 6
+(6, 'Équipe Inscrite', 12),-- ID Catégorie supposé: 12 (capacité en nb d'équipes)
+-- Event 7 (Escalade Mai) - ID supposé 7
+(7, 'Débutant Adulte', 8), -- ID Catégorie supposé: 13
+(7, 'Débutant Enfant', 8);
+-- ID Catégorie supposé: 14
 
--- Catégories pour la rencontre de tennis (event_id = 2)
-(2, 'Court Central', 40),
-(2, 'Gradins', 30),
-
--- Catégories pour l'atelier Yoga (event_id = 3)
-(3, 'Débutants', 20),
-(3, 'Intermédiaires', 15),
-
--- Catégories pour le tournoi de football (event_id = 4)
-(4, 'Tribune A', 25),
-(4, 'Tribune B', 25),
-(4, 'Pelouse', 25),
-
--- Catégories pour la randonnée (event_id = 5)
-(5, 'Groupe Débutant', 20),
-(5, 'Groupe Avancé', 10),
-
--- Catégories pour l'atelier de peinture (event_id = 6)
-(6, 'Places Standard', 25),
-
--- Catégories pour le cours de cuisine (event_id = 7)
-(7, 'Participants', 15),
-(7, 'Observateurs', 10),
-
--- Catégories pour le tournoi d'échecs (event_id = 8)
-(8, 'Joueurs', 32),
-(8, 'Spectateurs', 50),
-
--- Catégories pour la conférence IA (event_id = 9)
-(9, 'Places Assises', 18),
-(9, 'Places Debout', 50),
-
--- Catégories pour la soirée karaoké (event_id = 10)
-(10, 'Places Standard', 60),
-(10, 'Places VIP', 20),
-
--- Catégories pour l'atelier de poterie (event_id = 11)
-(11, 'Participants', 12),
-(11, 'Observateurs', 8),
-
--- Catégories pour la soirée jeux de société (event_id = 12)
-(12, 'Joueurs Tables Strategy', 24),
-(12, 'Joueurs Tables Family', 20),
-(12, 'Joueurs Tables Party', 30),
-
--- Catégories pour le cours de danse salsa (event_id = 13)
-(13, 'Danseurs Débutants', 15),
-(13, 'Danseurs Intermédiaires', 10),
-(13, 'Danseurs Avancés', 5),
-
--- Catégories pour la projection cinéma plein air (event_id = 14)
-(14, 'Espace Couvertures', 150),
-(14, 'Espace Transats', 80),
-(14, 'Espace Premium', 30),
-
--- Catégories pour le tournoi de basket-ball (event_id = 15)
-(15, 'Tribune Est', 28),
-(15, 'Tribune Ouest', 29),
-(15, 'Tribune Nord', 80),
-(15, 'Espace VIP', 25);
-
+-- 6. Insertion des Réservations
 INSERT INTO reservations (membre_id, event_id, categorie_id, date_reservation)
-VALUES (1, 1, 2, '2025-04-28 20:00:00'),
-       (2, 1, 1, '2025-04-24 16:37:00'),
-       (3, 1, 1, '2025-04-17 02:34:00'),
-       (4, 1, 1, '2025-04-16 16:27:00'),
+VALUES
+-- Event 1 (Badminton Passé)
+(1, 1, 1, '2025-02-01 10:00:00'),  -- Alice
+(2, 1, 2, '2025-02-02 11:00:00'),  -- Bob
+(4, 1, 1, '2025-02-03 12:00:00'),  -- David
+-- Event 3 (Soirée Mars)
+(1, 3, 6, '2025-03-01 10:00:00'),  -- Alice
+(2, 3, 6, '2025-03-01 11:00:00'),  -- Bob
+(3, 3, 6, '2025-03-02 12:00:00'),  -- Charlie
+(4, 3, 6, '2025-03-03 13:00:00'),  -- David
+-- Event 4 (Judo Avril)
+(4, 4, 7, '2025-03-15 10:00:00'),  -- David (-60kg)
+(1, 4, 9, '2025-03-16 11:00:00'),  -- Alice (Spectateur)
+-- Event 5 (Vélo Mai - FUTUR)
+(2, 5, 10, '2025-04-10 09:00:00'), -- Bob (Loisir) - 1ère résa
+(2, 5, 10, '2025-04-11 10:00:00'), -- Bob (Loisir) - 2ème résa (pour tester limite 2)
+(5, 5, 11, '2025-04-11 11:00:00'), -- Eva (Sportif)
+-- Event 7 (Escalade Mai - FUTUR)
+(1, 7, 13, '2025-04-12 10:00:00'), -- Alice (Adulte)
+(5, 7, 13, '2025-04-12 11:00:00');
+-- Eva (Adulte)
 
-       (9, 1, 2, '2025-04-05 12:44:00'),
-       (10, 1, 3, '2025-04-18 01:05:00'),
-       (1, 2, 5, '2025-04-16 09:34:00'),
-       (2, 2, 4, '2025-04-14 15:42:00'),
-       (3, 2, 4, '2025-04-24 07:57:00'),
-       (4, 2, 5, '2025-04-24 14:11:00'),
-       (5, 2, 5, '2025-04-12 09:48:00'),
-       (6, 2, 5, '2025-05-05 09:07:00'),
-       (8, 2, 4, '2025-04-22 03:45:00'),
-       (9, 2, 4, '2025-04-13 01:37:00'),
-       (10, 2, 4, '2025-05-04 14:04:00'),
-       (1, 3, 6, '2025-04-30 08:28:00'),
-       (2, 3, 7, '2025-04-25 12:22:00'),
-       (3, 3, 6, '2025-04-12 18:21:00'),
-       (5, 3, 6, '2025-04-09 22:47:00'),
-       (6, 3, 7, '2025-04-26 08:20:00'),
-       (8, 3, 6, '2025-04-24 09:27:00'),
-       (9, 3, 6, '2025-04-09 04:53:00'),
-       (10, 3, 6, '2025-04-26 15:02:00'),
-       (1, 4, 9, '2025-04-14 13:53:00'),
-       (2, 4, 8, '2025-04-22 03:54:00'),
-       (6, 4, 8, '2025-04-06 12:50:00'),
-       (8, 4, 8, '2025-04-05 23:41:00'),
-       (9, 4, 8, '2025-04-10 04:53:00'),
-       (10, 4, 8, '2025-04-26 12:08:00'),
-       (1, 5, 11, '2025-05-04 17:26:00'),
-       (2, 5, 11, '2025-04-06 06:12:00'),
-       (3, 5, 11, '2025-04-17 21:52:00'),
-       (4, 5, 12, '2025-04-20 02:49:00'),
-       (5, 5, 11, '2025-04-28 15:57:00'),
-       (6, 5, 11, '2025-04-28 19:10:00'),
-       (8, 5, 12, '2025-04-08 09:26:00'),
-       (9, 5, 12, '2025-04-07 05:11:00'),
-       (10, 5, 11, '2025-04-18 15:17:00'),
-       (1, 6, 13, '2025-04-16 15:56:00'),
-       (2, 6, 13, '2025-04-21 15:21:00'),
+-- 7. Insertion des Demandes d'Amis
+INSERT INTO demande_ami (envoyeur_id, recepteur_id, statut, date_demande)
+VALUES (1, 2, 'ACCEPTE', '2025-03-01 10:00:00'), -- Alice et Bob sont amis
+       (1, 3, 'ATTENTE', '2025-04-01 11:00:00'), -- Alice demande Charlie
+       (4, 1, 'ATTENTE', '2025-04-05 12:00:00'), -- David demande Alice
+       (2, 4, 'ACCEPTE', '2025-03-15 13:00:00'), -- Bob et David sont amis
+       (5, 2, 'REFUSE', '2025-04-10 14:00:00');
+-- Eva a demandé Bob, qui a refusé
 
-       (5, 6, 13, '2025-04-05 23:22:00'),
-       (6, 6, 13, '2025-04-11 01:33:00'),
-       (8, 6, 13, '2025-05-04 08:22:00'),
-       (9, 6, 13, '2025-04-26 15:30:00'),
-       (10, 6, 13, '2025-04-07 23:08:00'),
-       (1, 7, 14, '2025-05-01 00:36:00'),
-       (2, 7, 15, '2025-04-16 18:40:00'),
-       (3, 7, 15, '2025-04-17 09:27:00'),
-       (4, 7, 14, '2025-04-22 11:49:00'),
-       (5, 7, 14, '2025-04-09 07:12:00'),
-       (6, 7, 14, '2025-04-26 03:47:00'),
-       (8, 7, 15, '2025-05-02 13:38:00'),
-       (9, 7, 14, '2025-04-27 00:36:00'),
-       (10, 7, 15, '2025-04-08 08:24:00'),
-       (1, 8, 16, '2025-04-10 08:35:00'),
-       (2, 8, 16, '2025-04-17 12:00:00'),
-       (3, 8, 16, '2025-04-27 10:35:00'),
-       (4, 8, 16, '2025-04-30 20:46:00'),
-       (5, 8, 16, '2025-04-22 18:38:00'),
-       (6, 8, 17, '2025-04-06 20:55:00'),
+-- 8. Insertion des Notations (pour les événements PASSÉS)
+-- Note: Mettre la date manuellement si @PrePersist n'est pas fiable avec SQL direct
+INSERT INTO notation (event_id, membre_id, ambiance, propreté, organisation, fair_play, niveau_joueurs, date_notation)
+VALUES
+-- Event 1 (Badminton Passé)
+(1, 1, 5, 4, 5, 5, 4, '2025-02-16 10:00:00'), -- Note d'Alice
+(1, 2, 4, 3, 4, 4, 3, '2025-02-16 11:00:00'), -- Note de Bob
+(1, 4, 5, 5, 5, 5, 5, '2025-02-17 12:00:00'), -- Note de David
+-- Event 3 (Soirée Mars)
+(3, 1, 5, 5, 4, 5, 3, '2025-03-21 10:00:00'), -- Note d'Alice (Niveau joueur moins pertinent ici)
+(3, 2, 4, 4, 3, 4, 3, '2025-03-21 11:00:00'), -- Note de Bob
+-- Event 4 (Judo Avril)
+(4, 4, 3, 4, 3, 5, 5, '2025-04-07 10:00:00'), -- Note de David (participant)
+(4, 1, 4, 5, 4, 4, 4, '2025-04-07 11:00:00'); -- Note d'Alice (spectatrice)
 
-       (1, 9, 18, '2025-05-01 20:03:00'),
-       (2, 9, 19, '2025-04-17 00:40:00'),
-       (3, 9, 18, '2025-05-04 07:51:00'),
-       (4, 9, 18, '2025-04-28 15:27:00'),
-       (5, 9, 18, '2025-04-06 21:41:00'),
-       (6, 9, 19, '2025-04-10 15:27:00'),
-       (8, 9, 18, '2025-04-29 10:05:00'),
-       (9, 9, 19, '2025-04-23 18:17:00'),
-       (10, 9, 18, '2025-04-24 19:20:00'),
-       (1, 10, 21, '2025-04-30 00:23:00'),
-       (2, 10, 20, '2025-04-12 03:37:00'),
-       (3, 10, 20, '2025-05-01 03:41:00'),
-       (4, 10, 20, '2025-05-04 11:38:00'),
-       (5, 10, 20, '2025-04-14 12:30:00'),
-       (6, 10, 20, '2025-04-06 18:03:00'),
-       (8, 10, 21, '2025-04-22 00:56:00'),
-       (9, 10, 20, '2025-05-02 06:54:00'),
-       (10, 10, 20, '2025-04-29 09:08:00'),
-       (1, 11, 22, '2025-04-27 19:46:00'),
-       (10, 11, 23, '2025-04-24 08:24:00'),
-       (1, 12, 26, '2025-04-17 08:27:00'),
-       (2, 12, 26, '2025-04-18 05:30:00'),
-       (3, 12, 25, '2025-04-08 17:50:00'),
-       (4, 12, 26, '2025-04-28 16:05:00'),
-       (5, 12, 26, '2025-04-09 04:04:00'),
-       (6, 12, 26, '2025-04-20 21:43:00'),
-       (8, 12, 24, '2025-04-19 11:57:00'),
-       (9, 12, 25, '2025-04-26 13:13:00'),
-       (10, 12, 26, '2025-04-19 22:21:00'),
-       (1, 13, 28, '2025-04-30 06:43:00'),
-       (2, 13, 27, '2025-05-01 07:57:00'),
-       (3, 13, 28, '2025-05-04 12:34:00'),
-       (4, 13, 27, '2025-04-19 16:31:00'),
-       (5, 13, 27, '2025-04-08 02:58:00'),
-       (6, 13, 27, '2025-05-03 04:09:00'),
-       (8, 13, 27, '2025-04-28 05:11:00'),
-       (9, 13, 28, '2025-05-01 18:19:00'),
-       (10, 13, 27, '2025-04-23 14:03:00'),
-       (1, 14, 30, '2025-04-06 23:10:00'),
-       (2, 14, 32, '2025-05-02 11:15:00'),
-       (3, 14, 31, '2025-04-14 15:44:00'),
-       (4, 14, 31, '2025-04-19 11:00:00'),
-       (5, 14, 32, '2025-04-24 06:39:00'),
-       (6, 14, 30, '2025-04-24 23:08:00'),
-       (8, 14, 32, '2025-04-14 04:24:00'),
-       (9, 14, 32, '2025-04-11 14:40:00'),
-       (10, 14, 32, '2025-05-01 16:45:00'),
-       (1, 15, 35, '2025-04-12 09:02:00'),
-       (2, 15, 35, '2025-04-19 06:47:00'),
-       (3, 15, 33, '2025-04-15 13:51:00'),
-       (4, 15, 33, '2025-04-13 17:54:00'),
-       (5, 15, 36, '2025-04-10 01:47:00'),
-       (6, 15, 35, '2025-04-09 03:45:00'),
-       (8, 15, 35, '2025-04-20 06:38:00'),
-       (9, 15, 36, '2025-04-30 23:49:00'),
-       (10, 15, 33, '2025-05-03 11:24:00');

@@ -9,6 +9,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,22 +20,22 @@ import java.util.List;
 public class Club {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
-    private Long id;
+    @JsonView(GlobalView.Base.class)
+    private Integer id;
 
     @Column(nullable = false)
     @NotBlank
-    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
+    @JsonView(GlobalView.Base.class)
     private String nom;
 
 
     @Column(nullable = false)
     @JsonView(GlobalView.ClubView.class)
-    private String date_creation;
+    private LocalDate date_creation;
 
     @Column(nullable = false)
     @JsonView(GlobalView.ClubView.class)
-    private String date_inscription;
+    private LocalDate date_inscription;
 
     @Column(nullable = false)
     @NotBlank
@@ -53,7 +54,7 @@ public class Club {
 
     @Column(nullable = false)
     @NotBlank
-    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
+    @JsonView(GlobalView.Base.class)
     private String ville;
 
     @Column(nullable = false)
@@ -81,7 +82,7 @@ public class Club {
     @JsonView(GlobalView.ClubView.class)
     private List<Event> evenements = new ArrayList<>();
 
-    @Column(unique = true, length = 6)
+    @Column(unique = true, length = 9)
     @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
     private String codeClub; // Format "CL01", "CL02", etc.
 
@@ -89,7 +90,7 @@ public class Club {
     @PostPersist
     public void generateCode() {
         if (this.id != null) {
-            this.codeClub = String.format("CL%04d", this.id); // Exemple : CL0001, CL0002, etc.
+            this.codeClub = String.format("CLUB-%04d", this.id); // Exemple : CL0001, CL0002, etc.
         }
     }
 }

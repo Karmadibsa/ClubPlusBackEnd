@@ -24,5 +24,13 @@ public class GlobalView {
     // Vue pour le club
     public interface ClubView extends Base {
     }
+
+    // Vue pour le club
+    public interface DemandeView extends Base {
+    }
+
+    // Vue pour le club
+    public interface NotationView extends Base {
+    }
 }
 

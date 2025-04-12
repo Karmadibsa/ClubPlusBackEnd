@@ -20,15 +20,15 @@ import java.util.List;
 public class Categorie {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class})
-    private Long id;
+    @JsonView(GlobalView.Base.class)
+    private Integer id;
 
     @Column(nullable = false)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class})
+    @JsonView(GlobalView.Base.class)
     private String nom;
 
     @Column(nullable = false)
-    @JsonView({GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class})
+    @JsonView(GlobalView.Base.class)
     private Integer capacite;
 
     @Transient

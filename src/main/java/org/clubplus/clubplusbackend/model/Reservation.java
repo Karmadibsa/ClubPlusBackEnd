@@ -23,8 +23,8 @@ public class Reservation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class})
-    private Long id;
+    @JsonView(GlobalView.Base.class)
+    private Integer id;
 
     @ManyToOne
     @JoinColumn(name = "membre_id", nullable = false)
@@ -38,11 +38,11 @@ public class Reservation {
 
     @ManyToOne
     @JoinColumn(name = "categorie_id", nullable = false)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class})
+    @JsonView(GlobalView.Base.class)
     private Categorie categorie;
 
     @Column(nullable = false)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.MembreView.class, GlobalView.EventView.class, GlobalView.CategorieView.class})
+    @JsonView(GlobalView.Base.class)
     private LocalDateTime dateReservation;
 
 

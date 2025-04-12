@@ -25,7 +25,7 @@ public class AppUserDetails implements UserDetails {
         // Crée une seule autorité basée sur le rôle du membre
         // Le préfixe "ROLE_" est une convention de Spring Security
         // La conversion en majuscules assure la cohérence
-        return List.of(new SimpleGrantedAuthority("ROLE_" + membre.getRole().toUpperCase()));
+        return List.of(new SimpleGrantedAuthority("ROLE_" + membre.getRole().name()));
     }
 
     // Retourne le mot de passe encodé pour la vérification d'authentification Spring Security compare ce mot de passe avec celui fourni lors de la connexion

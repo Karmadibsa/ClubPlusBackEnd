@@ -7,8 +7,10 @@ import jakarta.validation.constraints.NotBlank;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.clubplus.clubplusbackend.security.Role;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -19,27 +21,27 @@ import java.util.List;
 public class Membre {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
-    private Long id;
+    @JsonView(GlobalView.Base.class)
+    private Integer id;
 
     @Column(nullable = false)
     @NotBlank
-    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
+    @JsonView(GlobalView.Base.class)
     private String nom;
 
     @Column(nullable = false)
     @NotBlank
-    @JsonView({GlobalView.ReservationView.class, GlobalView.EventView.class, GlobalView.MembreView.class, GlobalView.CategorieView.class, GlobalView.ClubView.class})
+    @JsonView(GlobalView.Base.class)
     private String prenom;
 
     @Column(nullable = false)
     @NotBlank
     @JsonView(GlobalView.MembreView.class)
-    private String date_naissance;
+    private LocalDate date_naissance;
 
     @Column(nullable = false)
     @JsonView(GlobalView.MembreView.class)
-    private String date_inscription;
+    private LocalDate date_inscription;
 
     @Column(nullable = false)
     @NotBlank
@@ -75,16 +77,28 @@ public class Membre {
     @NotBlank
     private String password;
 
-    @Column(nullable = false)
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, columnDefinition = "ENUM('MEMBRE','RESERVATION', 'ADMIN')")
     @JsonView(GlobalView.MembreView.class)
-    private String role;
+    private Role role;
 
     @OneToMany(mappedBy = "membre", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonView(GlobalView.MembreView.class)
     private List<Reservation> reservations = new ArrayList<>();
 
-    @JsonView(GlobalView.MembreView.class)
     @ManyToOne
     @JoinColumn(name = "club_id")
+    @JsonView(GlobalView.MembreView.class)
     private Club club;
+
+    @OneToMany(mappedBy = "envoyeur", cascade = CascadeType.ALL)
+    @JsonView(GlobalView.MembreView.class)
+    private List<DemandeAmi> demandeEnvoye = new ArrayList<>();
+
+    @OneToMany(mappedBy = "recepteur", cascade = CascadeType.ALL)
+    private List<DemandeAmi> demandeRecu = new ArrayList<>();
+
+
+    @OneToMany(mappedBy = "membre", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Notation> notations = new ArrayList<>();
 }
