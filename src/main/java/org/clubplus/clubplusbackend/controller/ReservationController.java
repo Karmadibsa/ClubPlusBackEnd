@@ -1,209 +1,113 @@
 package org.clubplus.clubplusbackend.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.model.Reservation;
+import org.clubplus.clubplusbackend.security.annotation.IsMembre;
+import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.ReservationService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/reservations")
 @RequiredArgsConstructor
-@CrossOrigin // À configurer précisément pour la production
+@CrossOrigin
 public class ReservationController {
 
     private final ReservationService reservationService;
-    // Injectez MembreService si vous devez récupérer le Membre à partir de Principal/Authentication
-    // private final MembreService membreService;
+    // Pas besoin de SecurityService ici
 
     /**
-     * Crée une nouvelle réservation.
-     * Vérifie si le membre connecté réserve pour lui-même (sauf si admin).
-     * Gère les erreurs métier du service (capacité, limite de résa, etc.).
+     * POST /api/reservations?eventId={eventId}&categorieId={categorieId}
+     * Crée une réservation pour l'utilisateur courant pour un événement/catégorie.
+     * Sécurité: Utilisateur authentifié (@IsMembre). Logique métier dans service.
+     * Exceptions (globales): 404 (Event/Cat non trouvés), 401 (Non auth),
+     * 409 (Event passé, limite/capacité atteinte),
+     * 400 (Catégorie pas dans Event).
      */
     @PostMapping
-    @JsonView(GlobalView.ReservationView.class) // Vue détaillée de la réservation créée
-    // @PreAuthorize("isAuthenticated()") // Au minimum, l'utilisateur doit être connecté
-    public ResponseEntity<?> createReservation(
-            @RequestParam Integer membreId,
-            @RequestParam Integer eventId,
-            @RequestParam Integer categorieId
-            // --- Pour la sécurité (à décommenter et implémenter) ---
-            // , Principal principal // Ou Authentication authentication
-    ) {
-
-        // --- !!! Section Sécurité Essentielle !!! ---
-        // Vous DEVEZ vérifier que l'utilisateur connecté (principal/authentication)
-        // correspond au membreId fourni, ou qu'il a un rôle ADMIN.
-        // Exemple (nécessite MembreService et configuration Spring Security) :
-        /*
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Utilisateur non authentifié."));
-        }
-        String userEmail = authentication.getName(); // Ou récupérer l'objet UserDetails
-        Membre connectedUser = membreService.findMembreByEmail(userEmail)
-                                     .orElse(null); // Gérer le cas où l'utilisateur n'est pas trouvé en BDD
-
-        if (connectedUser == null) {
-             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Utilisateur non trouvé."));
-        }
-
-        // Vérifier si l'ID correspond OU si l'utilisateur est ADMIN
-        if (!connectedUser.getId().equals(membreId) && connectedUser.getRole() != Role.ADMIN) {
-              return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                                   .body(Map.of("error", "Vous n'êtes pas autorisé à réserver pour ce membre."));
-        }
-        */
-        // --- Fin Section Sécurité ---
-
-
-        try {
-            // Le service gère maintenant la limite de 2 réservations/membre/event
-            Reservation createdReservation = reservationService.createReservation(membreId, eventId, categorieId);
-            return ResponseEntity.status(HttpStatus.CREATED).body(createdReservation);
-        } catch (EntityNotFoundException e) { // Membre, Event ou Catégorie non trouvé
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", e.getMessage()));
-        } catch (IllegalArgumentException e) { // Catégorie n'appartient pas à l'événement
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                    .body(Map.of("error", e.getMessage()));
-        } catch (IllegalStateException e) { // Capacité atteinte, déjà réservé (limite 2), événement passé
-            return ResponseEntity.status(HttpStatus.CONFLICT) // 409 Conflict est souvent approprié ici
-                    .body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error("Erreur création réservation...", e); // Pensez à logger les erreurs inattendues
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erreur interne lors de la création de la réservation."));
-        }
+    @IsMembre // Doit être au moins membre pour réserver
+    @ResponseStatus(HttpStatus.CREATED) // 201
+    @JsonView(GlobalView.ReservationView.class) // Retourne la réservation créée
+    public Reservation createMyReservation(@RequestParam Integer eventId,
+                                           @RequestParam Integer categorieId) {
+        // Le service utilise SecurityService pour obtenir l'ID courant
+        // et gère toute la logique métier (validation, capacité, limite) et les erreurs.
+        return reservationService.createMyReservation(eventId, categorieId);
     }
 
     /**
-     * Récupère une réservation spécifique par son ID.
-     * (Nécessite une vérification de droits : est-ce ma réservation ou suis-je admin ?)
+     * GET /api/reservations/me
+     * Récupère les réservations de l'utilisateur courant.
+     * Sécurité: Utilisateur authentifié (@IsMembre).
+     */
+    @GetMapping("/me")
+    @IsMembre // Ou @PreAuthorize("isAuthenticated()")
+    @JsonView(GlobalView.ReservationView.class) // Vue détaillée des réservations
+    public List<Reservation> getMyReservations() {
+        // Le service utilise SecurityService pour l'ID courant
+        return reservationService.findMyReservations();
+    }
+
+    /**
+     * GET /api/reservations/{id}
+     * Récupère une réservation spécifique par ID.
+     * Sécurité: Authentifié (@IsMembre). Propriétaire ou Manager vérifié dans le service.
+     * Exceptions (globales): 404 (Non trouvé), 403 (Accès refusé).
      */
     @GetMapping("/{id}")
+    @IsMembre // Rôle minimum pour tenter
     @JsonView(GlobalView.ReservationView.class)
-    public ResponseEntity<Reservation> getReservationById(@PathVariable Integer id /*, Principal principal */) {
-        return reservationService.findReservationById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public Reservation getReservationById(@PathVariable Integer id) {
+        // Le service gère l'existence et la sécurité (owner/manager)
+        return reservationService.getReservationByIdWithSecurityCheck(id);
     }
 
     /**
-     * Récupère toutes les réservations d'un membre spécifique.
-     * (Nécessite une vérification de droits : est-ce moi ou suis-je admin ?)
+     * GET /api/reservations/event/{eventId}
+     * Récupère les réservations pour un événement (pour les managers).
+     * Sécurité: Rôle RESERVATION/ADMIN requis (@IsReservation). Manager du club vérifié dans service.
+     * Exceptions (globales): 404 (Event non trouvé), 403 (Non manager).
      */
-    @GetMapping("/membre/{membreId}")
-    @JsonView(GlobalView.ReservationView.class)
-    public ResponseEntity<?> getReservationsByMembre(@PathVariable Integer membreId /*, Principal principal */) {
-
-        try {
-            List<Reservation> reservations = reservationService.findReservationsByMembreId(membreId);
-            return ResponseEntity.ok(reservations);
-        } catch (EntityNotFoundException e) { // Si le membreId lui-même n'existe pas
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error("Erreur get reservations membre...", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Erreur interne."));
-        }
-    }
-
     @GetMapping("/event/{eventId}")
+    @IsReservation // Rôle minimum requis
     @JsonView(GlobalView.ReservationView.class)
-    // @PreAuthorize("hasRole('ADMIN') or @securityService.isEventOwner(principal, #eventId)")
-    public ResponseEntity<?> getReservationsByEvent(@PathVariable Integer eventId /*, Principal principal */) {
-        // --- Sécurité : Vérifier si l'utilisateur connecté est l'organisateur ou un ADMIN ---
-
-        try {
-            // Le service lance EntityNotFoundException si l'événement n'existe pas
-            List<Reservation> reservations = reservationService.findReservationsByEventId(eventId);
-            return ResponseEntity.ok(reservations);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error("Erreur get reservations event...", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Erreur interne."));
-        }
-    }
-    
-    @GetMapping("/categorie/{categorieId}")
-    @JsonView(GlobalView.ReservationView.class)
-    // @PreAuthorize("hasRole('ADMIN') or @securityService.isEventOwnerForCategorie(principal, #categorieId)")
-    public ResponseEntity<?> getReservationsByCategorie(@PathVariable Integer categorieId /*, Principal principal */) {
-        // --- Sécurité : Vérifier si l'utilisateur connecté est l'organisateur ou un ADMIN ---
-
-        try {
-            // Le service lance EntityNotFoundException si la catégorie n'existe pas
-            List<Reservation> reservations = reservationService.findReservationsByCategorieId(categorieId);
-            return ResponseEntity.ok(reservations);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error("Erreur get reservations categorie...", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Erreur interne."));
-        }
+    public List<Reservation> getReservationsByEvent(@PathVariable Integer eventId) {
+        // Le service gère l'existence et la sécurité (manager)
+        return reservationService.findReservationsByEventIdWithSecurityCheck(eventId);
     }
 
     /**
+     * GET /api/reservations/categorie/{categorieId}
+     * Récupère les réservations pour une catégorie (pour les managers).
+     * Sécurité: Rôle RESERVATION/ADMIN requis (@IsReservation). Manager du club vérifié dans service.
+     * Exceptions (globales): 404 (Catégorie non trouvée), 403 (Non manager).
+     */
+    @GetMapping("/categorie/{categorieId}")
+    @IsReservation // Rôle minimum requis
+    @JsonView(GlobalView.ReservationView.class)
+    public List<Reservation> getReservationsByCategorie(@PathVariable Integer categorieId) {
+        // Le service gère l'existence et la sécurité (manager)
+        return reservationService.findReservationsByCategorieIdWithSecurityCheck(categorieId);
+    }
+
+    /**
+     * DELETE /api/reservations/{id}
      * Annule (supprime) une réservation.
-     * Vérifie si l'utilisateur connecté est le propriétaire de la réservation ou un admin.
+     * Sécurité: Authentifié (@IsMembre). Propriétaire ou Manager vérifié dans service.
+     * Exceptions (globales): 404 (Non trouvé), 403 (Accès refusé), 409 (Event passé).
      */
     @DeleteMapping("/{id}")
-    // @PreAuthorize("isAuthenticated()") // Doit être connecté pour annuler
-    public ResponseEntity<?> deleteReservation(@PathVariable Integer id /*, Principal principal */) { // Ou Authentication authentication
-
-        // --- !!! Section Sécurité Essentielle !!! ---
-        // Récupérer l'ID et le rôle de l'utilisateur connecté
-        Integer demandeurId = null;
-        boolean isAdmin = false;
-
-        /*
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        if (authentication == null || !authentication.isAuthenticated()) {
-             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Utilisateur non authentifié."));
-        }
-        String userEmail = authentication.getName();
-        Membre connectedUser = membreService.findMembreByEmail(userEmail).orElse(null);
-
-        if (connectedUser == null) {
-             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Utilisateur non trouvé."));
-        }
-
-        demandeurId = connectedUser.getId();
-        isAdmin = (connectedUser.getRole() == Role.ADMIN);
-        */
-
-        // --- À remplacer par la vraie logique ci-dessus ---
-        if (demandeurId == null) demandeurId = 1; // Placeholder non sécurisé pour test
-        // isAdmin = false; // Placeholder
-        // --- Fin section à remplacer ---
-
-
-        try {
-            // Le service vérifie les droits avec demandeurId et isAdmin
-            reservationService.deleteReservation(id, demandeurId, isAdmin);
-            return ResponseEntity.noContent().build(); // 204 No Content
-        } catch (EntityNotFoundException e) { // Réservation non trouvée
-            return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                    .body(Map.of("error", e.getMessage()));
-        } catch (SecurityException e) { // Pas le droit d'annuler
-            return ResponseEntity.status(HttpStatus.FORBIDDEN) // 403 Forbidden est plus approprié que 401 ici
-                    .body(Map.of("error", e.getMessage()));
-        } catch (IllegalStateException e) { // Annulation impossible (ex: événement passé, si activé dans le service)
-            return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error("Erreur suppression réservation {}", id, e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erreur interne lors de l'annulation de la réservation."));
-        }
+    @IsMembre // Rôle minimum pour tenter
+    @ResponseStatus(HttpStatus.NO_CONTENT) // 204
+    public void deleteReservation(@PathVariable Integer id) {
+        // Le service gère l'existence, la sécurité (owner/manager) et la logique métier (event passé)
+        reservationService.deleteReservationById(id);
     }
+
+    // Le @ExceptionHandler pour MethodArgumentNotValidException doit être dans GlobalExceptionHandler.
 }

@@ -1,43 +1,96 @@
 package org.clubplus.clubplusbackend.security;
 
+import lombok.Getter;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
-import java.util.List;
+import java.util.Collections;
+import java.util.Objects;
 
-// Cette classe implémente l'interface UserDetails de Spring Security UserDetails est une interface essentielle qui fournit les informations de base nécessaires à l'authentification et l'autorisation
+@Getter
+// Cette classe implémente l'interface UserDetails de Spring Security [4]
 public class AppUserDetails implements UserDetails {
 
-    // Référence à l'entité Membre de l'application Cette classe sert d'adaptateur entre votre modèle métier (Membre) et le modèle de sécurité de Spring (UserDetails)
-    protected Membre membre;
+    // Référence à l'entité Membre [7][8]
+    // protected Membre membre; // 'protected' est inhabituel, 'private final' est plus courant
+    private final Membre membre; // Utiliser private final pour l'immutabilité après construction
 
-    // Constructeur qui initialise l'objet avec une instance de Membre Appelé par AppUserDetailService après avoir trouvé le membre en base de données
+    // Constructeur qui initialise avec Membre [3][5]
     public AppUserDetails(Membre membre) {
+        // BONNE PRATIQUE: Ajouter un null check
+        Objects.requireNonNull(membre, "Membre ne peut pas être null pour AppUserDetails");
         this.membre = membre;
     }
 
-    // Retourne la liste des autorisations/rôles de l'utilisateur Cette méthode est utilisée par Spring Security pour déterminer ce que l'utilisateur a le droit de faire dans l'application
+    // Retourne les autorisations/rôles [2][4]
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Crée une seule autorité basée sur le rôle du membre
-        // Le préfixe "ROLE_" est une convention de Spring Security
-        // La conversion en majuscules assure la cohérence
-        return List.of(new SimpleGrantedAuthority("ROLE_" + membre.getRole().name()));
+        // Vérification si rôle est null
+        if (this.membre == null || this.membre.getRole() == null) {
+            return Collections.emptyList(); // Pas d'autorités si pas de rôle
+        }
+        // Utilise le rôle global du Membre, préfixé par "ROLE_" (Convention Spring Security)
+        String roleName = "ROLE_" + this.membre.getRole().name(); // .name() donne "ADMIN", "MEMBRE", etc.
+        return Collections.singletonList(new SimpleGrantedAuthority(roleName)); // CORRECT
     }
 
-    // Retourne le mot de passe encodé pour la vérification d'authentification Spring Security compare ce mot de passe avec celui fourni lors de la connexion
+    // Retourne le mot de passe encodé [4][5]
     @Override
     public String getPassword() {
-        return membre.getPassword();
+        // Vérification nullité membre
+        if (this.membre == null) {
+            return null;
+        }
+        return membre.getPassword(); // CORRECT
     }
 
-    // Retourne l'identifiant principal de l'utilisateur Dans ce cas, l'email est utilisé comme nom d'utilisateur
+    // Retourne l'identifiant (email ici) [4][5]
     @Override
     public String getUsername() {
-        return membre.getEmail();
+        // Vérification nullité membre
+        if (this.membre == null) {
+            return null;
+        }
+        return membre.getEmail(); // CORRECT
+    }
+
+    // Méthode ajoutée pour obtenir l'ID interne du Membre (pour nos services)
+    public Integer getId() {
+        // Vérification nullité membre
+        if (this.membre == null) {
+            // Lever une exception est probablement mieux ici car getId ne devrait pas être appelé
+            // sur un UserDetails invalide créé à partir d'un membre null.
+            throw new IllegalStateException("Membre associé à AppUserDetails est null lors de l'appel à getId().");
+        }
+        return membre.getId(); // CORRECT
+    }
+
+    // !!! MÉTHODES MANQUANTES DE L'INTERFACE UserDetails !!! [4]
+    // Ces méthodes DOIVENT être implémentées.
+    // Par défaut, si vous n'avez pas de logique spécifique, retournez 'true'.
+
+    @Override
+    public boolean isAccountNonExpired() {
+        return true; // Mettre 'false' si vous gérez l'expiration des comptes
+    }
+
+    @Override
+    public boolean isAccountNonLocked() {
+        return true; // Mettre 'false' si vous gérez le verrouillage des comptes (ex: trop d'échecs de login)
+    }
+
+    @Override
+    public boolean isCredentialsNonExpired() {
+        return true; // Mettre 'false' si vous gérez l'expiration des mots de passe
+    }
+
+    @Override
+    public boolean isEnabled() {
+        // Vous pourriez lier ceci à un champ 'actif' ou 'enabled' dans votre entité Membre si nécessaire.
+        // if (this.membre != null) { return this.membre.isActif(); }
+        return true; // Par défaut, compte activé
     }
 }
-

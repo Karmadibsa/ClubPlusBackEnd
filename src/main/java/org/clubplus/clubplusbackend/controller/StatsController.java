@@ -1,143 +1,112 @@
 package org.clubplus.clubplusbackend.controller;
 
-import jakarta.persistence.EntityNotFoundException;
+// Retrait des imports non nécessaires (ResponseEntity, HttpStatus, EntityNotFoundException)
+
 import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.service.StatsService;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Controller pour récupérer des statistiques SPÉCIFIQUES À UN CLUB.
+ * L'accès est restreint aux gestionnaires (RESERVATION/ADMIN) du club via @PreAuthorize.
+ */
 @RestController
-@RequestMapping("/api/stats") // Chemin de base pour les statistiques
+@RequestMapping("/api/stats/clubs/{clubId}") // Base URL inclut clubId
 @RequiredArgsConstructor
 @CrossOrigin
 public class StatsController {
 
-    private final StatsService statisticsService;
+    private final StatsService statsService;
+    // Pas besoin de SecurityService ici, utilisé dans @PreAuthorize ou dans StatsService
+
+    // Annotation de sécurité unique pour toute la classe si toutes les méthodes ont la même exigence
+    // Utilise la méthode isManagerOfClub de SecurityService via SpEL (#clubId fait référence à la variable de chemin)
+    @PreAuthorize("@securityService.isManagerOfClub(#clubId)") // Applique à toutes les méthodes
+    // Note: Assurez-vous que SecurityService est un bean (@Component/@Service) et que la méthode
+    // isManagerOfClub(Integer clubId) existe et fonctionne correctement (elle retourne boolean).
+    // Si la méthode isManagerOfClub lance AccessDeniedException, il faut utiliser
+    // @securityService.checkManagerOfClubOrThrow(#clubId) mais @PreAuthorize attend un booléen.
+    // On garde donc isManagerOfClub() qui retourne boolean.
 
     /**
-     * Récupère le taux d'occupation des événements.
-     * Retourne une liste de Maps: [{"eventId": 1, "eventName": "Tournoi A", "occupancyRate": 75.5}, ...]
+     * STAT 1: GET /api/stats/clubs/{clubId}/registrations-monthly
+     * Inscriptions mensuelles (12 derniers mois).
+     * Sécurité: Vérifiée par @PreAuthorize sur la classe.
+     * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
-    @GetMapping("/events/occupancy")
-    public ResponseEntity<List<Map<String, Object>>> getEventOccupancy() {
-        try {
-            List<Map<String, Object>> occupancyData = statisticsService.getEventOccupancyRates();
-            return ResponseEntity.ok(occupancyData);
-        } catch (Exception e) {
-            // logger.error(...)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(List.of(Map.of("error", "Erreur interne lors du calcul des taux d'occupation.")));
-        }
+    @GetMapping("/registrations-monthly")
+    public List<Map<String, Object>> getClubMonthlyRegistrations(@PathVariable Integer clubId) {
+        // Le service lance 404 si club non trouvé
+        return statsService.getClubMonthlyRegistrations(clubId);
     }
 
     /**
-     * Récupère le nombre d'événements prévus dans les 30 prochains jours.
-     * Retourne un JSON simple: {"count": 12}
+     * STAT 2: GET /api/stats/clubs/{clubId}/average-event-ratings
+     * Moyennes des notes des événements passés.
+     * Sécurité: Vérifiée par @PreAuthorize sur la classe.
+     * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
-    @GetMapping("/events/upcoming-count-30d")
-    public ResponseEntity<Map<String, Long>> getUpcomingEventCount() {
-        try {
-            long count = statisticsService.countUpcomingEventsNext30Days();
-            return ResponseEntity.ok(Map.of("count", count));
-        } catch (Exception e) {
-            // logger.error(...)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", -1L)); // Retourne une map avec une valeur d'erreur
-        }
+    @GetMapping("/average-event-ratings")
+    public Map<String, Double> getClubAverageEventRatings(@PathVariable Integer clubId) {
+        // Le service lance 404 si club non trouvé
+        return statsService.getClubAverageEventRatings(clubId);
     }
 
     /**
-     * Récupère les moyennes des notes pour un événement spécifique.
-     * Retourne une Map: {"ambiance": 4.2, "proprete": 3.8, ..., "moyenneGenerale": 4.05}
+     * STAT 3: GET /api/stats/clubs/{clubId}/total-events
+     * Nombre total d'événements.
+     * Sécurité: Vérifiée par @PreAuthorize sur la classe.
+     * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
-    @GetMapping("/events/{eventId}/ratings")
-    public ResponseEntity<?> getEventAverageRatings(@PathVariable Integer eventId) {
-        try {
-            Map<String, Double> averages = statisticsService.getAverageRatingsForEvent(eventId);
-            return ResponseEntity.ok(averages);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error(...)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erreur interne lors du calcul des moyennes."));
-        }
+    @GetMapping("/total-events")
+    public Map<String, Long> getTotalEventsForClub(@PathVariable Integer clubId) {
+        // Le service lance 404 si club non trouvé
+        long total = statsService.getTotalEventsForClub(clubId);
+        return Map.of("totalEvents", total); // Retourne directement une map
     }
 
     /**
-     * Récupère les données pour le graphique des inscriptions mensuelles sur 12 mois.
-     * Retourne une liste de Maps: [{"monthYear": "2024-05", "count": 5}, ...]
+     * STAT 4: GET /api/stats/clubs/{clubId}/average-event-occupancy
+     * Taux d'occupation moyen des événements.
+     * Sécurité: Vérifiée par @PreAuthorize sur la classe.
+     * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
-    @GetMapping("/members/registrations-monthly")
-    public ResponseEntity<List<Map<String, Object>>> getMonthlyRegistrations() {
-        try {
-            List<Map<String, Object>> registrationData = statisticsService.getMonthlyRegistrationsLast12Months();
-            return ResponseEntity.ok(registrationData);
-        } catch (Exception e) {
-            // logger.error(...)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(List.of(Map.of("error", "Erreur interne lors de la récupération des inscriptions.")));
-        }
+    @GetMapping("/average-event-occupancy")
+    public Map<String, Double> getClubAverageEventOccupancy(@PathVariable Integer clubId) {
+        // Le service lance 404 si club non trouvé
+        double averageRate = statsService.getClubAverageEventOccupancy(clubId);
+        return Map.of("averageOccupancyRate", averageRate);
     }
 
     /**
-     * Récupère le nombre total de membres pour un club spécifique.
-     * Retourne un JSON simple: {"totalMembers": 250}
+     * STAT 5: GET /api/stats/clubs/{clubId}/upcoming-event-count-30d
+     * Nombre d'événements à venir (30j).
+     * Sécurité: Vérifiée par @PreAuthorize sur la classe.
+     * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
-    @GetMapping("/clubs/{clubId}/total-members")
-    public ResponseEntity<?> getTotalMembers(@PathVariable Integer clubId) {
-        try {
-            long total = statisticsService.getTotalMembersForClub(clubId);
-            return ResponseEntity.ok(Map.of("totalMembers", total));
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error(...)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", -1L)); // Retourne une map avec une valeur d'erreur
-        }
+    @GetMapping("/upcoming-event-count-30d")
+    public Map<String, Long> getClubUpcomingEventCount30d(@PathVariable Integer clubId) {
+        // Le service lance 404 si club non trouvé
+        long count = statsService.getClubUpcomingEventCount30d(clubId);
+        return Map.of("count", count);
     }
 
     /**
-     * Récupère le nombre moyen d'amis par membre.
-     * Retourne un JSON simple: {"averageFriends": 3.75}
+     * STAT 6: GET /api/stats/clubs/{clubId}/total-members
+     * Nombre total de membres du club.
+     * Sécurité: Vérifiée par @PreAuthorize sur la classe.
+     * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
-    @GetMapping("/members/average-friends")
-    public ResponseEntity<Map<String, Object>> getAverageFriends() { // Changé le type de retour pour l'erreur
-        try {
-            double average = statisticsService.getAverageFriendsPerMember();
-            return ResponseEntity.ok(Map.of("averageFriends", average));
-        } catch (Exception e) {
-            // logger.error("Erreur calcul moyenne amis", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Map.of("error", "Erreur interne"));
-        }
+    @GetMapping("/total-members")
+    public Map<String, Long> getTotalMembers(@PathVariable Integer clubId) {
+        // Le service lance 404 si club non trouvé
+        long total = statsService.getTotalMembersForClub(clubId);
+        return Map.of("totalMembers", total);
     }
 
-    /**
-     * Récupère les 5 événements passés les mieux notés.
-     * Possibilité d'ajuster le nombre via le paramètre 'limit'.
-     * Retourne une liste de Maps: [{"eventId": 10, "eventName": "Super Tournoi", "overallAverageRating": 4.8}, ...]
-     */
-    @GetMapping("/events/top-rated")
-    public ResponseEntity<List<Map<String, Object>>> getTopRatedEvents(
-            @RequestParam(defaultValue = "5") int limit // Paramètre optionnel avec valeur par défaut 5
-    ) {
-        if (limit <= 0) {
-            return ResponseEntity.badRequest().body(Collections.singletonList(Map.of("error", "La limite doit être supérieure à zéro.")));
-        }
-        try {
-            List<Map<String, Object>> topEvents = statisticsService.getTopRatedEvents(limit);
-            return ResponseEntity.ok(topEvents);
-        } catch (Exception e) {
-            // logger.error("Erreur get top rated events", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body(Collections.singletonList(Map.of("error", "Erreur interne lors de la récupération des événements les mieux notés.")));
-        }
-    }
+    // Pas de @ExceptionHandler ici, doit être dans GlobalExceptionHandler.
 }

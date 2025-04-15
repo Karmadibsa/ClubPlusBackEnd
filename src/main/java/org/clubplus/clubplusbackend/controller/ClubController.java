@@ -1,172 +1,186 @@
 package org.clubplus.clubplusbackend.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
-import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.clubplus.clubplusbackend.dto.CreateClubRequestDto;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.model.Membre;
+import org.clubplus.clubplusbackend.security.annotation.IsAdmin;
+import org.clubplus.clubplusbackend.security.annotation.IsMembre;
 import org.clubplus.clubplusbackend.service.ClubService;
 import org.clubplus.clubplusbackend.service.EventService;
-import org.clubplus.clubplusbackend.service.MembreService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.validation.FieldError;
-import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
+import java.util.Set;
 
 @RestController
 @RequestMapping("/api/clubs")
 @RequiredArgsConstructor
-@CrossOrigin
+@CrossOrigin // Si nécessaire
 public class ClubController {
 
     private final ClubService clubService;
-    // Injecter d'autres services si nécessaire pour les endpoints liés
-    private final EventService eventService;
-    private final MembreService membreService; // Supposons qu'il existe une méthode findMembresByClubId
+    private final EventService eventService; // Supposé exister pour les events
 
-    // GET /api/clubs - Récupérer tous les clubs (vue de base)
+    /**
+     * GET /api/clubs
+     * Récupère la liste de tous les clubs (infos de base).
+     * Sécurité: Tout utilisateur authentifié.
+     * Exceptions: Aucune attendue (sauf erreur serveur 500).
+     */
     @GetMapping
+    @IsMembre
     @JsonView(GlobalView.Base.class)
     public List<Club> getAllClubs() {
         return clubService.findAllClubs();
     }
 
-    // GET /api/clubs/{id} - Récupérer un club par ID (vue détaillée)
+    /**
+     * GET /api/clubs/{id}
+     * Récupère les détails d'un club par ID.
+     * Sécurité: Authentifié + Membre du club (vérifié dans le service).
+     * Exceptions (gérées globalement): 404 (Club non trouvé), 403 (Non membre).
+     */
     @GetMapping("/{id}")
+    @IsMembre
     @JsonView(GlobalView.ClubView.class)
-    public ResponseEntity<Club> getClubById(@PathVariable Integer id) {
-        return clubService.findClubById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public Club getClubById(@PathVariable Integer id) {
+        // Le service gère existence + sécurité contextuelle (membre)
+        return clubService.getClubByIdWithSecurityCheck(id);
     }
 
-    // GET /api/clubs/code/{codeClub} - Récupérer un club par son code (vue détaillée)
+    /**
+     * GET /api/clubs/code/{codeClub}
+     * Récupère les détails d'un club par son code unique.
+     * Sécurité: Tout utilisateur authentifié.
+     * Exceptions (gérées globalement): 404 (Code non trouvé).
+     */
     @GetMapping("/code/{codeClub}")
+    @IsMembre
     @JsonView(GlobalView.ClubView.class)
-    public ResponseEntity<Club> getClubByCode(@PathVariable String codeClub) {
-        return clubService.findClubByCode(codeClub)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public Club getClubByCode(@PathVariable String codeClub) {
+        // Le service lance 404 si non trouvé
+        return clubService.getClubByCodeOrThrow(codeClub);
+    }
+    
+    /**
+     * POST /api/clubs
+     * Crée un nouveau club et son admin initial à partir d'un payload JSON unique.
+     * Sécurité: Tout utilisateur authentifié.
+     * Validation: Le DTO est validé via @Valid.
+     * Exceptions (gérées globalement): 400 (Validation échouée), 409 (Emails déjà utilisés).
+     */
+    @PostMapping // Pas besoin de 'consumes' car @RequestBody suppose application/json par défaut
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("isAuthenticated()")
+    @JsonView(GlobalView.ClubView.class)
+    public Club createClubAndAdmin(
+            @Valid @RequestBody CreateClubRequestDto creationDto // Utilise @RequestBody avec le DTO
+    ) {
+        // @Valid gère la validation Bean du DTO (y compris le AdminInfo imbriqué) -> 400 si échec
+        // Le service gère la logique et les conflits (-> 409)
+        return clubService.createClubAndRegisterAdmin(creationDto); // Passe le DTO au service
     }
 
-    // POST /api/clubs - Créer un nouveau club ET son admin initial via un objet Club imbriqué
-    @PostMapping
-    @JsonView(GlobalView.ClubView.class) // Vue pour le retour
-    public ResponseEntity<?> createClubWithNestedAdmin(@Valid @RequestBody Club clubInput) {
-        // @Valid validera les contraintes sur Club (ex: @NotBlank)
-        // La validation du Membre imbriqué dépendra si @Valid est sur Club.admin dans l'entité
-        if (clubInput.getAdmin() == null) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Les informations de l'administrateur sont requises dans le champ 'admin'."));
-        }
-        // Vérification basique que le mot de passe est fourni (la vraie validation est dans le service)
-        if (clubInput.getAdmin().getPassword() == null || clubInput.getAdmin().getPassword().isEmpty()) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", "Le mot de passe de l'administrateur est requis."));
-        }
-
-
-        try {
-            Club createdClub = clubService.createClubAndAdminFromInput(clubInput);
-            // Re-fetch pour être sûr d'avoir le codeClub généré dans la réponse
-            Club fetchedClub = clubService.getClubByIdOrThrow(createdClub.getId());
-            return ResponseEntity.status(HttpStatus.CREATED).body(fetchedClub);
-        } catch (IllegalArgumentException e) { // Gère les emails dupliqués ou autres erreurs logiques
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
-        } catch (IllegalStateException e) { // Ex: PasswordEncoder manquant
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // Loggez l'erreur côté serveur
-            // logger.error("Erreur lors de la création du club et admin", e);
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Une erreur interne est survenue lors de la création du club."));
-        }
-    }
-
-    // Gestionnaire d'erreurs de validation (@Valid sur Club)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    @ExceptionHandler(MethodArgumentNotValidException.class)
-    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
-        Map<String, String> errors = new HashMap<>();
-        ex.getBindingResult().getAllErrors().forEach((error) -> {
-            String fieldName = ((FieldError) error).getField();
-            // Le fieldName peut être complexe si l'erreur vient de l'admin imbriqué (ex: "admin.email")
-            String errorMessage = error.getDefaultMessage();
-            errors.put(fieldName, errorMessage);
-        });
-        return errors;
-    }
-
-    // PUT /api/clubs/{id} - Mettre à jour un club existant
+    /**
+     * PUT /api/clubs/{id}
+     * Met à jour les informations d'un club.
+     * Sécurité: Authentifié + ADMIN spécifique de ce club (vérifié dans le service).
+     * Exceptions (gérées globalement): 404 (Club non trouvé), 403 (Pas l'admin du club),
+     * 400 (Validation @Valid échouée), 409 (Email dupliqué).
+     */
     @PutMapping("/{id}")
+    @IsAdmin
     @JsonView(GlobalView.ClubView.class)
-    // @PreAuthorize("hasRole('ADMIN') or @securityService.isClubAdmin(principal, #id)") // Seul admin du club ou super admin
-    public ResponseEntity<?> updateClub(@PathVariable Integer id, @Valid @RequestBody Club clubDetails) {
-        try {
-            Club updatedClub = clubService.updateClub(id, clubDetails);
-            return ResponseEntity.ok(updatedClub);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        } catch (IllegalArgumentException e) { // Ex: Email déjà pris
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage());
-        }
+    public Club updateClub(@PathVariable Integer id, @Valid @RequestBody Club clubDetails) {
+        // @Valid gère validation Bean -> 400
+        // Le service gère existence (-> 404), sécurité admin (-> 403), conflits (-> 409)
+        return clubService.updateClub(id, clubDetails);
     }
 
-    // DELETE /api/clubs/{id} - Supprimer un club
+    /**
+     * DELETE /api/clubs/{id}
+     * Supprime un club.
+     * Sécurité: Authentifié + ADMIN spécifique de ce club (vérifié dans le service).
+     * Exceptions (gérées globalement): 404 (Club non trouvé), 403 (Pas l'admin du club),
+     * 409 (Événements futurs empêchent suppression).
+     */
     @DeleteMapping("/{id}")
-    // @PreAuthorize("hasRole('SUPER_ADMIN')") // Peut-être seul un super admin peut supprimer un club
-    public ResponseEntity<?> deleteClub(@PathVariable Integer id) {
-        try {
-            clubService.deleteClub(id);
-            return ResponseEntity.noContent().build(); // 204 No Content
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build(); // 404 Not Found
-        } catch (IllegalStateException e) { // Ex: Ne peut pas supprimer car membres/événements existent
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(e.getMessage()); // 409 Conflict
-        }
+    @PreAuthorize("isAuthenticated()") // L'utilisateur doit être connecté pour tenter
+    @ResponseStatus(HttpStatus.NO_CONTENT) // Code 204 si succès
+    public void deleteClub(@PathVariable Integer id) {
+        // Le service gère existence (-> 404), sécurité admin (-> 403), conflits (-> 409)
+        clubService.deleteClub(id);
     }
 
-    // --- Endpoints pour les relations ---
-
-    // GET /api/clubs/{id}/membres - Récupérer les membres d'un club
+    /**
+     * GET /api/clubs/{id}/membres
+     * Récupère la liste des membres d'un club.
+     * Sécurité: Authentifié + Membre du club (vérifié dans le service).
+     * Exceptions (gérées globalement): 404 (Club non trouvé), 403 (Non membre).
+     */
     @GetMapping("/{id}/membres")
-    @JsonView(GlobalView.Base.class) // Vue de base pour la liste des membres
-    // @PreAuthorize("isAuthenticated()") // Ouvert à tous les utilisateurs connectés ? Ou seulement membres du club ?
-    public ResponseEntity<List<Membre>> getClubMembres(@PathVariable Integer id) {
-        try {
-            Club club = clubService.getClubByIdOrThrow(id); // Valide que le club existe
-            // Il faut une méthode dans MembreService pour récupérer les membres par clubId
-            List<Membre> membres = membreService.findMembresByClubId(id);
-            return ResponseEntity.ok(membres);
-        } catch (EntityNotFoundException e) {
-            return ResponseEntity.notFound().build();
-        }
+    @PreAuthorize("isAuthenticated()")
+    @JsonView(GlobalView.Base.class) // Vue de base pour les membres listés
+    public List<Membre> getClubMembres(@PathVariable Integer id) {
+        // Le service gère existence (-> 404), sécurité membre (-> 403)
+        Set<Membre> membresSet = clubService.findMembresForClub(id);
+        return new ArrayList<>(membresSet); // Convertir Set en List pour JSON
     }
 
-    // GET /api/clubs/{id}/events - Récupérer les événements organisés par un club (passés et futurs)
+    /**
+     * GET /api/clubs/{id}/admin
+     * Récupère l'administrateur d'un club.
+     * Sécurité: Authentifié + Membre du club (vérifié dans le service).
+     * Exceptions (gérées globalement): 404 (Club ou Admin non trouvé), 403 (Non membre).
+     */
+    @GetMapping("/{id}/admin")
+    @PreAuthorize("isAuthenticated()")
+    @JsonView(GlobalView.MembreView.class) // Vue détaillée de l'admin
+    public Membre getClubAdmin(@PathVariable Integer id) {
+        // Le service gère existence (-> 404), sécurité membre (-> 403)
+        return clubService.getAdminForClubOrThrow(id);
+    }
+
+
+    // --- Endpoints liés aux événements (simplifiés, dépendent d'EventService) ---
+    // NOTE: La sécurité contextuelle (être membre du club) DOIT être dans EventService
+
+    /**
+     * GET /api/clubs/{id}/events
+     * Récupère les événements d'un club.
+     * Sécurité: Gérée par EventService (doit être membre du club).
+     * Exceptions (gérées globalement): 403 (Non membre), 500 (Erreur EventService).
+     */
     @GetMapping("/{id}/events")
-    @JsonView(GlobalView.Base.class) // Vue de base pour la liste des événements
-    public ResponseEntity<List<Event>> getClubEvents(@PathVariable Integer id) {
-        // Utilise la méthode existante dans EventService
-        // Vérifie implicitement que le club existe car EventService peut lancer une exception si club non trouvé
-        List<Event> events = eventService.findEventsByOrganisateur(id);
-        // On pourrait aussi ajouter une vérification explicite clubService.existsById(id) avant
-        return ResponseEntity.ok(events);
-    }
-
-    // GET /api/clubs/{id}/events/upcoming - Récupérer les événements futurs organisés par un club
-    @GetMapping("/{id}/events/upcoming")
+    @PreAuthorize("isAuthenticated()")
     @JsonView(GlobalView.Base.class)
-    public ResponseEntity<List<Event>> getClubUpcomingEvents(@PathVariable Integer id) {
-        // Utilise la méthode que nous avons ajoutée précédemment dans EventService
-        List<Event> upcomingEvents = eventService.findUpcomingEventsByOrganisateur(id);
-        // Le service gère le cas où le club n'existe pas (retourne liste vide ou lance exception)
-        return ResponseEntity.ok(upcomingEvents);
+    public List<Event> getClubEvents(@PathVariable Integer id) {
+        // Supposons qu'EventService existe et a la sécurité intégrée
+        return eventService.findEventsByOrganisateurWithSecurityCheck(id);
     }
 
+    /**
+     * GET /api/clubs/{id}/events/upcoming
+     * Récupère les événements futurs d'un club.
+     * Sécurité: Gérée par EventService (doit être membre du club).
+     * Exceptions (gérées globalement): 403 (Non membre), 500 (Erreur EventService).
+     */
+    @GetMapping("/{id}/events/upcoming")
+    @PreAuthorize("isAuthenticated()")
+    @JsonView(GlobalView.Base.class)
+    public List<Event> getClubUpcomingEvents(@PathVariable Integer id) {
+        // Supposons qu'EventService existe et a la sécurité intégrée
+        return eventService.findUpcomingEventsByOrganisateurWithSecurityCheck(id);
+    }
+
+    // Le @ExceptionHandler(MethodArgumentNotValidException.class) a été retiré
+    // et doit être dans GlobalExceptionHandler.
 }

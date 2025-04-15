@@ -9,22 +9,42 @@ import java.util.Optional;
 
 @Repository
 public interface ReservationDao extends JpaRepository<Reservation, Integer> {
-    // Trouver toutes les réservations pour un membre spécifique
+
+    /**
+     * Trouve toutes les réservations d'un membre.
+     */
     List<Reservation> findByMembreId(Integer membreId);
 
-    // Trouver toutes les réservations pour un événement spécifique
+    /**
+     * Trouve toutes les réservations pour un événement.
+     */
     List<Reservation> findByEventId(Integer eventId);
 
-    // Trouver toutes les réservations pour une catégorie spécifique
+    /**
+     * Trouve toutes les réservations pour une catégorie.
+     */
     List<Reservation> findByCategorieId(Integer categorieId);
 
-    // Trouver une réservation spécifique pour un membre et un événement donnés
-    // Utile pour vérifier si un membre a déjà réservé pour cet événement (si 1 réservation/membre/événement)
-    Optional<Reservation> findByMembreIdAndEventId(Integer membreId, Integer eventId);
+    /**
+     * Trouve TOUTES les réservations d'un membre pour un événement donné (utile si > 1 possible).
+     */
+    List<Reservation> findAllByMembreIdAndEventId(Integer membreId, Integer eventId);
 
-    // Compter les réservations pour une catégorie (pour vérifier la capacité)
-    // Note: On peut aussi obtenir la taille de la collection dans l'entité Categorie, mais ceci est une alternative BDD
+    /**
+     * Compte les réservations pour une catégorie (vérification capacité).
+     */
     long countByCategorieId(Integer categorieId);
 
+    /**
+     * Compte les réservations d'un membre pour un événement (vérification limite).
+     */
     long countByMembreIdAndEventId(Integer membreId, Integer eventId);
+
+    /**
+     * Vérifie si un membre a participé à un événement (pour NotationService).
+     */
+    boolean existsByMembreIdAndEventId(Integer membreId, Integer eventId);
+
+    // Optionnel: Trouver par UUID si nécessaire pour une API externe/validation QR code
+    Optional<Reservation> findByReservationUuid(String uuid);
 }

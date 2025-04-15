@@ -7,34 +7,79 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface EventDao extends JpaRepository<Event, Integer> {
-    // Trouver les événements par nom (recherche simple)
+
+    // --- Recherche par Attributs ---
     List<Event> findByNomContainingIgnoreCase(String nom);
 
-    // Trouver les événements organisés par un club spécifique
     List<Event> findByOrganisateurId(Integer clubId);
 
-    // Trouver les événements qui se déroulent après une certaine date/heure
-    List<Event> findByStartAfter(LocalDateTime dateTime);
+    List<Event> findByStartAfter(LocalDateTime dateTime); // Événements futurs
 
-    // Trouver les événements qui se terminent avant une certaine date/heure
-    List<Event> findByEndBefore(LocalDateTime dateTime);
+    List<Event> findByEndBefore(LocalDateTime dateTime); // Événements passés
 
-    // Trouver les événements actifs à un moment donné (entre start et end)
+    List<Event> findByStartBetween(LocalDateTime startTime, LocalDateTime endTime);
+
+    /**
+     * Trouve les événements actifs à un instant T.
+     */
     @Query("SELECT e FROM Event e WHERE e.start <= :now AND e.end >= :now")
     List<Event> findActiveEvents(@Param("now") LocalDateTime now);
 
-    // Trouver les événements dans une plage de dates
-    List<Event> findByStartBetween(LocalDateTime startTime, LocalDateTime endTime);
+    // --- Recherche Combinée ---
 
-    // Compte les événements commençant dans une période donnée
+    /**
+     * Événements futurs organisés par une liste de clubs.
+     */
+    List<Event> findByOrganisateurIdInAndStartAfter(Collection<Integer> clubIds, LocalDateTime now);
+
+    /**
+     * Événements futurs organisés par un club.
+     */
+    List<Event> findByOrganisateurIdAndStartAfter(Integer clubId, LocalDateTime now);
+
+    // --- Comptage ---
+    long countByOrganisateurId(Integer clubId);
+
     long countByStartBetween(LocalDateTime startDate, LocalDateTime endDate);
 
+    long countByOrganisateurIdAndStartBetween(Integer clubId, LocalDateTime start, LocalDateTime end);
 
-    List<Event> findByOrganisateurIdAndStartAfter(Integer clubId, LocalDateTime now);
-    
+    // --- Requêtes Spécifiques ---
+
+    /**
+     * Récupère les IDs des événements passés d'un organisateur.
+     */
+    @Query("SELECT e.id FROM Event e WHERE e.organisateur.id = :clubId AND e.end < :now")
+    List<Integer> findPastEventIdsByOrganisateurId(@Param("clubId") Integer clubId, @Param("now") LocalDateTime now);
+
+    /**
+     * Récupère le nombre de réservations et la capacité totale pour chaque événement d'un club
+     * ayant une capacité > 0.
+     * Correction: Utilise LEFT JOIN pour inclure les événements sans réservation.
+     */
+    @Query("SELECT e.id, COUNT(r.id), SUM(COALESCE(c.capacite, 0)) " + // Utilise COALESCE pour SUM sur potentiellement 0 catégories
+            "FROM Event e " +
+            "LEFT JOIN e.categories c " + // LEFT JOIN pour inclure event sans catégorie
+            "LEFT JOIN c.reservations r " + // LEFT JOIN pour inclure catégorie sans réservation
+            "WHERE e.organisateur.id = :clubId " +
+            "GROUP BY e.id " +
+            "HAVING SUM(COALESCE(c.capacite, 0)) > 0")
+    // Assure capacité totale > 0
+    List<Object[]> findEventStatsForOccupancy(@Param("clubId") Integer clubId);
+
+    // --- Ajout pour suppression sécurisée ---
+
+    /**
+     * Trouve un événement par son ID, en chargeant EAGERLY ses catégories et les réservations de ces catégories.
+     * Nécessaire pour vérifier les réservations avant suppression.
+     */
+    @Query("SELECT e FROM Event e LEFT JOIN FETCH e.categories c LEFT JOIN FETCH c.reservations r WHERE e.id = :eventId")
+    Optional<Event> findByIdFetchingCategoriesAndReservations(@Param("eventId") Integer eventId);
 
 }

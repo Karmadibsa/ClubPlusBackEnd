@@ -1,240 +1,152 @@
 package org.clubplus.clubplusbackend.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
-import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.clubplus.clubplusbackend.dao.DemandeAmiDao;
 import org.clubplus.clubplusbackend.model.DemandeAmi;
 import org.clubplus.clubplusbackend.model.Membre;
-import org.clubplus.clubplusbackend.security.Statut;
+import org.clubplus.clubplusbackend.security.SecurityService;
 import org.clubplus.clubplusbackend.service.DemandeAmiService;
-import org.clubplus.clubplusbackend.service.MembreService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+// Retrait Map, Optional, Authentication, MembreService si plus nécessaires
 
+/**
+ * Controller gérant les demandes d'ami et les relations d'amitié.
+ * Sécurité de base (@PreAuthorize), les vérifications contextuelles sont dans DemandeAmiService.
+ */
 @RestController
-@RequestMapping("/api/amis") // Préfixe pour les opérations liées aux amis/demandes
+@RequestMapping("/api/amis") // Ou "/api/friendships" ? "/api/amis" est bien.
 @RequiredArgsConstructor
 @CrossOrigin
 public class DemandeAmiController {
 
     private final DemandeAmiService demandeAmiService;
-    private final DemandeAmiDao demandeAmiRepository;
-    private final MembreService membreService; // Nécessaire pour l'ID utilisateur
-
-    // --- Méthode utilitaire (privée) pour obtenir l'ID de l'utilisateur connecté ---
-    // À remplacer par votre vraie logique de sécurité
-    private Integer getConnectedUserId(/* Authentication authentication */) {
-        /*
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getPrincipal())) {
-             return null; // Ou lancer une exception d'authentification
-        }
-        String userEmail = auth.getName();
-        Membre user = membreService.findMembreByEmail(userEmail).orElse(null);
-        return (user != null) ? user.getId() : null;
-        */
-        // --- Placeholder non sécurisé ---
-        return 1; // Simule l'utilisateur avec ID 1 connecté
-        // --- Fin Placeholder ---
-    }
+    private final SecurityService securityService;
 
 
     /**
-     * Envoie une demande d'ami à un autre membre.
-     * L'envoyeur est l'utilisateur connecté.
+     * POST /api/amis/demandes/envoyer/{recepteurId}
+     * Envoie une demande d'ami à un autre utilisateur.
+     * Sécurité: Utilisateur authentifié.
+     * Exceptions (gérées globalement): 404 (Récepteur non trouvé), 400 (Auto-demande),
+     * 409 (Demande/Amitié existante), 401 (Non authentifié).
      */
     @PostMapping("/demandes/envoyer/{recepteurId}")
+    @PreAuthorize("isAuthenticated()")
+    @ResponseStatus(HttpStatus.CREATED) // Statut 201
     @JsonView(GlobalView.DemandeView.class) // Retourne la demande créée
-    // @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> sendFriendRequest(@PathVariable Integer recepteurId) {
-        Integer envoyeurId = getConnectedUserId();
-        if (envoyeurId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentification requise."));
-        }
-
-        try {
-            DemandeAmi demande = demandeAmiService.sendFriendRequest(envoyeurId, recepteurId);
-            return ResponseEntity.status(HttpStatus.CREATED).body(demande);
-        } catch (EntityNotFoundException e) { // Receveur non trouvé
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-        } catch (IllegalArgumentException | IllegalStateException e) { // Auto-demande, déjà amis/demandé
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error(...)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Erreur interne lors de l'envoi de la demande."));
-        }
+    public DemandeAmi sendFriendRequest(@PathVariable Integer recepteurId) {
+        // Le service utilise SecurityService pour obtenir l'envoyeurId
+        return demandeAmiService.sendFriendRequest(securityService.getCurrentUserIdOrThrow(), recepteurId); // Passer l'ID courant explicitement
+        // Ou si le service est modifié pour récupérer l'ID lui-même:
+        // return demandeAmiService.sendFriendRequest(recepteurId);
     }
 
     /**
+     * PUT /api/amis/demandes/accepter/{demandeId}
      * Accepte une demande d'ami reçue.
-     * L'accepteur est l'utilisateur connecté.
+     * Sécurité: Utilisateur authentifié. Vérification du récepteur dans le service.
+     * Exceptions (gérées globalement): 404 (Demande non trouvée), 403 (Pas le récepteur),
+     * 409 (Demande pas en attente), 401 (Non authentifié).
      */
     @PutMapping("/demandes/accepter/{demandeId}")
+    @PreAuthorize("isAuthenticated()")
     @JsonView(GlobalView.DemandeView.class) // Retourne la demande mise à jour
-    // @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> acceptFriendRequest(@PathVariable Integer demandeId) {
-        Integer accepteurId = getConnectedUserId();
-        if (accepteurId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentification requise."));
-        }
-
-        try {
-            DemandeAmi demande = demandeAmiService.acceptFriendRequest(demandeId, accepteurId);
-            return ResponseEntity.ok(demande);
-        } catch (EntityNotFoundException e) { // Demande non trouvée
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-        } catch (SecurityException e) { // Pas le récepteur
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
-        } catch (IllegalStateException e) { // Pas en attente
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error(...)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Erreur interne lors de l'acceptation."));
-        }
+    public DemandeAmi acceptFriendRequest(@PathVariable Integer demandeId) {
+        // Le service utilise SecurityService pour vérifier que l'utilisateur courant est le récepteur
+        return demandeAmiService.acceptFriendRequest(demandeId);
     }
 
     /**
+     * PUT /api/amis/demandes/refuser/{demandeId}
      * Refuse une demande d'ami reçue.
-     * Le refuseur est l'utilisateur connecté.
+     * Sécurité: Utilisateur authentifié. Vérification du récepteur dans le service.
+     * Exceptions (gérées globalement): 404, 403, 409, 401.
      */
-    @PutMapping("/demandes/refuser/{demandeId}") // Ou @DeleteMapping si on supprime
-    @JsonView(GlobalView.DemandeView.class) // Retourne la demande mise à jour (si statut REFUSE)
-    // @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> refuseFriendRequest(@PathVariable Integer demandeId) {
-        Integer refuseurId = getConnectedUserId();
-        if (refuseurId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentification requise."));
-        }
-
-        try {
-            DemandeAmi demande = demandeAmiService.refuseFriendRequest(demandeId, refuseurId);
-            return ResponseEntity.ok(demande); // 200 OK avec la demande marquée REFUSE
-            // Si le service supprime au lieu de marquer REFUSE :
-            // demandeAmiService.refuseFriendRequest(demandeId, refuseurId);
-            // return ResponseEntity.noContent().build(); // 204 No Content
-        } catch (EntityNotFoundException e) { // Demande non trouvée
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-        } catch (SecurityException e) { // Pas le récepteur
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
-        } catch (IllegalStateException e) { // Pas en attente
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error(...)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Erreur interne lors du refus."));
-        }
+    @PutMapping("/demandes/refuser/{demandeId}")
+    @PreAuthorize("isAuthenticated()")
+    @JsonView(GlobalView.DemandeView.class) // Retourne la demande mise à jour (avec statut REFUSEE)
+    public DemandeAmi refuseFriendRequest(@PathVariable Integer demandeId) {
+        // Le service utilise SecurityService pour vérifier que l'utilisateur courant est le récepteur
+        return demandeAmiService.refuseFriendRequest(demandeId);
+        // Si le service supprime la demande, changer le retour en void + @ResponseStatus(NO_CONTENT)
     }
 
     /**
-     * Annule une demande d'ami envoyée (par l'envoyeur).
-     * L'annuleur est l'utilisateur connecté.
+     * DELETE /api/amis/demandes/annuler/{demandeId}
+     * Annule une demande d'ami envoyée par l'utilisateur courant.
+     * Sécurité: Utilisateur authentifié. Vérification de l'envoyeur dans le service.
+     * Exceptions (gérées globalement): 404, 403, 409, 401.
      */
     @DeleteMapping("/demandes/annuler/{demandeId}")
-    // @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> cancelFriendRequest(@PathVariable Integer demandeId) {
-        Integer annuleurId = getConnectedUserId();
-        if (annuleurId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentification requise."));
-        }
-
-        try {
-            demandeAmiService.cancelFriendRequest(demandeId, annuleurId);
-            return ResponseEntity.noContent().build(); // 204 No Content
-        } catch (EntityNotFoundException e) { // Demande non trouvée
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", e.getMessage()));
-        } catch (SecurityException e) { // Pas l'envoyeur
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("error", e.getMessage()));
-        } catch (IllegalStateException e) { // Pas en attente
-            return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error(...)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Erreur interne lors de l'annulation."));
-        }
+    @PreAuthorize("isAuthenticated()")
+    @ResponseStatus(HttpStatus.NO_CONTENT) // Statut 204
+    public void cancelFriendRequest(@PathVariable Integer demandeId) {
+        // Le service utilise SecurityService pour vérifier que l'utilisateur courant est l'envoyeur
+        demandeAmiService.cancelFriendRequest(demandeId);
     }
 
     /**
-     * Supprime une relation d'amitié existante (demande avec statut ACCEPTE).
-     * Le suppresseur est l'utilisateur connecté (qui doit être l'un des deux amis).
-     *
-     * @param amiId L'ID de l'ami à retirer.
+     * DELETE /api/amis/{amiId}
+     * Supprime une relation d'amitié avec un autre utilisateur.
+     * Sécurité: Utilisateur authentifié. Vérification de l'implication dans l'amitié dans le service.
+     * Exceptions (gérées globalement): 404 (Amitié non trouvée), 400 (Auto-suppression), 401.
      */
     @DeleteMapping("/{amiId}")
-    // @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> removeFriend(@PathVariable Integer amiId) {
-        Integer membreId = getConnectedUserId();
-        if (membreId == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "Authentification requise."));
-        }
-
-        // Trouver la demande ACCEPTEE entre membreId et amiId
-        List<DemandeAmi> relations = demandeAmiRepository.findAllAcceptedRequestsInvolvingUser(membreId, Statut.ACCEPTE);
-        Optional<DemandeAmi> relationToRemove = relations.stream()
-                .filter(d -> d.getEnvoyeur().getId().equals(amiId) || d.getRecepteur().getId().equals(amiId))
-                .findFirst();
-
-        if (relationToRemove.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Aucune relation d'amitié active trouvée avec cet utilisateur."));
-        }
-
-        try {
-            // On utilise l'ID de la DemandeAmi trouvée
-            demandeAmiService.removeFriendship(relationToRemove.get().getId(), membreId);
-            return ResponseEntity.noContent().build(); // 204 No Content
-        } catch (EntityNotFoundException | SecurityException | IllegalStateException e) {
-            // Ces erreurs ne devraient pas arriver si la logique ci-dessus est correcte, mais par sécurité :
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("error", e.getMessage()));
-        } catch (Exception e) {
-            // logger.error(...)
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("error", "Erreur interne lors de la suppression de l'ami."));
-        }
+    @PreAuthorize("isAuthenticated()")
+    @ResponseStatus(HttpStatus.NO_CONTENT) // Statut 204
+    public void removeFriend(@PathVariable Integer amiId) {
+        // Le service utilise SecurityService pour obtenir l'ID courant et vérifier l'amitié
+        demandeAmiService.removeFriendshipByFriendId(amiId);
     }
 
-
-    // --- Consultation des demandes ---
+    // --- Consultation ---
 
     /**
-     * Récupère les demandes d'ami reçues en attente pour l'utilisateur connecté.
+     * GET /api/amis/demandes/recues
+     * Récupère les demandes d'ami reçues en attente par l'utilisateur courant.
+     * Sécurité: Utilisateur authentifié.
+     * Exceptions (gérées globalement): 401.
      */
     @GetMapping("/demandes/recues")
-    @JsonView(GlobalView.DemandeView.class) // Montre la demande et l'envoyeur
-    // @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> getPendingReceivedRequests() {
-        Integer membreId = getConnectedUserId();
-        if (membreId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        List<DemandeAmi> demandes = demandeAmiService.getPendingReceivedRequests(membreId);
-        return ResponseEntity.ok(demandes);
+    @PreAuthorize("isAuthenticated()")
+    @JsonView(GlobalView.DemandeView.class)
+    public List<DemandeAmi> getPendingReceivedRequests() {
+        // Le service utilise SecurityService pour obtenir l'ID courant
+        return demandeAmiService.getPendingReceivedRequests();
     }
 
     /**
-     * Récupère les demandes d'ami envoyées en attente par l'utilisateur connecté.
+     * GET /api/amis/demandes/envoyees
+     * Récupère les demandes d'ami envoyées en attente par l'utilisateur courant.
+     * Sécurité: Utilisateur authentifié.
+     * Exceptions (gérées globalement): 401.
      */
     @GetMapping("/demandes/envoyees")
-    @JsonView(GlobalView.DemandeView.class) // Montre la demande et le récepteur
-    // @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> getPendingSentRequests() {
-        Integer membreId = getConnectedUserId();
-        if (membreId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        List<DemandeAmi> demandes = demandeAmiService.getPendingSentRequests(membreId);
-        return ResponseEntity.ok(demandes);
+    @PreAuthorize("isAuthenticated()")
+    @JsonView(GlobalView.DemandeView.class)
+    public List<DemandeAmi> getPendingSentRequests() {
+        // Le service utilise SecurityService pour obtenir l'ID courant
+        return demandeAmiService.getPendingSentRequests();
     }
 
     /**
-     * Récupère la liste des amis (Membres) de l'utilisateur connecté.
+     * GET /api/amis
+     * Récupère la liste des amis (objets Membre) de l'utilisateur courant.
+     * Sécurité: Utilisateur authentifié.
+     * Exceptions (gérées globalement): 401.
      */
     @GetMapping("") // GET /api/amis
-    @JsonView(GlobalView.Base.class) // On retourne juste les infos de base des membres amis
-    // @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<?> getFriends() {
-        Integer membreId = getConnectedUserId();
-        if (membreId == null) return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-        List<Membre> amis = demandeAmiService.getFriends(membreId);
-        return ResponseEntity.ok(amis);
+    @PreAuthorize("isAuthenticated()")
+    @JsonView(GlobalView.Base.class) // Vue de base pour la liste d'amis
+    public List<Membre> getFriends() {
+        // Le service utilise SecurityService pour obtenir l'ID courant
+        return demandeAmiService.getFriends();
     }
 
+    // Pas besoin de @ExceptionHandler ici, doit être dans GlobalExceptionHandler.
 }

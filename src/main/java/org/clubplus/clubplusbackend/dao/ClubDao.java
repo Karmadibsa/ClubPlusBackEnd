@@ -9,17 +9,35 @@ import java.util.Optional;
 
 @Repository
 public interface ClubDao extends JpaRepository<Club, Integer> {
-    // Trouver un club par son code unique (généré automatiquement)
+
+    /**
+     * Trouve un club par son code unique (généré).
+     */
     Optional<Club> findByCodeClub(String codeClub);
 
-    // Trouver des clubs par ville (recherche fréquente)
+    /**
+     * Trouve des clubs dont la ville contient la chaîne fournie (ignorant la casse).
+     */
     List<Club> findByVilleContainingIgnoreCase(String ville);
 
-    // Trouver un club par l'ID de son administrateur (si nécessaire)
-    Optional<Club> findByAdminId(Integer adminId);
+    /**
+     * Trouve des clubs dont le nom contient la chaîne fournie (ignorant la casse).
+     */
+    List<Club> findByNomContainingIgnoreCase(String nom);
 
-    // Vérifier si un club existe avec un certain email (pour validation)
+    /**
+     * Vérifie si un club existe avec un email donné (pour validation unicité).
+     */
     boolean existsByEmail(String email);
 
+    /**
+     * Trouve un club par son email exact.
+     */
+    Optional<Club> findByEmail(String email); // Type de retour Optional<Club> est correct
 
+    /**
+     * Vérifie s'il existe un AUTRE club (ID différent) avec le même email.
+     * Utile pour la validation lors de la mise à jour.
+     */
+    boolean existsByEmailAndIdNot(String email, Integer id);
 }

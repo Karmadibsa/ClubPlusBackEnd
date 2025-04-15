@@ -2,13 +2,14 @@ package org.clubplus.clubplusbackend.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.clubplus.clubplusbackend.dao.*;
-import org.clubplus.clubplusbackend.model.Event;
-import org.clubplus.clubplusbackend.security.Statut;
+import org.clubplus.clubplusbackend.dao.AdhesionDao;
+import org.clubplus.clubplusbackend.dao.ClubDao;
+import org.clubplus.clubplusbackend.dao.EventDao;
+import org.clubplus.clubplusbackend.dao.NotationDao;
+import org.clubplus.clubplusbackend.security.SecurityService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -17,212 +18,233 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true) // La plupart des stats sont en lecture seule
+@Transactional(readOnly = true) // La plupart des méthodes sont en lecture seule
 public class StatsService {
 
     private final EventDao eventRepository;
-    private final DemandeAmiDao demandeAmiRepository;
     private final NotationDao notationRepository;
-    private final MembreDao membreRepository;
-    private final ClubDao clubRepository; // Pour vérifier l'existence du club
+    private final ClubDao clubRepository;
+    private final AdhesionDao adhesionRepository;
+    private final SecurityService securityService; // Pour les vérifications de droits
 
     /**
-     * Calcule le taux d'occupation pour les événements.
-     *
-     * @return Une liste de Maps, chaque Map contenant "eventId", "eventName", "occupancyRate".
+     * STAT 1: Nouvelles adhésions mensuelles pour un club (12 derniers mois).
+     * Sécurité: Vérifie que l'appelant est MANAGER du club.
+     * Lance 404 (Club non trouvé), 403 (Non manager).
      */
-    public List<Map<String, Object>> getEventOccupancyRates() {
-        List<Event> events = eventRepository.findAll(); // Ou filtrer si nécessaire
+    public List<Map<String, Object>> getClubMonthlyRegistrations(Integer clubId) {
+        // 1. Sécurité d'abord
+        securityService.checkManagerOfClubOrThrow(clubId); // Lance 403 si pas manager
 
-        return events.stream()
-                .map(event -> {
-                    double occupancyRate = 0.0;
-                    int totalCapacity = event.getPlaceTotal();
-                    if (totalCapacity > 0) {
-                        occupancyRate = ((double) event.getPlaceReserve() / totalCapacity) * 100.0;
-                    }
-                    // Arrondir à 2 décimales pour la propreté
-                    occupancyRate = Math.round(occupancyRate * 100.0) / 100.0;
-
-                    Map<String, Object> eventStat = new HashMap<>();
-                    eventStat.put("eventId", event.getId());
-                    eventStat.put("eventName", event.getNom());
-                    eventStat.put("occupancyRate", occupancyRate);
-                    return eventStat;
-                })
-                .collect(Collectors.toList());
-    }
-
-    /**
-     * Compte le nombre d'événements commençant dans les 30 prochains jours.
-     *
-     * @return Le nombre d'événements.
-     */
-    public long countUpcomingEventsNext30Days() {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime futureDate = now.plusDays(30);
-        return eventRepository.countByStartBetween(now, futureDate);
-    }
-
-    /**
-     * Calcule les moyennes des notes pour un événement spécifique.
-     *
-     * @param eventId L'ID de l'événement.
-     * @return Une Map contenant les moyennes par critère et la moyenne générale.
-     * @throws EntityNotFoundException si l'événement n'existe pas.
-     */
-    public Map<String, Double> getAverageRatingsForEvent(Integer eventId) {
-        if (!eventRepository.existsById(eventId)) {
-            throw new EntityNotFoundException("Événement non trouvé avec l'ID : " + eventId);
+        // 2. Vérifier existence club (pour 404 clair)
+        if (!clubRepository.existsById(clubId)) {
+            throw new EntityNotFoundException("Club non trouvé avec l'ID : " + clubId); // -> 404
         }
 
-        Double ambianceAvg = notationRepository.findAverageAmbianceByEventId(eventId);
-        Double propreteAvg = notationRepository.findAveragePropreteByEventId(eventId);
-        Double organisationAvg = notationRepository.findAverageOrganisationByEventId(eventId);
-        Double fairPlayAvg = notationRepository.findAverageFairPlayByEventId(eventId);
-        Double niveauJoueursAvg = notationRepository.findAverageNiveauJoueursByEventId(eventId);
+        // 3. Calculer la période et appeler le DAO
+        LocalDateTime today = LocalDateTime.now();
+        LocalDateTime startDate = today.minusMonths(11).withDayOfMonth(1).toLocalDate().atStartOfDay();
+        List<Object[]> results = adhesionRepository.findMonthlyAdhesionsToClubSince(clubId, startDate);
 
-        List<Double> validAverages = new ArrayList<>();
-        if (ambianceAvg != null) validAverages.add(ambianceAvg);
-        if (propreteAvg != null) validAverages.add(propreteAvg);
-        if (organisationAvg != null) validAverages.add(organisationAvg);
-        if (fairPlayAvg != null) validAverages.add(fairPlayAvg);
-        if (niveauJoueursAvg != null) validAverages.add(niveauJoueursAvg);
-
-        Double generalAverage = validAverages.stream()
-                .mapToDouble(Double::doubleValue)
-                .average()
-                .orElse(0.0); // Moyenne de 0 si aucune note
-
-        Map<String, Double> averages = new LinkedHashMap<>(); // LinkedHashMap pour garder l'ordre
-        averages.put("ambiance", Optional.ofNullable(ambianceAvg).orElse(0.0));
-        averages.put("proprete", Optional.ofNullable(propreteAvg).orElse(0.0));
-        averages.put("organisation", Optional.ofNullable(organisationAvg).orElse(0.0));
-        averages.put("fairPlay", Optional.ofNullable(fairPlayAvg).orElse(0.0));
-        averages.put("niveauJoueurs", Optional.ofNullable(niveauJoueursAvg).orElse(0.0));
-        averages.put("moyenneGenerale", Math.round(generalAverage * 100.0) / 100.0); // Arrondi
-
-        return averages;
+        // 4. Formater les résultats
+        return formatMonthlyResults(results, startDate, today);
     }
 
     /**
-     * Récupère le nombre d'inscriptions mensuelles sur les 12 derniers mois.
-     *
-     * @return Une liste de Maps, chaque Map contenant "monthYear" (String YYYY-MM) et "count" (long).
+     * STAT 2: Moyennes des notes des événements passés du club.
+     * Sécurité: Vérifie que l'appelant est MANAGER du club.
+     * Lance 404 (Club non trouvé), 403 (Non manager).
      */
-    public List<Map<String, Object>> getMonthlyRegistrationsLast12Months() {
-        LocalDate today = LocalDate.now();
-        LocalDate startDate = today.minusMonths(11).withDayOfMonth(1); // Premier jour du mois il y a 11 mois
-
-        List<Object[]> results = membreRepository.findMonthlyRegistrationsSince(startDate);
-
-        // Préparer une map pour tous les 12 mois avec compte à 0
-        Map<YearMonth, Long> monthlyCounts = new LinkedHashMap<>();
-        YearMonth currentMonth = YearMonth.from(startDate);
-        for (int i = 0; i < 12; i++) {
-            monthlyCounts.put(currentMonth, 0L);
-            currentMonth = currentMonth.plusMonths(1);
+    public Map<String, Double> getClubAverageEventRatings(Integer clubId) {
+        securityService.checkManagerOfClubOrThrow(clubId); // -> 403
+        if (!clubRepository.existsById(clubId)) {
+            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
         }
 
-        // Remplir avec les données de la BDD
-        for (Object[] result : results) {
-            Integer year = (Integer) result[0];
-            Integer month = (Integer) result[1];
-            Long count = (Long) result[2];
-            YearMonth ym = YearMonth.of(year, month);
-            if (monthlyCounts.containsKey(ym)) { // Sécurité, ne devrait arriver que pour les 12 mois concernés
-                monthlyCounts.put(ym, count);
+        List<Integer> pastEventIds = eventRepository.findPastEventIdsByOrganisateurId(clubId, LocalDateTime.now());
+        if (pastEventIds.isEmpty()) {
+            return defaultRatingMap(); // Pas d'événements passés = pas de notes
+        }
+
+        // Appeler le DAO qui calcule toutes les moyennes en une fois
+        Optional<Object[]> averagesResult = notationRepository.findAverageRatingsForEventIds(pastEventIds);
+        if (averagesResult.isEmpty() || averagesResult.get()[0] == null) {
+            // Si la première moyenne est null, aucune notation n'a été trouvée pour ces events
+            return defaultRatingMap();
+        }
+
+        Object[] averagesArray = averagesResult.get();
+        Map<String, Double> averagesMap = new LinkedHashMap<>();
+        double sum = 0;
+        int count = 0;
+
+        // Extraction plus sûre et calcul moyenne générale
+        double[] notes = new double[5];
+        notes[0] = extractDouble(averagesArray, 0); // ambiance
+        notes[1] = extractDouble(averagesArray, 1); // proprete
+        notes[2] = extractDouble(averagesArray, 2); // organisation
+        notes[3] = extractDouble(averagesArray, 3); // fairPlay
+        notes[4] = extractDouble(averagesArray, 4); // niveauJoueurs
+
+        for (double note : notes) {
+            if (note > 0) { // AVG retourne null si aucune ligne, ce qui donne 0.0 ici. On ne compte que les vraies moyennes.
+                sum += note;
+                count++;
             }
         }
 
-        // Transformer en List<Map<String, Object>> pour l'API
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
-        return monthlyCounts.entrySet().stream()
-                .map(entry -> {
-                    Map<String, Object> monthData = new HashMap<>();
-                    monthData.put("monthYear", entry.getKey().format(formatter));
-                    monthData.put("count", entry.getValue());
-                    return monthData;
-                })
-                .collect(Collectors.toList());
+        averagesMap.put("ambiance", notes[0]);
+        averagesMap.put("proprete", notes[1]);
+        averagesMap.put("organisation", notes[2]);
+        averagesMap.put("fairPlay", notes[3]);
+        averagesMap.put("niveauJoueurs", notes[4]);
+        averagesMap.put("moyenneGenerale", (count > 0) ? sum / count : 0.0);
+
+        // Arrondir
+        averagesMap.replaceAll((key, value) -> Math.round(value * 10.0) / 10.0); // 1 décimale suffit peut-être
+        return averagesMap;
     }
 
     /**
-     * Calcule le nombre total de membres pour un club spécifique.
-     *
-     * @param clubId L'ID du club.
-     * @return Le nombre total de membres.
-     * @throws EntityNotFoundException si le club n'existe pas.
+     * STAT 3: Nombre total d'événements pour un club.
+     * Sécurité: Vérifie que l'appelant est MANAGER du club.
+     * Lance 404 (Club non trouvé), 403 (Non manager).
      */
-    public long getTotalMembersForClub(Integer clubId) {
+    public long getTotalEventsForClub(Integer clubId) {
+        securityService.checkManagerOfClubOrThrow(clubId); // -> 403
         if (!clubRepository.existsById(clubId)) {
-            throw new EntityNotFoundException("Club non trouvé avec l'ID : " + clubId);
+            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
         }
-        return membreRepository.countByClubId(clubId);
+        return eventRepository.countByOrganisateurId(clubId); // Méthode DAO simple
     }
 
     /**
-     * Calcule le nombre moyen d'amis par membre.
-     *
-     * @return Le nombre moyen d'amis, ou 0.0 si aucun membre n'existe.
+     * STAT 4: Taux d'occupation moyen des événements du club (capacité > 0).
+     * Sécurité: Vérifie que l'appelant est MANAGER du club.
+     * Lance 404 (Club non trouvé), 403 (Non manager).
      */
-    public double getAverageFriendsPerMember() {
-        long totalMembers = membreRepository.count();
-        if (totalMembers == 0) {
+    public double getClubAverageEventOccupancy(Integer clubId) {
+        securityService.checkManagerOfClubOrThrow(clubId); // -> 403
+        if (!clubRepository.existsById(clubId)) {
+            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
+        }
+
+        List<Object[]> eventStatsList = eventRepository.findEventStatsForOccupancy(clubId); // Utilise la requête DAO optimisée
+        if (eventStatsList.isEmpty()) {
             return 0.0;
         }
-        // Chaque ligne ACCEPTE représente une amitié liant 2 personnes
-        long totalFriendshipRows = demandeAmiRepository.countByStatut(Statut.ACCEPTE);
-        long totalFriendConnections = totalFriendshipRows * 2;
 
-        double average = (double) totalFriendConnections / totalMembers;
-        // Arrondir à 2 décimales
-        return Math.round(average * 100.0) / 100.0;
-    }
+        double totalOccupancyPercentageSum = 0;
+        // On utilise la taille de la liste car chaque ligne représente un événement valide (capacité > 0)
+        int numberOfEventsConsidered = eventStatsList.size();
 
-    /**
-     * Récupère les N événements passés les mieux notés (basé sur la moyenne générale des notes).
-     *
-     * @param limit Le nombre maximum d'événements à retourner (ex: 5).
-     * @return Une liste de Maps, chaque Map contenant "eventId", "eventName", "overallAverageRating".
-     * La liste est triée par note décroissante.
-     */
-    public List<Map<String, Object>> getTopRatedEvents(int limit) {
-        List<Event> pastEvents = eventRepository.findByEndBefore(LocalDateTime.now());
-        if (pastEvents.isEmpty()) {
-            return List.of(); // Retourne une liste vide si pas d'événements passés
-        }
+        for (Object[] stats : eventStatsList) {
+            // stats[0] = eventId (inutilisé ici)
+            long reservedCount = stats[1] != null ? ((Number) stats[1]).longValue() : 0L; // COUNT peut être null si LEFT JOIN
+            long totalCapacity = stats[2] != null ? ((Number) stats[2]).longValue() : 0L; // SUM peut être null si LEFT JOIN
 
-        List<Map<String, Object>> ratedEvents = new ArrayList<>();
-
-        for (Event event : pastEvents) {
-            // Utilise la logique de getAverageRatingsForEvent pour obtenir la moyenne générale
-            // Note: Ceci peut être optimisé avec une requête unique si performance devient un problème
-            try {
-                Map<String, Double> averages = getAverageRatingsForEvent(event.getId());
-                // Récupère la moyenne générale calculée (peut être null ou 0.0 si pas de notes)
-                Double overallAverage = averages.getOrDefault("moyenneGenerale", 0.0);
-
-                if (overallAverage > 0) { // Ne considérer que les événements ayant au moins une note
-                    Map<String, Object> eventRating = new HashMap<>();
-                    eventRating.put("eventId", event.getId());
-                    eventRating.put("eventName", event.getNom());
-                    eventRating.put("overallAverageRating", overallAverage);
-                    ratedEvents.add(eventRating);
-                }
-            } catch (EntityNotFoundException e) {
-                // Ignore si l'événement n'est étrangement pas trouvé pendant le calcul (ne devrait pas arriver)
+            // La clause HAVING assure totalCapacity > 0, mais une vérification reste prudente
+            if (totalCapacity > 0) {
+                totalOccupancyPercentageSum += ((double) reservedCount / totalCapacity) * 100.0;
+            } else {
+                numberOfEventsConsidered--; // Ne pas compter cet événement s'il a une capacité nulle malgré HAVING
             }
         }
 
-        // Trier la liste par "overallAverageRating" en ordre décroissant
-        ratedEvents.sort((map1, map2) -> {
-            Double rating1 = (Double) map1.getOrDefault("overallAverageRating", 0.0);
-            Double rating2 = (Double) map2.getOrDefault("overallAverageRating", 0.0);
-            return rating2.compareTo(rating1); // Tri décroissant
-        });
+        if (numberOfEventsConsidered == 0) {
+            return 0.0;
+        }
 
-        // Retourner les 'limit' premiers éléments
-        return ratedEvents.stream().limit(limit).collect(Collectors.toList());
+        double averageRate = totalOccupancyPercentageSum / numberOfEventsConsidered;
+        return Math.round(averageRate * 10.0) / 10.0; // Arrondir à 1 décimale
+    }
+
+    /**
+     * STAT 5: Nombre d'événements à venir (30j) pour un club.
+     * Sécurité: Vérifie que l'appelant est MANAGER du club.
+     * Lance 404 (Club non trouvé), 403 (Non manager).
+     */
+    public long getClubUpcomingEventCount30d(Integer clubId) {
+        securityService.checkManagerOfClubOrThrow(clubId); // -> 403
+        if (!clubRepository.existsById(clubId)) {
+            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
+        }
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime futureDate = now.plusDays(30);
+        return eventRepository.countByOrganisateurIdAndStartBetween(clubId, now, futureDate); // Méthode DAO
+    }
+
+    /**
+     * STAT 6: Nombre total de membres pour un club.
+     * Sécurité: Vérifie que l'appelant est MANAGER du club.
+     * Lance 404 (Club non trouvé), 403 (Non manager).
+     */
+    public long getTotalMembersForClub(Integer clubId) {
+        securityService.checkManagerOfClubOrThrow(clubId); // -> 403
+        if (!clubRepository.existsById(clubId)) {
+            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
+        }
+        return adhesionRepository.countByClubId(clubId); // Méthode DAO simple
+    }
+
+    // --- Méthodes Helper Privées ---
+
+    private List<Map<String, Object>> formatMonthlyResults(List<Object[]> results, LocalDateTime startDate, LocalDateTime today) {
+        Map<YearMonth, Long> monthlyCounts = new TreeMap<>(); // TreeMap pour trier par clé (YearMonth)
+        YearMonth startMonth = YearMonth.from(startDate);
+        YearMonth endMonth = YearMonth.from(today);
+
+        // Initialiser les 12 derniers mois (ou moins si l'app est plus récente)
+        YearMonth current = startMonth;
+        while (!current.isAfter(endMonth)) {
+            monthlyCounts.put(current, 0L);
+            current = current.plusMonths(1);
+        }
+
+        // Remplir avec les résultats de la BDD
+        for (Object[] result : results) {
+            try {
+                if (result[0] != null && result[1] != null && result[2] != null) {
+                    int year = ((Number) result[0]).intValue();
+                    int month = ((Number) result[1]).intValue();
+                    long count = ((Number) result[2]).longValue();
+                    YearMonth ym = YearMonth.of(year, month);
+                    if (monthlyCounts.containsKey(ym)) { // Mettre à jour seulement les mois pré-initialisés
+                        monthlyCounts.put(ym, count);
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Erreur formatage adhésions mensuelles: " + Arrays.toString(result) + " - " + e.getMessage()); // -> Logger
+            }
+        }
+
+        // Formater pour la sortie API
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
+        return monthlyCounts.entrySet().stream()
+                .map(entry -> Map.<String, Object>of("monthYear", entry.getKey().format(formatter), "count", entry.getValue()))
+                .collect(Collectors.toList());
+    }
+
+    private Map<String, Double> defaultRatingMap() {
+        // Utiliser LinkedHashMap si l'ordre d'insertion est important pour l'affichage
+        Map<String, Double> map = new LinkedHashMap<>();
+        map.put("ambiance", 0.0);
+        map.put("proprete", 0.0);
+        map.put("organisation", 0.0);
+        map.put("fairPlay", 0.0);
+        map.put("niveauJoueurs", 0.0);
+        map.put("moyenneGenerale", 0.0);
+        return map;
+    }
+
+    private double extractDouble(Object[] array, int index) {
+        if (array == null || index < 0 || index >= array.length || array[index] == null) {
+            return 0.0; // AVG(col) retourne NULL si aucune ligne, ce qui devient 0.0
+        }
+        if (array[index] instanceof Number) {
+            return ((Number) array[index]).doubleValue();
+        }
+        System.err.println("WARN: Type inattendu pour moyenne de notation à l'index " + index + ": " + array[index].getClass()); // -> Logger
+        return 0.0;
     }
 }

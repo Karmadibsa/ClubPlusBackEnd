@@ -6,13 +6,13 @@ import org.clubplus.clubplusbackend.dao.DemandeAmiDao;
 import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.model.DemandeAmi;
 import org.clubplus.clubplusbackend.model.Membre;
+import org.clubplus.clubplusbackend.security.SecurityService;
 import org.clubplus.clubplusbackend.security.Statut;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -20,201 +20,172 @@ import java.util.stream.Collectors;
 public class DemandeAmiService {
 
     private final DemandeAmiDao demandeAmiRepository;
-    private final MembreDao membreRepository; // Pour valider l'existence des membres
+    private final MembreDao membreRepository;
+    private final SecurityService securityService; // Injecter pour accès utilisateur courant
 
     /**
-     * Envoie une demande d'ami de l'envoyeur vers le récepteur.
-     *
-     * @param envoyeurId  L'ID du membre qui envoie la demande.
-     * @param recepteurId L'ID du membre qui reçoit la demande.
-     * @return La DemandeAmi créée avec le statut ATTENTE.
-     * @throws EntityNotFoundException  Si l'envoyeur ou le récepteur n'existe pas.
-     * @throws IllegalArgumentException Si l'envoyeur et le récepteur sont identiques.
-     * @throws IllegalStateException    Si une demande (ou une amitié acceptée) existe déjà entre ces deux membres.
+     * Envoie une demande d'ami.
+     * Vérifications : auto-demande, existence membres, relation déjà existante (ATTENTE ou ACCEPTE).
      */
     public DemandeAmi sendFriendRequest(Integer envoyeurId, Integer recepteurId) {
-        // 1. Vérifier si les ID sont différents
         if (envoyeurId.equals(recepteurId)) {
-            throw new IllegalArgumentException("Impossible d'envoyer une demande d'ami à soi-même.");
+            throw new IllegalArgumentException("Impossible d'envoyer une demande à soi-même."); // -> 400
         }
 
-        // 2. Vérifier l'existence des membres
         Membre envoyeur = membreRepository.findById(envoyeurId)
-                .orElseThrow(() -> new EntityNotFoundException("Membre envoyeur non trouvé avec l'ID : " + envoyeurId));
+                .orElseThrow(() -> new EntityNotFoundException("Membre envoyeur non trouvé : " + envoyeurId)); // -> 404
         Membre recepteur = membreRepository.findById(recepteurId)
-                .orElseThrow(() -> new EntityNotFoundException("Membre récepteur non trouvé avec l'ID : " + recepteurId));
+                .orElseThrow(() -> new EntityNotFoundException("Membre récepteur non trouvé : " + recepteurId)); // -> 404
 
-        // 3. Vérifier s'il existe déjà une relation (demande ou amitié) entre les deux
-        if (demandeAmiRepository.existsBetweenUsers(envoyeurId, recepteurId)) {
-            // Vous pouvez affiner ici : vérifier le statut existant si vous voulez permettre
-            // de renvoyer une demande après un refus, par exemple.
-            // Pour l'instant, on bloque si une relation existe, quel que soit son statut.
-            throw new IllegalStateException("Une demande d'ami ou une relation existe déjà entre ces deux membres.");
+        // Vérifier s'il existe déjà une demande en attente ou une amitié acceptée
+        if (demandeAmiRepository.existsPendingOrAcceptedRequestBetween(envoyeurId, recepteurId, Statut.ATTENTE, Statut.ACCEPTE)) {
+            throw new IllegalStateException("Une demande en attente ou une relation d'amitié existe déjà."); // -> 409
         }
+        // Note: On pourrait aussi vérifier une demande REFUSEE et éventuellement la remplacer/réactiver.
 
-        // 4. Créer et sauvegarder la nouvelle demande
-        DemandeAmi nouvelleDemande = new DemandeAmi();
-        nouvelleDemande.setEnvoyeur(envoyeur);
-        nouvelleDemande.setRecepteur(recepteur);
-        nouvelleDemande.setStatut(Statut.ATTENTE);
-        nouvelleDemande.setDateDemande(LocalDateTime.now()); // La date peut aussi être gérée par @PrePersist
-
+        DemandeAmi nouvelleDemande = new DemandeAmi(envoyeur, recepteur); // Utilise le constructeur (statut=ATTENTE, date=now)
         return demandeAmiRepository.save(nouvelleDemande);
     }
 
     /**
      * Accepte une demande d'ami en attente.
-     *
-     * @param demandeId   L'ID de la demande d'ami à accepter.
-     * @param accepteurId L'ID du membre qui accepte (doit être le récepteur initial).
-     * @return La DemandeAmi mise à jour avec le statut ACCEPTE.
-     * @throws EntityNotFoundException Si la demande n'est pas trouvée.
-     * @throws SecurityException       Si le membre qui accepte n'est pas le récepteur de la demande.
-     * @throws IllegalStateException   Si la demande n'est pas au statut ATTENTE.
+     * Sécurité : Vérifie que l'utilisateur courant est bien le récepteur de la demande.
+     * Met à jour le statut de la demande ET la relation @ManyToMany 'amis'.
      */
-    public DemandeAmi acceptFriendRequest(Integer demandeId, Integer accepteurId) {
+    public DemandeAmi acceptFriendRequest(Integer demandeId) { // Retire accepteurId, on utilise SecurityService
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow(); // Récupère ID courant ou lance exception si non auth
+
         DemandeAmi demande = demandeAmiRepository.findById(demandeId)
-                .orElseThrow(() -> new EntityNotFoundException("Demande d'ami non trouvée avec l'ID : " + demandeId));
+                .orElseThrow(() -> new EntityNotFoundException("Demande d'ami non trouvée : " + demandeId)); // -> 404
 
-        // Vérifier si l'utilisateur est bien le récepteur
-        if (!demande.getRecepteur().getId().equals(accepteurId)) {
-            throw new SecurityException("Seul le récepteur peut accepter cette demande d'ami.");
+        // Vérification Sécurité Contextuelle : Est-ce le récepteur ?
+        if (!demande.getRecepteur().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("Seul le récepteur peut accepter cette demande."); // -> 403
         }
 
-        // Vérifier si la demande est bien en attente
+        // Vérification Métier : La demande est-elle en attente ?
         if (demande.getStatut() != Statut.ATTENTE) {
-            throw new IllegalStateException("Cette demande d'ami n'est pas en attente (Statut actuel: " + demande.getStatut() + ").");
+            throw new IllegalStateException("Cette demande n'est pas en attente."); // -> 409
         }
 
+        // Mise à jour Statut Demande
         demande.setStatut(Statut.ACCEPTE);
-        return demandeAmiRepository.save(demande);
+        DemandeAmi savedDemande = demandeAmiRepository.save(demande);
+
+        // *** MISE À JOUR RELATION @ManyToMany 'amis' ***
+        Membre envoyeur = demande.getEnvoyeur();
+        Membre recepteur = demande.getRecepteur();
+        // Ajouter l'amitié dans les deux sens (méthodes helper dans Membre)
+        recepteur.addAmi(envoyeur);
+        // Sauvegarder les entités Membre modifiées pour persister le lien dans la table 'amitie'
+        membreRepository.save(recepteur);
+        membreRepository.save(envoyeur); // IMPORTANT: Sauver les deux côtés
+
+        return savedDemande;
     }
 
     /**
      * Refuse une demande d'ami en attente.
-     *
-     * @param demandeId  L'ID de la demande d'ami à refuser.
-     * @param refuseurId L'ID du membre qui refuse (doit être le récepteur initial).
-     * @return La DemandeAmi mise à jour avec le statut REFUSE.
-     * @throws EntityNotFoundException Si la demande n'est pas trouvée.
-     * @throws SecurityException       Si le membre qui refuse n'est pas le récepteur de la demande.
-     * @throws IllegalStateException   Si la demande n'est pas au statut ATTENTE.
+     * Sécurité : Vérifie que l'utilisateur courant est bien le récepteur.
      */
-    public DemandeAmi refuseFriendRequest(Integer demandeId, Integer refuseurId) {
+    public DemandeAmi refuseFriendRequest(Integer demandeId) { // Retire refuseurId
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+
         DemandeAmi demande = demandeAmiRepository.findById(demandeId)
-                .orElseThrow(() -> new EntityNotFoundException("Demande d'ami non trouvée avec l'ID : " + demandeId));
+                .orElseThrow(() -> new EntityNotFoundException("Demande d'ami non trouvée : " + demandeId)); // -> 404
 
-        // Vérifier si l'utilisateur est bien le récepteur
-        if (!demande.getRecepteur().getId().equals(refuseurId)) {
-            throw new SecurityException("Seul le récepteur peut refuser cette demande d'ami.");
+        if (!demande.getRecepteur().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("Seul le récepteur peut refuser cette demande."); // -> 403
         }
 
-        // Vérifier si la demande est bien en attente
         if (demande.getStatut() != Statut.ATTENTE) {
-            throw new IllegalStateException("Cette demande d'ami n'est pas en attente (Statut actuel: " + demande.getStatut() + ").");
+            throw new IllegalStateException("Cette demande n'est pas en attente."); // -> 409
         }
 
-        demande.setStatut(Statut.REFUSE);
+        demande.setStatut(Statut.REFUSE); // Met à jour le statut
         return demandeAmiRepository.save(demande);
-
-        // Alternative : Supprimer la demande au lieu de la marquer comme refusée
-        // demandeAmiRepository.delete(demande);
+        // Alternative : supprimer la demande refusée ? demandeAmiRepository.delete(demande);
     }
 
     /**
      * Annule une demande d'ami envoyée qui est toujours en attente.
-     *
-     * @param demandeId  L'ID de la demande à annuler.
-     * @param annuleurId L'ID du membre qui annule (doit être l'envoyeur initial).
-     * @throws EntityNotFoundException Si la demande n'est pas trouvée.
-     * @throws SecurityException       Si le membre qui annule n'est pas l'envoyeur de la demande.
-     * @throws IllegalStateException   Si la demande n'est plus au statut ATTENTE.
+     * Sécurité : Vérifie que l'utilisateur courant est bien l'envoyeur.
      */
-    public void cancelFriendRequest(Integer demandeId, Integer annuleurId) {
-        DemandeAmi demande = demandeAmiRepository.findById(demandeId)
-                .orElseThrow(() -> new EntityNotFoundException("Demande d'ami non trouvée avec l'ID : " + demandeId));
+    public void cancelFriendRequest(Integer demandeId) { // Retire annuleurId
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
 
-        // Vérifier si l'utilisateur est bien l'envoyeur
-        if (!demande.getEnvoyeur().getId().equals(annuleurId)) {
-            throw new SecurityException("Seul l'envoyeur peut annuler cette demande d'ami.");
+        DemandeAmi demande = demandeAmiRepository.findById(demandeId)
+                .orElseThrow(() -> new EntityNotFoundException("Demande d'ami non trouvée : " + demandeId)); // -> 404
+
+        if (!demande.getEnvoyeur().getId().equals(currentUserId)) {
+            throw new AccessDeniedException("Seul l'envoyeur peut annuler cette demande."); // -> 403
         }
 
-        // Vérifier si la demande est bien en attente
         if (demande.getStatut() != Statut.ATTENTE) {
-            throw new IllegalStateException("Impossible d'annuler une demande qui n'est plus en attente (Statut actuel: " + demande.getStatut() + ").");
+            throw new IllegalStateException("Impossible d'annuler : la demande n'est pas en attente."); // -> 409
         }
 
-        demandeAmiRepository.delete(demande);
+        demandeAmiRepository.delete(demande); // Suppression de la demande annulée
     }
 
     /**
-     * Supprime une relation d'amitié (marquée comme ACCEPTE).
-     * N'importe lequel des deux amis peut initier la suppression.
-     *
-     * @param demandeId L'ID de la relation d'amitié (DemandeAmi avec statut ACCEPTE).
-     * @param membreId  L'ID d'un des deux membres impliqués dans l'amitié.
-     * @throws EntityNotFoundException Si la demande n'est pas trouvée.
-     * @throws SecurityException       Si le membreId n'est ni l'envoyeur ni le récepteur.
-     * @throws IllegalStateException   Si la relation n'est pas au statut ACCEPTE.
+     * Supprime une relation d'amitié (DemandeAmi avec statut ACCEPTE) entre l'utilisateur courant et un autre membre.
+     * Met à jour la relation @ManyToMany 'amis'.
      */
-    public void removeFriendship(Integer demandeId, Integer membreId) {
-        DemandeAmi demande = demandeAmiRepository.findById(demandeId)
-                .orElseThrow(() -> new EntityNotFoundException("Relation d'amitié non trouvée avec l'ID : " + demandeId));
+    public void removeFriendshipByFriendId(Integer friendIdToRemove) {
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
 
-        // Vérifier que le membreId est bien l'un des deux participants
-        if (!demande.getEnvoyeur().getId().equals(membreId) && !demande.getRecepteur().getId().equals(membreId)) {
-            throw new SecurityException("Vous n'êtes pas partie prenante de cette relation d'amitié.");
+        if (currentUserId.equals(friendIdToRemove)) {
+            throw new IllegalArgumentException("Impossible de se retirer soi-même comme ami."); // -> 400
         }
 
-        // Vérifier que le statut est bien ACCEPTE
-        if (demande.getStatut() != Statut.ACCEPTE) {
-            throw new IllegalStateException("Cette relation n'est pas actuellement une amitié acceptée (Statut actuel: " + demande.getStatut() + ").");
-        }
+        // 1. Trouver l'entité DemandeAmi représentant l'amitié ACCEPTÉE
+        DemandeAmi friendship = demandeAmiRepository.findAcceptedFriendshipBetween(currentUserId, friendIdToRemove, Statut.ACCEPTE)
+                .orElseThrow(() -> new EntityNotFoundException("Aucune relation d'amitié active trouvée avec l'utilisateur ID: " + friendIdToRemove)); // -> 404
 
-        // Supprimer la relation
-        demandeAmiRepository.delete(demande);
-        // Alternative: Marquer comme REFUSE ou créer un statut "TERMINE" ? La suppression est plus simple.
+        // 2. Récupérer les objets Membre impliqués (nécessaires pour la mise à jour ManyToMany)
+        // On pourrait les récupérer via friendship.getEnvoyeur()/getRecepteur(), mais findById est plus sûr.
+        Membre currentUser = membreRepository.findById(currentUserId).orElseThrow(() -> new EntityNotFoundException("Utilisateur courant non trouvé ?!")); // Devrait pas arriver
+        Membre friendToRemove = membreRepository.findById(friendIdToRemove).orElseThrow(() -> new EntityNotFoundException("Ami à supprimer non trouvé : " + friendIdToRemove));
+
+        // *** MISE À JOUR RELATION @ManyToMany 'amis' ***
+        currentUser.removeAmi(friendToRemove);
+        // Sauvegarder les entités Membre modifiées pour persister la suppression du lien dans la table 'amitie'
+        membreRepository.save(currentUser);
+        membreRepository.save(friendToRemove); // IMPORTANT: Sauver les deux
+
+        // 3. Supprimer l'entité DemandeAmi (ou la mettre à un statut "TERMINEE")
+        demandeAmiRepository.delete(friendship);
     }
 
+    // --- Méthodes de Consultation ---
 
-    // --- Méthodes de consultation ---
-
-    public List<DemandeAmi> getPendingReceivedRequests(Integer membreId) {
-        return demandeAmiRepository.findPendingReceivedRequests(membreId);
-    }
-
-    public List<DemandeAmi> getPendingSentRequests(Integer membreId) {
-        return demandeAmiRepository.findPendingSentRequests(membreId);
+    /**
+     * Récupère les demandes reçues en attente pour l'utilisateur courant.
+     */
+    @Transactional(readOnly = true)
+    public List<DemandeAmi> getPendingReceivedRequests() {
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+        return demandeAmiRepository.findByRecepteurIdAndStatut(currentUserId, Statut.ATTENTE);
     }
 
     /**
-     * Récupère la liste des amis (Membres) d'un membre donné.
-     * Un ami est défini par une DemandeAmi avec le statut ACCEPTE où le membre est soit l'envoyeur soit le récepteur.
-     *
-     * @param membreId L'ID du membre dont on veut la liste d'amis.
-     * @return Une liste d'objets Membre représentant les amis.
+     * Récupère les demandes envoyées en attente par l'utilisateur courant.
      */
-    public List<Membre> getFriends(Integer membreId) {
-        List<DemandeAmi> acceptedRequests = demandeAmiRepository.findAllAcceptedRequestsInvolvingUser(membreId, Statut.ACCEPTE);
-
-        // Extraire l'ID de l'ami (l'autre personne dans la relation) pour chaque demande
-        List<Integer> friendIds = acceptedRequests.stream()
-                .map(demande -> {
-                    if (demande.getEnvoyeur().getId().equals(membreId)) {
-                        return demande.getRecepteur().getId();
-                    } else {
-                        return demande.getEnvoyeur().getId();
-                    }
-                })
-                .distinct() // Éviter les doublons si jamais c'est possible
-                .collect(Collectors.toList());
-
-        // Récupérer les objets Membre correspondants aux IDs des amis
-        if (friendIds.isEmpty()) {
-            return List.of(); // Retourne une liste vide si pas d'amis
-        }
-        return membreRepository.findAllById(friendIds); // Récupère tous les amis en une seule requête
+    @Transactional(readOnly = true)
+    public List<DemandeAmi> getPendingSentRequests() {
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+        return demandeAmiRepository.findByEnvoyeurIdAndStatut(currentUserId, Statut.ATTENTE);
     }
 
+    /**
+     * Récupère la liste des objets Membre amis de l'utilisateur courant.
+     * Utilise la requête DAO optimisée.
+     */
+    @Transactional(readOnly = true)
+    public List<Membre> getFriends() {
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+        // Appelle la méthode DAO optimisée qui retourne directement List<Membre>
+        return demandeAmiRepository.findFriendsOfUser(currentUserId, Statut.ACCEPTE);
+    }
 }
-

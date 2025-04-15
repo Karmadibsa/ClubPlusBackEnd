@@ -1,16 +1,15 @@
-package org.clubplus.clubplusbackend.security;
-// Imports des classes nécessaires de Spring Security et Spring Web
+package org.clubplus.clubplusbackend.security; // Ou votre package config
 
-//
-
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,63 +21,77 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
-/// / Configuration de la sécurité de l'application
-@Configuration // Indique à Spring que cette classe fournit des configurations de beans
-@EnableWebSecurity // Active la configuration de sécurité web de Spring Security
-@EnableMethodSecurity
+@Configuration
+@EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
 public class ConfigurationSecurite {
-    private final PasswordEncoder passwordEncoder;
+
     private final UserDetailsService userDetailsService;
     private final JwtFilter jwtFilter;
+    private final PasswordEncoder passwordEncoder; // <- Le PasswordEncoder injecté
 
-    //
-//    // Composants nécessaires pour gérer l'authentification
-//    protected PasswordEncoder passwordEncoder; // Service pour encoder/décoder les mots de passe
-//    protected UserDetailsService userDetailsService; // Service pour charger les données utilisateur
-//    protected JwtFilter jwtFilter; // Service pour charger les données utilisateur
-//
-//    // Injection des dépendances par constructeur
-    @Autowired
-    public ConfigurationSecurite(PasswordEncoder passwordEncoder, UserDetailsService userDetailsService, JwtFilter jwtFilter) {
-        this.passwordEncoder = passwordEncoder;
+    // Constructeur pour injection - NE PAS CHANGER
+    public ConfigurationSecurite(UserDetailsService userDetailsService, JwtFilter jwtFilter, PasswordEncoder passwordEncoder) {
         this.userDetailsService = userDetailsService;
         this.jwtFilter = jwtFilter;
+        this.passwordEncoder = passwordEncoder; // Reçoit le bean créé dans Application.java
     }
 
-    //
-//
-//    // Configuration du fournisseur d'authentification
+    // --- Le @Bean PasswordEncoder a été SUPPRIMÉ d'ici ---
+
+    /**
+     * Bean pour le fournisseur d'authentification standard (Dao).
+     * Utilise votre UserDetailsService et le PasswordEncoder INJECTÉ.
+     */
     @Bean
     public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider auth = new DaoAuthenticationProvider();
-        auth.setPasswordEncoder(passwordEncoder); // Définit l'encodeur de mot de passe à utiliser
-        auth.setUserDetailsService(userDetailsService); // Définit le service qui récupère les informations utilisateur
-        return auth;
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        // Utilise le champ 'passwordEncoder' injecté
+        authProvider.setPasswordEncoder(this.passwordEncoder);
+        return authProvider;
     }
 
-    //
-//    // Configuration de la chaîne de filtres de sécurité
+    /**
+     * Bean pour l'AuthenticationManager.
+     */
     @Bean
-    public SecurityFilterChain configureAuthentification(HttpSecurity http) throws Exception {
-        return http
-                .csrf(c -> c.disable()) // Désactive la protection CSRF, généralement inutile pour les API REST
-                .cors(c -> c.configurationSource(corsConfigurationSource())) // Configure CORS avec les paramètres définis ci-dessous
-                .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS)) // Configuration sans état (pas de session), typique des API REST
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class)
-                .build();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration authenticationConfiguration) throws Exception {
+        return authenticationConfiguration.getAuthenticationManager();
     }
 
-    //
-//    // Configuration détaillée de CORS (Cross-Origin Resource Sharing)
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration corsConfiguration = new CorsConfiguration();
-        corsConfiguration.setAllowedOrigins(List.of("*")); // Autorise les requêtes de n'importe quelle origine
-        corsConfiguration.setAllowedMethods(List.of("GET", "POST", "DELETE", "PUT", "PATCH")); // Autorise ces méthodes HTTP
-        corsConfiguration.setAllowedHeaders(List.of("*")); // Autorise tous les types d'en-têtes
+    /**
+     * Configuration principale de la chaîne de filtres de sécurité HTTP.
+     */
+    @Bean
+    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+        http
+                .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/inscription").permitAll()
+                        .requestMatchers("/api/auth/connexion").permitAll()
+                        .requestMatchers("/api/**").authenticated()
+                        .anyRequest().denyAll()
+                )
+                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
-        // Applique cette configuration CORS à tous les chemins d'API
+        return http.build();
+    }
+
+    /**
+     * Configuration CORS.
+     */
+    @Bean
+    CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:3000", "http://votre-frontend.com")); // Adaptez si nécessaire
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
+        configuration.setAllowedHeaders(List.of("*"));
+        // configuration.setAllowCredentials(true); // Si besoin
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", corsConfiguration);
+        source.registerCorsConfiguration("/api/**", configuration);
         return source;
     }
 }

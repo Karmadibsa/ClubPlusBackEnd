@@ -2,102 +2,252 @@ package org.clubplus.clubplusbackend.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.clubplus.clubplusbackend.dao.AdhesionDao;
+import org.clubplus.clubplusbackend.dao.ClubDao;
 import org.clubplus.clubplusbackend.dao.MembreDao;
+import org.clubplus.clubplusbackend.model.Adhesion;
+import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.Role;
+import org.clubplus.clubplusbackend.security.SecurityService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
-@RequiredArgsConstructor // Injection de dépendances via constructeur Lombok
-@Transactional // Toutes les méthodes publiques seront transactionnelles par défaut
+@RequiredArgsConstructor
+@Transactional
 public class MembreService {
 
     private final MembreDao membreRepository;
+    private final ClubDao clubRepository;
+    private final AdhesionDao adhesionRepository;
     private final PasswordEncoder passwordEncoder;
+    private final SecurityService securityService; // Injection
 
-    public List<Membre> findAllMembres() {
-        return membreRepository.findAll();
-    }
+    // --- Lecture ---
 
-    public Optional<Membre> findMembreById(Integer id) {
-        return membreRepository.findById(id);
-    }
-
+    /**
+     * Trouve un membre par ID ou lance 404.
+     */
+    @Transactional(readOnly = true)
     public Membre getMembreByIdOrThrow(Integer id) {
         return membreRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Membre non trouvé avec l'ID : " + id));
-
     }
 
-    public Optional<Membre> findMembreByEmail(String email) {
-        return membreRepository.findByEmail(email);
+    /**
+     * Récupère un membre par ID avec vérification de sécurité.
+     * Doit être le membre lui-même ou un admin global (règle à affiner dans SecurityService).
+     * Lance 404 (Non trouvé) ou 403 (Accès refusé).
+     */
+    @Transactional(readOnly = true)
+    public Membre getMembreByIdWithSecurityCheck(Integer id) {
+        Membre membre = getMembreByIdOrThrow(id);
+        // Sécurité: Est-ce l'utilisateur courant OU un admin global ?
+        securityService.checkIsOwnerOrGlobalAdminOrThrow(membre.getId()); // Méthode à ajouter dans SecurityService
+        return membre;
     }
 
+    // --- Inscription (Logique déjà revue, semble OK) ---
+    public Membre registerMembreAndJoinClub(Membre membreData, String codeClub) {
+        String email = membreData.getEmail().toLowerCase().trim();
+        if (membreRepository.existsByEmail(email)) {
+            throw new IllegalArgumentException("Un compte existe déjà avec cet email."); // -> 409
+        }
+        Club clubToJoin = clubRepository.findByCodeClub(codeClub)
+                .orElseThrow(() -> new EntityNotFoundException("Club non trouvé avec le code : " + codeClub)); // -> 404
 
-    public Membre createMembre(Membre membre) {
-        // Logique avant la sauvegarde :
-        // 1. Vérifier si l'email existe déjà
-        membreRepository.findByEmail(membre.getEmail()).ifPresent(m -> {
-            throw new IllegalArgumentException("Un membre avec l'email " + membre.getEmail() + " existe déjà.");
-        });
+        membreData.setEmail(email);
+        membreData.setDate_inscription(LocalDate.now());
+        membreData.setPassword(passwordEncoder.encode(membreData.getPassword()));
+        membreData.setRole(Role.MEMBRE);
+        membreData.setId(null);
+        membreData.setAdhesions(new HashSet<>()); // Init collections
+        membreData.setAmis(new HashSet<>());
+        // ... autres collections ...
 
-        membre.setPassword(passwordEncoder.encode(membre.getPassword()));
+        Membre nouveauMembre = membreRepository.save(membreData);
+        Adhesion nouvelleAdhesion = new Adhesion(nouveauMembre, clubToJoin);
+        adhesionRepository.save(nouvelleAdhesion);
+        return nouveauMembre;
+    }
 
-        // 3. Définir la date d'inscription
-        membre.setDate_inscription(LocalDate.now());
+    // --- Mise à Jour Profil (Utilisateur Courant) ---
+    public Membre updateMyProfile(Membre membreDetails) {
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow(); // Récupère ID courant
+        Membre existingMembre = getMembreByIdOrThrow(currentUserId); // Pas besoin de checkIsOwner ici
 
-        // 4. Attribuer un rôle par défaut si nécessaire (ex: MEMBRE)
-        if (membre.getRole() == null) {
-            membre.setRole(Role.MEMBRE);
+        boolean updated = false;
+        // ... (logique de copie des champs nom, prenom, date_naissance, adresse, telephone...) ...
+        if (membreDetails.getNom() != null && !membreDetails.getNom().isBlank()) {
+            existingMembre.setNom(membreDetails.getNom());
+            updated = true;
+        }
+        if (membreDetails.getPrenom() != null && !membreDetails.getPrenom().isBlank()) {
+            existingMembre.setPrenom(membreDetails.getPrenom());
+            updated = true;
+        }
+        if (membreDetails.getDate_naissance() != null) {
+            existingMembre.setDate_naissance(membreDetails.getDate_naissance());
+            updated = true;
+        }
+        if (membreDetails.getNumero_voie() != null) {
+            existingMembre.setNumero_voie(membreDetails.getNumero_voie());
+            updated = true;
+        }
+        if (membreDetails.getRue() != null) {
+            existingMembre.setRue(membreDetails.getRue());
+            updated = true;
+        }
+        if (membreDetails.getCodepostal() != null) {
+            existingMembre.setCodepostal(membreDetails.getCodepostal());
+            updated = true;
+        }
+        if (membreDetails.getVille() != null) {
+            existingMembre.setVille(membreDetails.getVille());
+            updated = true;
+        }
+        if (membreDetails.getTelephone() != null) {
+            existingMembre.setTelephone(membreDetails.getTelephone());
+            updated = true;
         }
 
-        return membreRepository.save(membre);
-    }
 
-    public Membre updateMembre(Integer id, Membre membreDetails) {
-        Membre existingMembre = getMembreByIdOrThrow(id);
-
-        // Mettre à jour les champs modifiables
-        existingMembre.setNom(membreDetails.getNom());
-        existingMembre.setPrenom(membreDetails.getPrenom());
-        existingMembre.setDate_naissance(membreDetails.getDate_naissance());
-        existingMembre.setNumero_voie(membreDetails.getNumero_voie());
-        existingMembre.setRue(membreDetails.getRue());
-        existingMembre.setCodepostal(membreDetails.getCodepostal());
-        existingMembre.setVille(membreDetails.getVille());
-        existingMembre.setTelephone(membreDetails.getTelephone());
-
-        // Gérer la mise à jour de l'email (vérifier l'unicité si l'email change)
-        if (!existingMembre.getEmail().equals(membreDetails.getEmail())) {
-            membreRepository.findByEmail(membreDetails.getEmail()).ifPresent(m -> {
-                if (!m.getId().equals(id)) { // Assurez-vous que ce n'est pas le même utilisateur
-                    throw new IllegalArgumentException("Un autre membre utilise déjà l'email " + membreDetails.getEmail());
-                }
-            });
-            existingMembre.setEmail(membreDetails.getEmail());
+        String newEmail = membreDetails.getEmail();
+        if (newEmail != null && !newEmail.isBlank() && !newEmail.equalsIgnoreCase(existingMembre.getEmail())) {
+            String normalizedNewEmail = newEmail.toLowerCase().trim();
+            if (membreRepository.existsByEmailAndIdNot(normalizedNewEmail, currentUserId)) { // Utilise DAO
+                throw new IllegalArgumentException("Email déjà utilisé par un autre membre."); // -> 409
+            }
+            existingMembre.setEmail(normalizedNewEmail);
+            updated = true;
         }
 
-        // Gérer la mise à jour du rôle si nécessaire (peut nécessiter des droits spécifiques)
-        existingMembre.setRole(membreDetails.getRole());
+        // NE PAS METTRE A JOUR password ou role ici
 
-
-        return membreRepository.save(existingMembre);
-    }
-
-    public void deleteMembre(Integer id) {
-        if (!membreRepository.existsById(id)) {
-            throw new EntityNotFoundException("Impossible de supprimer, Membre non trouvé avec l'ID : " + id);
+        if (updated) {
+            return membreRepository.save(existingMembre);
         }
-        membreRepository.deleteById(id);
+        return existingMembre;
     }
 
-    public List<Membre> findMembresByClubId(Integer clubId) {
-        return membreRepository.findByClubId(clubId);
+    // --- Suppression Compte (Utilisateur Courant) ---
+    public void deleteMyAccount() {
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+        Membre membreToDelete = getMembreByIdOrThrow(currentUserId);
+
+        if (membreToDelete.getRole() == Role.ADMIN) {
+            // Vérifier s'il est admin d'un club (il ne devrait pas pouvoir se supprimer si c'est le cas)
+            // Long numberOfClubsAdministered = adhesionRepository.countByMembreIdAndRole(currentUserId, Role.ADMIN); // Méthode hypothétique
+            boolean isAdminOfAnyClub = !membreToDelete.getAdhesions().isEmpty() && membreToDelete.getRole() == Role.ADMIN; // Simplifié: si rôle ADMIN et a des adhésions
+            if (isAdminOfAnyClub) {
+                throw new IllegalStateException("Impossible de supprimer un compte ADMIN qui gère encore un club."); // -> 409
+            }
+            // Si le rôle est ADMIN mais qu'il n'a plus d'adhésions (cas étrange), on pourrait autoriser. À discuter.
+        }
+
+        // Les cascades et orphanRemoval gèrent la suppression des données liées
+        membreRepository.delete(membreToDelete);
     }
+
+    // --- Gestion Adhésions Club (Utilisateur Courant) ---
+    public Adhesion joinClub(String codeClub) {
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+        Membre membre = getMembreByIdOrThrow(currentUserId);
+
+        if (membre.getRole() == Role.ADMIN || membre.getRole() == Role.RESERVATION) {
+            throw new IllegalStateException("Les membres ADMIN ou RESERVATION ne peuvent pas rejoindre d'autres clubs."); // -> 409
+        }
+
+        Club club = clubRepository.findByCodeClub(codeClub)
+                .orElseThrow(() -> new EntityNotFoundException("Club non trouvé avec le code : " + codeClub)); // -> 404
+
+        if (adhesionRepository.existsByMembreIdAndClubId(currentUserId, club.getId())) {
+            throw new IllegalStateException("Vous êtes déjà membre de ce club."); // -> 409
+        }
+
+        Adhesion adhesion = new Adhesion(membre, club);
+        return adhesionRepository.save(adhesion);
+    }
+
+    public void leaveClub(Integer clubId) {
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+        Adhesion adhesion = adhesionRepository.findByMembreIdAndClubId(currentUserId, clubId)
+                .orElseThrow(() -> new EntityNotFoundException("Vous n'êtes pas membre de ce club (ID: " + clubId + ").")); // -> 404
+
+        Membre membre = getMembreByIdOrThrow(currentUserId); // Recharger pour rôle sûr
+        if (membre.getRole() == Role.ADMIN || membre.getRole() == Role.RESERVATION) {
+            // Spécifier pourquoi: l'ADMIN ne peut pas via cette méthode, le RESERVATION non plus car lié à un seul club.
+            throw new IllegalStateException("Impossible de quitter ce club avec votre rôle actuel (" + membre.getRole() + "). Un ADMIN doit transférer la propriété. Un RESERVATION est lié à ce club."); // -> 409
+        }
+
+        adhesionRepository.delete(adhesion); // OK pour rôle MEMBRE
+    }
+
+    @Transactional(readOnly = true)
+    public Set<Club> findClubsForCurrentUser() {
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+        Membre membre = getMembreByIdOrThrow(currentUserId); // Charge le membre
+        // Accès LAZY dans la transaction
+        return membre.getAdhesions().stream()
+                .map(Adhesion::getClub)
+                .collect(Collectors.toSet());
+    }
+
+    // --- Gestion Rôles (par Admin de Club) ---
+    public Membre changeMemberRoleInClub(Integer targetMemberId, Integer clubId, Role newRole) {
+        Integer currentAdminId = securityService.getCurrentUserIdOrThrow();
+
+        // 1. Sécurité: Appelant est ADMIN DE CE CLUB
+        securityService.checkIsActualAdminOfClubOrThrow(clubId); // Vérifie l'appelant pour ce club -> 403
+
+        // 2. Validation rôle cible
+        if (newRole != Role.MEMBRE && newRole != Role.RESERVATION) {
+            throw new IllegalArgumentException("Le nouveau rôle doit être MEMBRE ou RESERVATION."); // -> 400
+        }
+
+        Membre targetMember = getMembreByIdOrThrow(targetMemberId); // -> 404
+        Role currentRole = targetMember.getRole();
+
+        // 3. Vérifier appartenance cible au club
+        if (!adhesionRepository.existsByMembreIdAndClubId(targetMemberId, clubId)) {
+            throw new EntityNotFoundException("Le membre cible (ID: " + targetMemberId + ") n'appartient pas à ce club (ID: " + clubId + ")."); // -> 404
+        }
+
+        // 4. Vérifier cas interdits
+        if (currentAdminId.equals(targetMemberId)) {
+            throw new IllegalArgumentException("L'administrateur ne peut pas changer son propre rôle via cette méthode."); // -> 400
+        }
+        if (currentRole == Role.ADMIN) {
+            throw new IllegalStateException("Impossible de changer le rôle d'un administrateur (ADMIN)."); // -> 409
+        }
+        if (currentRole == newRole) {
+            return targetMember; // Pas de changement, on retourne le membre actuel (ou 409?)
+            // throw new IllegalStateException("Le membre cible a déjà le rôle " + newRole + "."); // -> 409
+        }
+
+        // 5. Logique de changement
+        if (newRole == Role.RESERVATION) { // MEMBRE -> RESERVATION
+            if (currentRole != Role.MEMBRE)
+                throw new IllegalStateException("Seul un MEMBRE peut être promu RESERVATION."); // -> 409
+            // Vérifier club unique
+            if (adhesionRepository.countByMembreId(targetMemberId) > 1) {
+                throw new IllegalStateException("Impossible de promouvoir RESERVATION un membre appartenant à plusieurs clubs."); // -> 409
+            }
+            targetMember.setRole(Role.RESERVATION);
+        } else { // RESERVATION -> MEMBRE
+            if (currentRole != Role.RESERVATION)
+                throw new IllegalStateException("Seul un RESERVATION peut être rétrogradé MEMBRE."); // -> 409
+            targetMember.setRole(Role.MEMBRE);
+        }
+
+        return membreRepository.save(targetMember);
+    }
+
 }
