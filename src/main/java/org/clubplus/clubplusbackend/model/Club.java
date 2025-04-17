@@ -41,7 +41,6 @@ public class Club {
     // Redondant avec date_creation? Si c'est la même chose, on peut en supprimer une.
     // Si elle a un sens différent (ex: date d'activation), renommer et commenter.
     // Supposons qu'elle soit identique pour l'instant.
-    @NotNull(message = "La date d'inscription est obligatoire.")
     @PastOrPresent(message = "La date d'inscription doit être dans le passé ou aujourd'hui.")
     @Column(nullable = false, updatable = false)
     @JsonView(GlobalView.ClubView.class)

@@ -2,6 +2,7 @@ package org.clubplus.clubplusbackend.security;
 
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
@@ -11,6 +12,9 @@ import java.util.Map;
  */
 @Service
 public class SecurityUtils {
+
+    @Value("${jwt.secret}")
+    String jwtSecret;
 
     public String getRole(AppUserDetails userDetails) {
         return userDetails.getAuthorities().stream()
@@ -36,16 +40,16 @@ public class SecurityUtils {
                 // ATTENTION: Utiliser une clé codée en dur ("azerty") n'est pas sécurisé
                 // en production, elle devrait être stockée dans une variable d'environnement
                 // ou un fichier de configuration sécurisé
-                .signWith(SignatureAlgorithm.HS256, "azerty")
+                .signWith(SignatureAlgorithm.HS256, jwtSecret)
 
                 // Convertit le token en format compact (chaîne de caractères)
                 .compact();
     }
 
-    
+
     public String getSubjectFromJwt(String jwt) {
         return Jwts.parser()
-                .setSigningKey("azerty")
+                .setSigningKey(jwtSecret)
                 .parseClaimsJws(jwt)
                 .getBody()
                 .getSubject();
