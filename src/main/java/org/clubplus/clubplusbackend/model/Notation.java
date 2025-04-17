@@ -87,7 +87,7 @@ public class Notation {
 
     // --- Callbacks JPA ---
     @PrePersist // Méthode appelée avant l'insertion en BDD
-    protected void onPrePersist() {
+    public void onPrePersist() {
         // Assure que la date est définie si elle n'est pas fournie explicitement lors de la création
         if (this.dateNotation == null) {
             this.dateNotation = LocalDateTime.now();
