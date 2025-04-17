@@ -8,6 +8,6 @@ import java.lang.annotation.*;
 @Retention(RetentionPolicy.RUNTIME)
 @Inherited
 // #id est l'ID du club attendu comme paramètre de la méthode
-@PreAuthorize("hasAnyRole('ROLE_ADMIN','ROLE_RESERVATION')")
-public @interface IsReservation {
+@PreAuthorize("hasAnyRole('ROLE_ADMIN','ROLE_RESERVATION','ROLE_MEMBRE')")
+public @interface IsConnected {
 }
