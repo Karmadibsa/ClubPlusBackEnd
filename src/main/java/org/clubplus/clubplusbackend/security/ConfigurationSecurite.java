@@ -2,7 +2,6 @@ package org.clubplus.clubplusbackend.security; // Ou votre package config
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -73,7 +72,6 @@ public class ConfigurationSecurite {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/inscription").permitAll()
                         .requestMatchers("/api/auth/connexion").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/clubs").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll()
                 )

@@ -1,7 +1,6 @@
 package org.clubplus.clubplusbackend.dao;
 
 import org.clubplus.clubplusbackend.model.Adhesion;
-import org.clubplus.clubplusbackend.security.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -82,6 +81,6 @@ public interface AdhesionDao extends JpaRepository<Adhesion, Integer> {
      * Utile pour vérifier rapidement si un utilisateur est ADMIN ou RESERVATION d'un club.
      * NOTE: Renvoie Optional<Object[]> car un membre peut ne pas avoir d'adhésion.
      */
-    @Query("SELECT a.membre.role FROM Adhesion a WHERE a.membre.id = :membreId AND a.club.id = :clubId")
-    Optional<Role> findRoleByMembreIdAndClubId(Integer membreId, Integer clubId);
+    @Query("SELECT m.id, m.role FROM Adhesion a JOIN a.membre m WHERE a.membre.id = :membreId AND a.club.id = :clubId")
+    Optional<Object[]> findMembreIdAndRoleByMembreIdAndClubId(@Param("membreId") Integer membreId, @Param("clubId") Integer clubId);
 }

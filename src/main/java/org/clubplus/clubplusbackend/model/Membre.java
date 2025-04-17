@@ -45,6 +45,7 @@ public class Membre {
     private LocalDate date_naissance;
 
     // Date d'inscription gérée par le système, pas d'annotation de validation d'entrée nécessaire
+    @NotNull // Assurons-nous qu'elle n'est jamais nulle dans l'objet
     @Column(nullable = false)
     @JsonView(GlobalView.MembreView.class)
     private LocalDate date_inscription;
@@ -94,6 +95,7 @@ public class Membre {
     // N'autoriser que l'écriture (désérialisation), pas la lecture (sérialisation)
     private String password; // Mot de passe en clair pour l'entrée/validation, hashé avant sauvegarde
 
+    @NotNull(message = "Le rôle est obligatoire.") // Le rôle doit être défini
     @Enumerated(EnumType.STRING) // Stocke "ADMIN", "MEMBRE", etc.
     @Column(nullable = false)
     @JsonView(GlobalView.MembreView.class) // Visible dans la vue détaillée

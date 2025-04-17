@@ -10,8 +10,6 @@ import org.clubplus.clubplusbackend.model.DemandeAmi;
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.model.Reservation;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -24,7 +22,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class SecurityService {
 
-    private static final Logger logger = LoggerFactory.getLogger(SecurityService.class);
     private final AdhesionDao adhesionRepository;
     private final MembreDao membreRepository;
     private final EventDao eventRepository;           // Injecter DAO Event
@@ -142,33 +139,17 @@ public class SecurityService {
      */
     @Transactional(readOnly = true)
     public boolean isManagerOfClub(Integer clubId) {
-        // --- Log si besoin ---
-        // logger.warn("Début vérification Manager pour clubId: {}", clubId);
+        // Utilise la requête DAO optimisée qui récupère ID et Role
+        Optional<Object[]> resultOpt = getCurrentUserIdOptional()
+                .flatMap(userId -> adhesionRepository.findMembreIdAndRoleByMembreIdAndClubId(userId, clubId));
 
-        Optional<Integer> userIdOpt = getCurrentUserIdOptional();
-        if (userIdOpt.isEmpty()) {
-            // logger.warn("Utilisateur non trouvé ou non connecté pour check Manager.");
-            return false;
+        if (resultOpt.isEmpty()) {
+            return false; // Pas d'adhésion trouvée ou non authentifié
         }
-        Integer userId = userIdOpt.get();
-        // logger.warn("Utilisateur courant ID pour check Manager: {}", userId);
-
-        // --- MODIFIÉ : Utilise la requête qui retourne Optional<Role> ---
-        Optional<Role> roleOpt = adhesionRepository.findRoleByMembreIdAndClubId(userId, clubId);
-
-        if (roleOpt.isEmpty()) {
-            // logger.warn("Aucune adhésion/rôle trouvé pour check Manager userId: {} et clubId: {}", userId, clubId);
-            return false; // Pas d'adhésion trouvée
-        }
-
-        // --- MODIFIÉ : Récupère le rôle directement ---
-        Role userRole = roleOpt.get();
-        // logger.warn("Rôle récupéré pour check Manager: {}", userRole);
-
-        // --- La logique de vérification reste, mais sur userRole directement ---
-        boolean isManager = (userRole == Role.ADMIN || userRole == Role.RESERVATION);
-        // logger.warn("Résultat isManagerOfClub: {}", isManager);
-        return isManager;
+        Object[] result = resultOpt.get();
+        // result[0] est userId (pas utile ici), result[1] est Role
+        Role userRole = (Role) result[1];
+        return userRole == Role.ADMIN || userRole == Role.RESERVATION;
     }
 
     /**
@@ -185,34 +166,15 @@ public class SecurityService {
      */
     @Transactional(readOnly = true)
     public boolean isActualAdminOfClub(Integer clubId) {
-        logger.warn("Début vérification Admin pour clubId: {}", clubId);
+        Optional<Object[]> resultOpt = getCurrentUserIdOptional()
+                .flatMap(userId -> adhesionRepository.findMembreIdAndRoleByMembreIdAndClubId(userId, clubId));
 
-        Optional<Integer> userIdOpt = getCurrentUserIdOptional();
-        if (userIdOpt.isEmpty()) {
-            logger.warn("Utilisateur non trouvé ou non connecté.");
+        if (resultOpt.isEmpty()) {
             return false;
         }
-        Integer userId = userIdOpt.get();
-        logger.warn("Utilisateur courant ID: {}", userId);
-
-        // --- MODIFIÉ : Appelle la nouvelle méthode et utilise Optional<Role> ---
-        Optional<Role> roleOpt = adhesionRepository.findRoleByMembreIdAndClubId(userId, clubId);
-
-        if (roleOpt.isEmpty()) {
-            // Ce log signifie qu'aucune adhésion n'a été trouvée pour ce membre/club
-            logger.warn("Aucune adhésion/rôle trouvé pour userId: {} et clubId: {}", userId, clubId);
-            return false;
-        }
-
-        Role userRole = roleOpt.get(); // Récupère le rôle directement
-        logger.warn("Rôle récupéré pour userId: {} et clubId: {} => {}", userId, clubId, userRole);
-
-        boolean isAdmin = (userRole == Role.ADMIN);
-        logger.warn("Comparaison userRole == Role.ADMIN : {}", isAdmin);
-        return isAdmin;
-        // --- FIN MODIFIÉ ---
+        Role userRole = (Role) resultOpt.get()[1];
+        return userRole == Role.ADMIN;
     }
-
 
     /**
      * Vérifie si admin spécifique du club ou lance exception.
