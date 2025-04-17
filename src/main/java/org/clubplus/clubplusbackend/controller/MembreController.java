@@ -6,10 +6,10 @@ import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.model.Adhesion;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
+import org.clubplus.clubplusbackend.security.ISecurityService;
 import org.clubplus.clubplusbackend.security.Role;
-import org.clubplus.clubplusbackend.security.SecurityService;
 import org.clubplus.clubplusbackend.security.annotation.IsAdmin;
-import org.clubplus.clubplusbackend.service.MembreService;
+import org.clubplus.clubplusbackend.service.IMembreService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,8 +24,8 @@ import java.util.Set;
 @CrossOrigin
 public class MembreController {
 
-    private final MembreService membreService;
-    private final SecurityService securityService;
+    private final IMembreService membreService;
+    private final ISecurityService securityService;
     // Pas besoin de SecurityService ici, géré dans MembreService
 
     /**

@@ -10,8 +10,9 @@ import java.util.Map;
  * Service utilitaire pour la génération de tokens JWT (JSON Web Tokens)
  */
 @Service
-public class SecurityUtils {
+public class SecurityUtils implements ISecurityUtils {
 
+    @Override
     public String getRole(AppUserDetails userDetails) {
         return userDetails.getAuthorities().stream()
                 .map(r -> r.getAuthority())
@@ -25,6 +26,7 @@ public class SecurityUtils {
      * param userDetails L'objet contenant les informations de l'utilisateur
      * return Une chaîne de caractères représentant le token JWT
      */
+    @Override
     public String generateToken(AppUserDetails userDetails) {
         return Jwts.builder()
                 // Définit le sujet du token (généralement l'identifiant unique de l'utilisateur)
@@ -42,7 +44,8 @@ public class SecurityUtils {
                 .compact();
     }
 
-    
+
+    @Override
     public String getSubjectFromJwt(String jwt) {
         return Jwts.parser()
                 .setSigningKey("azerty")

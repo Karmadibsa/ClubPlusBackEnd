@@ -61,4 +61,6 @@ public class Adhesion {
     }
 
 
+    public Adhesion(int i, Membre testUser, Club testClub, LocalDateTime now) {
+    }
 }

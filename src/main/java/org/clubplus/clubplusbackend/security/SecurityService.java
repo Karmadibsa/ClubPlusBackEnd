@@ -20,13 +20,14 @@ import java.util.Optional;
 
 @Component("securityService") // Nom du bean pour SpEL dans @PreAuthorize si besoin
 @RequiredArgsConstructor
-public class SecurityService {
+public class SecurityService implements ISecurityService {
 
     private final AdhesionDao adhesionRepository;
     private final MembreDao membreRepository;
     private final EventDao eventRepository;           // Injecter DAO Event
     private final ReservationDao reservationRepository; // Injecter DAO Reservation
     // Injecter d'autres DAOs si nécessaire (CategorieDao, DemandeAmiDao...)
+
 
     // --- Helpers Internes pour l'Utilisateur Courant ---
 
@@ -38,6 +39,7 @@ public class SecurityService {
      * @return L'ID de l'utilisateur.
      * @throws AccessDeniedException si non authentifié ou type de principal invalide.
      */
+    @Override
     public Integer getCurrentUserIdOrThrow() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof AppUserDetails)) {
@@ -62,6 +64,7 @@ public class SecurityService {
      * @throws EntityNotFoundException si l'utilisateur authentifié n'est pas trouvé en BDD (incohérence).
      */
     @Transactional(readOnly = true)
+    @Override
     public Membre getCurrentMembreOrThrow() {
         Integer userId = getCurrentUserIdOrThrow(); // Gère le cas non authentifié
         return membreRepository.findById(userId)
@@ -71,7 +74,7 @@ public class SecurityService {
     /**
      * Récupère l'ID de l'utilisateur courant (version Optional, pour méthodes 'is...').
      */
-    private Optional<Integer> getCurrentUserIdOptional() {
+    public Optional<Integer> getCurrentUserIdOptional() {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated() || !(authentication.getPrincipal() instanceof AppUserDetails)) {
             return Optional.empty();
@@ -83,7 +86,7 @@ public class SecurityService {
     /**
      * Récupère le Membre courant (version Optional, pour méthodes 'is...').
      */
-    private Optional<Membre> getCurrentMembreOptional() {
+    public Optional<Membre> getCurrentMembreOptional() {
         return getCurrentUserIdOptional().flatMap(membreRepository::findById);
     }
 
@@ -95,6 +98,7 @@ public class SecurityService {
      * @param ownerId L'ID du propriétaire de la ressource.
      * @return true si l'utilisateur courant est le propriétaire.
      */
+    @Override
     public boolean isOwner(Integer ownerId) {
         if (ownerId == null) return false; // Ne peut pas être propriétaire de "null"
         Optional<Integer> currentUserIdOpt = getCurrentUserIdOptional();
@@ -107,6 +111,7 @@ public class SecurityService {
      * @param ownerId L'ID du propriétaire de la ressource.
      * @throws AccessDeniedException si non propriétaire ou non authentifié.
      */
+    @Override
     public void checkIsOwnerOrThrow(Integer ownerId) {
         if (!isOwner(ownerId)) {
             throw new AccessDeniedException("Accès refusé : Vous n'êtes pas le propriétaire de cette ressource.");
@@ -119,6 +124,7 @@ public class SecurityService {
      * Vérifie si l'utilisateur courant est membre du club (quel que soit le rôle).
      */
     @Transactional(readOnly = true)
+    @Override
     public boolean isCurrentUserMemberOfClub(Integer clubId) {
         return getCurrentUserIdOptional()
                 .map(userId -> adhesionRepository.existsByMembreIdAndClubId(userId, clubId))
@@ -128,6 +134,7 @@ public class SecurityService {
     /**
      * Vérifie si membre du club ou lance exception.
      */
+    @Override
     public void checkIsCurrentUserMemberOfClubOrThrow(Integer clubId) {
         if (!isCurrentUserMemberOfClub(clubId)) {
             throw new AccessDeniedException("Accès refusé : Vous n'êtes pas membre du club ID " + clubId);
@@ -138,6 +145,7 @@ public class SecurityService {
      * Vérifie si l'utilisateur courant est MANAGER (ADMIN ou RESERVATION) du club.
      */
     @Transactional(readOnly = true)
+    @Override
     public boolean isManagerOfClub(Integer clubId) {
         // Utilise la requête DAO optimisée qui récupère ID et Role
         Optional<Object[]> resultOpt = getCurrentUserIdOptional()
@@ -155,6 +163,7 @@ public class SecurityService {
     /**
      * Vérifie si manager du club ou lance exception.
      */
+    @Override
     public void checkManagerOfClubOrThrow(Integer clubId) {
         if (!isManagerOfClub(clubId)) {
             throw new AccessDeniedException("Accès refusé : Droits de gestionnaire (ADMIN/RESERVATION) requis pour le club ID " + clubId);
@@ -165,6 +174,7 @@ public class SecurityService {
      * Vérifie si l'utilisateur courant est l'ADMIN spécifique du club.
      */
     @Transactional(readOnly = true)
+    @Override
     public boolean isActualAdminOfClub(Integer clubId) {
         Optional<Object[]> resultOpt = getCurrentUserIdOptional()
                 .flatMap(userId -> adhesionRepository.findMembreIdAndRoleByMembreIdAndClubId(userId, clubId));
@@ -179,6 +189,7 @@ public class SecurityService {
     /**
      * Vérifie si admin spécifique du club ou lance exception.
      */
+    @Override
     public void checkIsActualAdminOfClubOrThrow(Integer clubId) {
         if (!isActualAdminOfClub(clubId)) {
             throw new AccessDeniedException("Accès refusé : Droits d'administrateur (ADMIN) requis pour le club ID " + clubId);
@@ -196,6 +207,7 @@ public class SecurityService {
      * @throws EntityNotFoundException si l'événement n'existe pas.
      */
     @Transactional(readOnly = true)
+    @Override
     public boolean isManagerOfEventClub(Integer eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Événement non trouvé pour vérification sécurité (ID: " + eventId + ")"));
@@ -205,6 +217,7 @@ public class SecurityService {
     /**
      * Vérifie si manager du club de l'événement ou lance exception.
      */
+    @Override
     public void checkManagerOfEventClubOrThrow(Integer eventId) {
         if (!isManagerOfEventClub(eventId)) {
             // Le message d'erreur de EntityNotFound (si event non trouvé) sera lancé avant
@@ -221,6 +234,7 @@ public class SecurityService {
      * @throws EntityNotFoundException si l'événement n'existe pas.
      */
     @Transactional(readOnly = true)
+    @Override
     public boolean isMemberOfEventClub(Integer eventId) {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Événement non trouvé pour vérification sécurité (ID: " + eventId + ")"));
@@ -230,6 +244,7 @@ public class SecurityService {
     /**
      * Vérifie si membre du club de l'événement ou lance exception.
      */
+    @Override
     public void checkMemberOfEventClubOrThrow(Integer eventId) {
         if (!isMemberOfEventClub(eventId)) {
             throw new AccessDeniedException("Accès refusé : Vous devez être membre du club organisateur pour accéder à cet événement.");
@@ -245,7 +260,8 @@ public class SecurityService {
      * @param reservation La réservation à vérifier (doit être chargée, pas juste l'ID).
      * @return true si autorisé.
      */
-    @Transactional(readOnly = true) // readOnly car on lit les relations
+    @Transactional(readOnly = true)
+    @Override
     public boolean isOwnerOrManagerForReservation(Reservation reservation) {
         if (reservation == null || reservation.getMembre() == null || reservation.getEvent() == null || reservation.getEvent().getOrganisateur() == null) {
             // Gérer le cas où les données sont incomplètes
@@ -262,6 +278,7 @@ public class SecurityService {
     /**
      * Vérifie si propriétaire ou manager pour une réservation ou lance exception.
      */
+    @Override
     public void checkIsOwnerOrManagerOfAssociatedClubOrThrow(Reservation reservation) {
         if (!isOwnerOrManagerForReservation(reservation)) {
             throw new AccessDeniedException("Accès refusé : Vous n'êtes pas le propriétaire de cette réservation ou gestionnaire du club associé.");
@@ -273,6 +290,7 @@ public class SecurityService {
     /**
      * Vérifie si l'utilisateur courant est le récepteur d'une demande.
      */
+    @Override
     public void checkIsRecepteurOfDemandeOrThrow(DemandeAmi demande) {
         Integer currentUserId = getCurrentUserIdOrThrow();
         if (demande == null || demande.getRecepteur() == null || !currentUserId.equals(demande.getRecepteur().getId())) {
@@ -283,6 +301,7 @@ public class SecurityService {
     /**
      * Vérifie si l'utilisateur courant est l'envoyeur d'une demande.
      */
+    @Override
     public void checkIsEnvoyeurOfDemandeOrThrow(DemandeAmi demande) {
         Integer currentUserId = getCurrentUserIdOrThrow();
         if (demande == null || demande.getEnvoyeur() == null || !currentUserId.equals(demande.getEnvoyeur().getId())) {
@@ -296,6 +315,7 @@ public class SecurityService {
      * Vérifie si l'utilisateur courant est le propriétaire de l'ID cible OU un admin global (logique admin global à définir).
      * Utile pour GET /api/membres/{id} ou DELETE /api/membres/{id} (si admin global peut supprimer).
      */
+    @Override
     public void checkIsOwnerOrGlobalAdminOrThrow(Integer targetUserId) {
         // boolean isGlobalAdmin = checkIsGlobalAdmin(); // Logique à définir si nécessaire
         if (!isOwner(targetUserId) /* && !isGlobalAdmin */) {
@@ -307,6 +327,7 @@ public class SecurityService {
      * Vérifie si l'utilisateur courant est l'auteur d'une notation OU l'admin du club organisateur.
      * Utile pour DELETE /api/notations/{id}.
      */
+    @Override
     public void checkIsOwnerOrAdminOfClubOrThrow(Integer notationOwnerId, Integer clubId) {
         // boolean isAdmin = isActualAdminOfClub(clubId); // Est-il admin du club ?
         // boolean owner = isOwner(notationOwnerId); // Est-ce l'auteur ?

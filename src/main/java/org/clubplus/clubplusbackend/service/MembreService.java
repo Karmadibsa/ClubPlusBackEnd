@@ -22,7 +22,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class MembreService {
+public class MembreService implements IMembreService {
 
     private final MembreDao membreRepository;
     private final ClubDao clubRepository;
@@ -36,6 +36,7 @@ public class MembreService {
      * Trouve un membre par ID ou lance 404.
      */
     @Transactional(readOnly = true)
+    @Override
     public Membre getMembreByIdOrThrow(Integer id) {
         return membreRepository.findById(id)
                 .orElseThrow(() -> new EntityNotFoundException("Membre non trouvé avec l'ID : " + id));
@@ -47,6 +48,7 @@ public class MembreService {
      * Lance 404 (Non trouvé) ou 403 (Accès refusé).
      */
     @Transactional(readOnly = true)
+    @Override
     public Membre getMembreByIdWithSecurityCheck(Integer id) {
         Membre membre = getMembreByIdOrThrow(id);
         // Sécurité: Est-ce l'utilisateur courant OU un admin global ?
@@ -55,6 +57,7 @@ public class MembreService {
     }
 
     // --- Inscription (Logique déjà revue, semble OK) ---
+    @Override
     public Membre registerMembreAndJoinClub(Membre membreData, String codeClub) {
         String email = membreData.getEmail().toLowerCase().trim();
         if (membreRepository.existsByEmail(email)) {
@@ -79,6 +82,7 @@ public class MembreService {
     }
 
     // --- Mise à Jour Profil (Utilisateur Courant) ---
+    @Override
     public Membre updateMyProfile(Membre membreDetails) {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow(); // Récupère ID courant
         Membre existingMembre = getMembreByIdOrThrow(currentUserId); // Pas besoin de checkIsOwner ici
@@ -138,6 +142,7 @@ public class MembreService {
     }
 
     // --- Suppression Compte (Utilisateur Courant) ---
+    @Override
     public void deleteMyAccount() {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow();
         Membre membreToDelete = getMembreByIdOrThrow(currentUserId);
@@ -157,6 +162,7 @@ public class MembreService {
     }
 
     // --- Gestion Adhésions Club (Utilisateur Courant) ---
+    @Override
     public Adhesion joinClub(String codeClub) {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow();
         Membre membre = getMembreByIdOrThrow(currentUserId);
@@ -176,6 +182,7 @@ public class MembreService {
         return adhesionRepository.save(adhesion);
     }
 
+    @Override
     public void leaveClub(Integer clubId) {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow();
         Adhesion adhesion = adhesionRepository.findByMembreIdAndClubId(currentUserId, clubId)
@@ -191,6 +198,7 @@ public class MembreService {
     }
 
     @Transactional(readOnly = true)
+    @Override
     public Set<Club> findClubsForCurrentUser() {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow();
         Membre membre = getMembreByIdOrThrow(currentUserId); // Charge le membre
@@ -201,6 +209,7 @@ public class MembreService {
     }
 
     // --- Gestion Rôles (par Admin de Club) ---
+    @Override
     public Membre changeMemberRoleInClub(Integer targetMemberId, Integer clubId, Role newRole) {
         Integer currentAdminId = securityService.getCurrentUserIdOrThrow();
 

@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.dto.LoginRequestDto;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.AppUserDetails;
-import org.clubplus.clubplusbackend.security.SecurityUtils;
+import org.clubplus.clubplusbackend.security.ISecurityUtils;
 import org.clubplus.clubplusbackend.service.MembreService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
@@ -25,7 +25,7 @@ public class AuthController {
 
     private final MembreService membreService;
     private final AuthenticationProvider authenticationProvider; // Pour gérer l'authentification
-    private final SecurityUtils jwtUtils; // Pour générer le token
+    private final ISecurityUtils jwtUtils; // Pour générer le token
 
     /**
      * POST /api/auth/inscription?codeClub={codeClub}
