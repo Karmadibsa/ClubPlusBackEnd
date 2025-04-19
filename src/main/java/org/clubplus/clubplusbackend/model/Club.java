@@ -11,6 +11,7 @@ import lombok.Setter;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Entity
@@ -18,6 +19,7 @@ import java.util.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Where(clause = "actif = true")
 public class Club {
 
     @Id
@@ -95,6 +97,15 @@ public class Club {
     @JsonView({GlobalView.Base.class, GlobalView.ClubView.class}) // Simplifié la visibilité
     private String codeClub;
 
+
+    // --- Champs pour Soft Delete ---
+    @NotNull // Important pour @Where
+    @Column(nullable = false)
+    private Boolean actif = true; // Statut du club
+
+    @Column(name = "desactivation_date") // Nom de colonne explicite
+    private LocalDateTime desactivationDate; // Date de désactivation
+
     // --- Relations ---
 
     // Relation vers Adhesion: C'est LE moyen de lier Membre et Club. Parfait.
@@ -124,6 +135,42 @@ public class Club {
             this.codeClub = String.format("CLUB-%04d", this.id);
 
         }
+    }
+
+    /**
+     * Prépare l'entité Club pour la désactivation.
+     * Modifie certaines données pour refléter l'état inactif et gère les contraintes.
+     * À appeler AVANT de sauvegarder le club désactivé.
+     *
+     * @throws IllegalStateException si l'ID du club est null.
+     */
+    public void prepareForDeactivation() {
+        if (this.id == null) {
+            throw new IllegalStateException("Impossible de désactiver un club sans ID persistant.");
+        }
+
+        // Modifier le nom pour indiquer clairement l'état
+        if (!this.nom.startsWith("[Désactivé]")) { // Évite d'ajouter le préfixe plusieurs fois
+            this.nom = "[Désactivé] " + this.nom;
+        }
+
+        // Modifier l'email pour garantir l'unicité et indiquer l'état
+        // Utilise un domaine non fonctionnel ou spécifique à ton application
+        this.email = "inactive+" + this.id + "@clubplus.invalid"; // ou @tondomaine.org
+
+        // Les autres champs (adresse, téléphone, codeClub) peuvent rester pour l'historique.
+
+        // Mettre à jour la date de désactivation
+        this.desactivationDate = LocalDateTime.now();
+
+        // Que faire des relations ?
+        // - Adhesions: Elles pointent maintenant vers un club inactif. C'est ok pour l'historique.
+        // - Evenements: Les événements passés sont de l'historique. Les événements futurs
+        //   associés à un club désactivé posent problème. La logique de service doit
+        //   empêcher la désactivation si des événements futurs existent (comme tu l'as fait)
+        //   OU idéalement, la désactivation du club devrait aussi désactiver/annuler ses événements futurs.
+        //   (Cela nécessiterait d'ajouter un statut 'actif' à l'entité Event aussi).
+        //   Pour l'instant, on ne touche pas aux collections ici, on gère au niveau service.
     }
 
     // --- equals et hashCode (Basés sur l'ID) ---

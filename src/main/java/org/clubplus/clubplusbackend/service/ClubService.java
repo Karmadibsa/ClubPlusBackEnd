@@ -231,31 +231,43 @@ public class ClubService {
     // --- Suppression ---
 
     /**
-     * Supprime un club.
-     * Sécurité: Seul l'ADMINISTRATEUR spécifique de ce club peut le faire.
-     * Lance EntityNotFoundException (404), AccessDeniedException (403), IllegalStateException (409).
+     * Désactive un club après vérifications de sécurité et métier.
+     * Remplace la suppression physique par une désactivation logique.
+     * Empêche la désactivation si le club a des événements futurs planifiés.
+     *
+     * @param id L'ID du club à désactiver.
+     * @throws EntityNotFoundException si le club actif n'est pas trouvé.
+     * @throws SecurityException       (ou similaire) si l'utilisateur n'est pas admin du club.
+     * @throws IllegalStateException   si le club a des événements futurs.
      */
-    public void deleteClub(Integer id) {
-        // 1. Vérification Sécurité Contextuelle.
-        securityService.checkIsActualAdminOfClubOrThrow(id); // Lance 403 si non admin du club
+    @Transactional // Garantit l'atomicité de l'opération complète
+    public void deactivateClub(Integer id) { // Renommée pour la clarté
+        // 1. Vérification Sécurité Contextuelle (inchangée)
+        securityService.checkIsActualAdminOfClubOrThrow(id); // Doit être implémentée dans SecurityService
 
-        // 2. Récupérer le club (lance 404 si non trouvé).
-        Club club = getClubByIdOrThrow(id);
+        // 2. Récupérer le club ACTIF (lance 404 si non trouvé ou déjà inactif)
+        Club clubToDeactivate = getClubByIdOrThrow(id);
 
-        // 3. Validation Métier : Vérifier s'il y a des événements futurs.
-        // IMPORTANT: Nécessite que la relation 'evenements' soit chargée.
-        // Soit via un EAGER fetch (non recommandé), soit en chargeant explicitement ici.
-        // On suppose que la transaction est active et que l'accès déclenche le LAZY loading.
-        boolean hasFutureEvents = club.getEvenements().stream()
+        // 3. Validation Métier : Vérifier s'il y a des événements futurs (inchangée).
+        //    Accéder à clubToDeactivate.getEvenements() chargera la collection (si transaction active).
+        //    NOTE: Cette vérification est bonne, mais idéalement, désactiver le club
+        //    devrait aussi cascader la désactivation aux événements futurs.
+        //    Cela nécessiterait d'avoir un champ 'actif' et une logique similaire sur Event.
+        boolean hasFutureEvents = clubToDeactivate.getEvenements().stream()
                 .anyMatch(event -> event.getStart() != null && event.getStart().isAfter(LocalDateTime.now()));
         if (hasFutureEvents) {
-            throw new IllegalStateException("Impossible de supprimer le club: événements futurs planifiés."); // -> 409 Conflict
+            throw new IllegalStateException("Impossible de désactiver le club: des événements futurs sont encore planifiés. Annulez-les d'abord."); // Message plus clair
         }
 
-        // 4. Procéder à la suppression.
-        // La suppression du Club entraînera la suppression des Adhesions et Events associés
-        // grâce à CascadeType.ALL et orphanRemoval=true définis dans l'entité Club.
-        clubRepository.delete(club);
+        // 4. Procéder à la Désactivation Logique
+        //    a) Préparer l'entité (modifier nom, email, mettre date désactivation)
+        clubToDeactivate.prepareForDeactivation();
+
+        //    b) Marquer comme inactif
+        clubToDeactivate.setActif(false);
+
+        //    c) Sauvegarder les modifications (Hibernate fera un UPDATE)
+        clubRepository.save(clubToDeactivate);
     }
 
     // --- Récupération d'informations liées ---
