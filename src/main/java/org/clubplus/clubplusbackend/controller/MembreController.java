@@ -9,6 +9,7 @@ import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.Role;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.clubplus.clubplusbackend.security.annotation.IsAdmin;
+import org.clubplus.clubplusbackend.security.annotation.IsConnected;
 import org.clubplus.clubplusbackend.service.MembreService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
@@ -35,7 +36,7 @@ public class MembreController {
      * Exceptions (globales): 401/500 (User non trouvé dans SecurityContext).
      */
     @GetMapping("/profile")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.MembreView.class)
     public Membre getMyProfile() {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow(); // Nécessite SecurityService injecté ou via MembreService
@@ -50,7 +51,7 @@ public class MembreController {
      * Exceptions (globales): 404 (Non trouvé), 403 (Accès refusé).
      */
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.MembreView.class)
     public Membre getMembreById(@PathVariable Integer id) {
         return membreService.getMembreByIdWithSecurityCheck(id);
@@ -63,7 +64,7 @@ public class MembreController {
      * Exceptions (globales): 400 (Validation), 409 (Email dupliqué).
      */
     @PutMapping("/profile")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.MembreView.class)
     public Membre updateMyProfile(@Valid @RequestBody Membre membreDetails) {
         // Le service utilisera l'ID de l'utilisateur courant
@@ -77,7 +78,7 @@ public class MembreController {
      * Exceptions (globales): 409 (Est ADMIN d'un club).
      */
     @DeleteMapping("/profile")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @ResponseStatus(HttpStatus.NO_CONTENT) // 204
     public void deleteMyAccount() {
         // Le service utilise l'ID de l'utilisateur courant
@@ -90,7 +91,7 @@ public class MembreController {
      * Sécurité: Utilisateur authentifié.
      */
     @GetMapping("/profile/clubs")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.Base.class)
     public Set<Club> getMyClubs() {
         return membreService.findClubsForCurrentUser();
@@ -103,7 +104,7 @@ public class MembreController {
      * Exceptions (globales): 404 (Club non trouvé), 409 (Déjà membre / Rôle interdit).
      */
     @PostMapping("/profile/join")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @ResponseStatus(HttpStatus.CREATED) // 201
     @JsonView(GlobalView.Base.class) // Retourner juste l'adhésion ou le club ?
     public Adhesion joinClub(@RequestParam String codeClub) { // Retourne l'adhésion créée
@@ -117,7 +118,7 @@ public class MembreController {
      * Exceptions (globales): 404 (Pas membre), 409 (Rôle interdit).
      */
     @DeleteMapping("/profile/leave/{clubId}")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @ResponseStatus(HttpStatus.NO_CONTENT) // 204
     public void leaveClub(@PathVariable Integer clubId) {
         membreService.leaveClub(clubId);

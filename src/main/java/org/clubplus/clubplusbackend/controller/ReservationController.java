@@ -46,11 +46,14 @@ public class ReservationController {
      * Sécurité: Utilisateur authentifié (@IsMembre).
      */
     @GetMapping("/me")
-    @IsMembre // Ou @PreAuthorize("isAuthenticated()")
-    @JsonView(GlobalView.ReservationView.class) // Vue détaillée des réservations
-    public List<Reservation> getMyReservations() {
-        // Le service utilise SecurityService pour l'ID courant
-        return reservationService.findMyReservations();
+    @IsMembre
+    @JsonView(GlobalView.ReservationView.class)
+    public List<Reservation> getMyReservations(
+            // Ajout du paramètre de filtrage par statut
+            @RequestParam(required = false) String status
+    ) {
+        // Appel service mis à jour
+        return reservationService.findMyReservations(status);
     }
 
     /**
@@ -74,11 +77,15 @@ public class ReservationController {
      * Exceptions (globales): 404 (Event non trouvé), 403 (Non manager).
      */
     @GetMapping("/event/{eventId}")
-    @IsReservation // Rôle minimum requis
+    @IsReservation
     @JsonView(GlobalView.ReservationView.class)
-    public List<Reservation> getReservationsByEvent(@PathVariable Integer eventId) {
-        // Le service gère l'existence et la sécurité (manager)
-        return reservationService.findReservationsByEventIdWithSecurityCheck(eventId);
+    public List<Reservation> getReservationsByEvent(
+            @PathVariable Integer eventId,
+            // Ajout du paramètre de filtrage par statut
+            @RequestParam(required = false) String status
+    ) {
+        // Appel service mis à jour
+        return reservationService.findReservationsByEventIdWithSecurityCheck(eventId, status);
     }
 
     /**
@@ -96,18 +103,42 @@ public class ReservationController {
     }
 
     /**
-     * DELETE /api/reservations/{id}
-     * Annule (supprime) une réservation.
+     * PUT /api/reservations/{id}/cancel
+     * Annule une réservation en changeant son statut à CANCELLED.
      * Sécurité: Authentifié (@IsMembre). Propriétaire ou Manager vérifié dans service.
-     * Exceptions (globales): 404 (Non trouvé), 403 (Accès refusé), 409 (Event passé).
+     * Exceptions (globales): 404 (Non trouvé), 403 (Accès refusé), 409 (Event passé ou résa non confirmée).
+     *
+     * @param id L'ID de la réservation à annuler.
+     * @return La réservation mise à jour avec le statut CANCELLED.
      */
-    @DeleteMapping("/{id}")
+    @PutMapping("/{id}/cancel") // Changement de méthode HTTP et de path
     @IsMembre // Rôle minimum pour tenter
-    @ResponseStatus(HttpStatus.NO_CONTENT) // 204
-    public void deleteReservation(@PathVariable Integer id) {
-        // Le service gère l'existence, la sécurité (owner/manager) et la logique métier (event passé)
-        reservationService.deleteReservationById(id);
+    @ResponseStatus(HttpStatus.OK) // Retourne 200 OK avec le corps de la réponse
+    @JsonView(GlobalView.ReservationView.class) // Retourner l'objet mis à jour
+    public Reservation cancelReservation(@PathVariable Integer id) {
+        // Appeler la méthode de service pour l'annulation logique
+        reservationService.cancelReservationById(id);
+        // Re-récupérer la réservation pour retourner l'état mis à jour (optionnel mais recommandé)
+        return reservationService.getReservationByIdWithSecurityCheck(id);
     }
 
+    /**
+     * PUT /api/reservations/uuid/{uuid}/use
+     * Marque une réservation comme UTILISÉE via son UUID (pour scan QR code).
+     * Sécurité: Rôle spécifique (ex: SCANNER, MANAGER) vérifié dans le service ou via annotation dédiée.
+     * Exceptions (globales): 404 (UUID non trouvé), 403 (Non autorisé),
+     * 409 (Event non actif/en cours, Résa non confirmée).
+     *
+     * @param uuid L'UUID de la réservation à marquer comme utilisée.
+     * @return La réservation mise à jour avec le statut USED.
+     */
+    @PutMapping("/uuid/{uuid}/use") // Nouveau chemin utilisant l'UUID
+    @IsReservation
+    @ResponseStatus(HttpStatus.OK) // 200 OK
+    @JsonView(GlobalView.ReservationView.class) // Retourner l'objet mis à jour
+    public Reservation markReservationUsed(@PathVariable String uuid) {
+        // Le service gère toute la logique et les vérifications
+        return reservationService.markReservationAsUsed(uuid);
+    }
     // Le @ExceptionHandler pour MethodArgumentNotValidException doit être dans GlobalExceptionHandler.
 }

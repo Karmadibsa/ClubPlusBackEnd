@@ -8,12 +8,12 @@ import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.annotation.IsAdmin;
+import org.clubplus.clubplusbackend.security.annotation.IsConnected;
 import org.clubplus.clubplusbackend.security.annotation.IsMembre;
 import org.clubplus.clubplusbackend.service.ClubService;
 import org.clubplus.clubplusbackend.service.EventService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -69,7 +69,7 @@ public class ClubController {
         // Le service lance 404 si non trouvé
         return clubService.getClubByCodeOrThrow(codeClub);
     }
-    
+
     /**
      * POST /api/clubs
      * Crée un nouveau club et son admin initial à partir d'un payload JSON unique.
@@ -79,7 +79,7 @@ public class ClubController {
      */
     @PostMapping // Pas besoin de 'consumes' car @RequestBody suppose application/json par défaut
     @ResponseStatus(HttpStatus.CREATED)
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.ClubView.class)
     public Club createClubAndAdmin(
             @Valid @RequestBody CreateClubRequestDto creationDto // Utilise @RequestBody avec le DTO
@@ -113,11 +113,11 @@ public class ClubController {
      * 409 (Événements futurs empêchent suppression).
      */
     @DeleteMapping("/{id}")
-    @PreAuthorize("isAuthenticated()") // L'utilisateur doit être connecté pour tenter
+    @IsConnected // L'utilisateur doit être connecté pour tenter
     @ResponseStatus(HttpStatus.NO_CONTENT) // Code 204 si succès
     public void deleteClub(@PathVariable Integer id) {
         // Le service gère existence (-> 404), sécurité admin (-> 403), conflits (-> 409)
-        clubService.deleteClub(id);
+        clubService.deactivateClub(id);
     }
 
     /**
@@ -127,7 +127,7 @@ public class ClubController {
      * Exceptions (gérées globalement): 404 (Club non trouvé), 403 (Non membre).
      */
     @GetMapping("/{id}/membres")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.Base.class) // Vue de base pour les membres listés
     public List<Membre> getClubMembres(@PathVariable Integer id) {
         // Le service gère existence (-> 404), sécurité membre (-> 403)
@@ -142,7 +142,7 @@ public class ClubController {
      * Exceptions (gérées globalement): 404 (Club ou Admin non trouvé), 403 (Non membre).
      */
     @GetMapping("/{id}/admin")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.MembreView.class) // Vue détaillée de l'admin
     public Membre getClubAdmin(@PathVariable Integer id) {
         // Le service gère existence (-> 404), sécurité membre (-> 403)
@@ -160,11 +160,11 @@ public class ClubController {
      * Exceptions (gérées globalement): 403 (Non membre), 500 (Erreur EventService).
      */
     @GetMapping("/{id}/events")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.Base.class)
-    public List<Event> getClubEvents(@PathVariable Integer id) {
+    public List<Event> getClubEvents(@PathVariable Integer id, @RequestParam(required = false) String status) {
         // Supposons qu'EventService existe et a la sécurité intégrée
-        return eventService.findEventsByOrganisateurWithSecurityCheck(id);
+        return eventService.findEventsByOrganisateurWithSecurityCheck(id, status);
     }
 
     /**
@@ -174,11 +174,11 @@ public class ClubController {
      * Exceptions (gérées globalement): 403 (Non membre), 500 (Erreur EventService).
      */
     @GetMapping("/{id}/events/upcoming")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.Base.class)
-    public List<Event> getClubUpcomingEvents(@PathVariable Integer id) {
+    public List<Event> getClubUpcomingEvents(@PathVariable Integer id, @RequestParam(required = false) String status) {
         // Supposons qu'EventService existe et a la sécurité intégrée
-        return eventService.findUpcomingEventsByOrganisateurWithSecurityCheck(id);
+        return eventService.findUpcomingEventsByOrganisateurWithSecurityCheck(id, status);
     }
 
     // Le @ExceptionHandler(MethodArgumentNotValidException.class) a été retiré

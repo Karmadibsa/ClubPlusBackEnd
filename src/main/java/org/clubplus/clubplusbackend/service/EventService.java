@@ -2,10 +2,13 @@ package org.clubplus.clubplusbackend.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.clubplus.clubplusbackend.dao.AdhesionDao;
 import org.clubplus.clubplusbackend.dao.ClubDao;
 import org.clubplus.clubplusbackend.dao.EventDao;
+import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Event;
+import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,18 +24,28 @@ import java.util.List;
 public class EventService {
 
     private final EventDao eventRepository;
+    private final AdhesionDao adhesionRepository;
+    private final MembreDao membreRepository;
     private final ClubDao clubRepository;
     private final SecurityService securityService; // Injecter
 
     // --- Méthodes de Lecture Publiques (Certaines avec Sécurité) ---
 
     /**
-     * Récupère tous les événements (sans filtre sécurité par défaut).
+     * Récupère une liste d'événements, potentiellement filtrée par statut.
+     *
+     * @param statusFilter "active", "inactive", ou null/"all" pour tout récupérer. Par défaut (null), retourne les actifs.
+     * @return La liste des événements filtrée.
      */
     @Transactional(readOnly = true)
-    public List<Event> findAllEvents() {
-        // Potentiellement ajouter un filtre si on ne veut montrer que les events des clubs de l'user ?
-        return eventRepository.findAll();
+    public List<Event> findAllEvents(String statusFilter) { // Signature modifiée
+        if ("inactive".equalsIgnoreCase(statusFilter)) {
+            return eventRepository.findByActif(false);
+        } else if ("all".equalsIgnoreCase(statusFilter)) {
+            return eventRepository.findAll(); // Récupère tout
+        } else { // "active" ou null (comportement par défaut)
+            return eventRepository.findByActif(true);
+        }
     }
 
     /**
@@ -57,71 +70,126 @@ public class EventService {
     }
 
     /**
-     * Récupère les événements d'un organisateur et vérifie si l'utilisateur est membre.
-     * Lance 404 (Club non trouvé via eventId logique) ou 403 (Non membre).
+     * Récupère les événements d'un organisateur, avec sécurité et filtrage par statut.
+     * Par défaut (statusFilter = null), retourne uniquement les événements actifs.
+     *
+     * @param clubId       L'ID du club organisateur.
+     * @param statusFilter "active", "inactive", ou null/"all" (null retourne actifs par défaut).
+     * @return Liste filtrée des événements.
      */
     @Transactional(readOnly = true)
-    public List<Event> findEventsByOrganisateurWithSecurityCheck(Integer clubId) {
-        // 1. Vérifier l'existence du club pour un message d'erreur clair si clubId invalide.
+    // Signature modifiée pour inclure statusFilter
+    public List<Event> findEventsByOrganisateurWithSecurityCheck(Integer clubId, String statusFilter) {
+        if (!clubRepository.existsById(clubId)) { // Garde la vérification d'existence du club
+            throw new EntityNotFoundException("Club non trouvé avec l'ID : " + clubId);
+        }
+        securityService.checkIsCurrentUserMemberOfClubOrThrow(clubId);
+
+        // Appliquer le filtre
+        if ("inactive".equalsIgnoreCase(statusFilter)) {
+            return eventRepository.findByOrganisateurIdAndActif(clubId, false);
+        } else if ("all".equalsIgnoreCase(statusFilter)) {
+            return eventRepository.findByOrganisateurId(clubId); // Récupère tout
+        } else { // "active" ou null
+            return eventRepository.findByOrganisateurIdAndActif(clubId, true);
+        }
+    }
+
+    /**
+     * Récupère les événements FUTURS d'un organisateur, avec sécurité et filtrage par statut.
+     * Par défaut (statusFilter = null), retourne uniquement les événements futurs ACTIFS.
+     *
+     * @param clubId       L'ID du club organisateur.
+     * @param statusFilter "active", "inactive", ou null/"all" (null retourne actifs par défaut).
+     * @return Liste filtrée des événements futurs.
+     */
+    @Transactional(readOnly = true)
+    // Signature modifiée pour inclure statusFilter
+    public List<Event> findUpcomingEventsByOrganisateurWithSecurityCheck(Integer clubId, String statusFilter) {
         if (!clubRepository.existsById(clubId)) {
             throw new EntityNotFoundException("Club non trouvé avec l'ID : " + clubId);
         }
-        // 2. Vérifier la sécurité contextuelle : l'utilisateur est-il membre de ce club ?
-        securityService.checkIsCurrentUserMemberOfClubOrThrow(clubId); // Lance 403 si non membre
+        securityService.checkIsCurrentUserMemberOfClubOrThrow(clubId);
 
-        // 3. Récupérer les événements
-        return eventRepository.findByOrganisateurId(clubId);
-    }
-
-    /**
-     * Récupère les événements FUTURS d'un organisateur et vérifie si l'utilisateur est membre.
-     * Lance 404 (Club non trouvé) ou 403 (Non membre).
-     */
-    @Transactional(readOnly = true)
-    public List<Event> findUpcomingEventsByOrganisateurWithSecurityCheck(Integer clubId) {
-        // 1. Vérifier l'existence du club.
-        if (!clubRepository.existsById(clubId)) {
-            throw new EntityNotFoundException("Club non trouvé avec l'ID : " + clubId);
+        LocalDateTime now = LocalDateTime.now();
+        // Appliquer le filtre
+        if ("inactive".equalsIgnoreCase(statusFilter)) {
+            // Trouve les futurs inactifs
+            return eventRepository.findByOrganisateurIdAndActifAndStartAfter(clubId, false, now);
+        } else if ("all".equalsIgnoreCase(statusFilter)) {
+            // Trouve tous les futurs (actifs et inactifs)
+            return eventRepository.findByOrganisateurIdAndStartAfter(clubId, now); // Méthode DAO existante
+        } else { // "active" ou null
+            // Trouve les futurs actifs
+            return eventRepository.findByOrganisateurIdAndActifAndStartAfter(clubId, true, now);
         }
-        // 2. Vérifier la sécurité contextuelle.
-        securityService.checkIsCurrentUserMemberOfClubOrThrow(clubId); // Lance 403 si non membre
+    }
 
-        // 3. Récupérer les événements futurs.
-        return eventRepository.findByOrganisateurIdAndStartAfter(clubId, LocalDateTime.now());
+
+    /**
+     * Récupère tous les événements futurs, potentiellement filtrés par statut.
+     * Par défaut (null), retourne les actifs.
+     *
+     * @param statusFilter "active", "inactive", ou null/"all".
+     * @return Liste filtrée des événements futurs.
+     */
+    @Transactional(readOnly = true)
+    public List<Event> findUpcomingEvents(String statusFilter) { // Signature modifiée
+        LocalDateTime now = LocalDateTime.now();
+        if ("inactive".equalsIgnoreCase(statusFilter)) {
+            return eventRepository.findByActifAndStartAfter(false, now);
+        } else if ("all".equalsIgnoreCase(statusFilter)) {
+            return eventRepository.findByStartAfter(now); // Méthode DAO existante
+        } else { // "active" ou null
+            return eventRepository.findByActifAndStartAfter(true, now);
+        }
     }
 
     /**
-     * Récupère tous les événements futurs (sans filtre sécurité).
+     * Récupère les événements futurs des clubs dont l'utilisateur est membre,
+     * potentiellement filtrés par statut.
+     * Par défaut (statusFilter = null ou "all"), retourne TOUS les événements futurs (actifs et inactifs).
+     *
+     * @param statusFilter "active", "inactive", ou null/"all".
+     * @return Liste filtrée des événements futurs.
      */
     @Transactional(readOnly = true)
-    public List<Event> findUpcomingEvents() {
-        return eventRepository.findByStartAfter(LocalDateTime.now());
-    }
-
-    /**
-     * Récupère les événements futurs des clubs dont l'utilisateur est membre.
-     * Utilise l'ID de l'utilisateur courant via SecurityService.
-     */
-    @Transactional(readOnly = true)
-    public List<Event> findUpcomingEventsForMemberClubs() {
-        Integer currentUserId = securityService.getCurrentUserIdOrThrow(); // Lance si non authentifié
-
-        // Récupérer les IDs des clubs du membre (suppose une méthode dans AdhesionDao ou MembreService)
-        List<Integer> memberClubIds = findClubIdsForMember(currentUserId); // Méthode helper à implémenter
+    // Ajouter le paramètre statusFilter
+    public List<Event> findUpcomingEventsForMemberClubs(String statusFilter) {
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+        List<Integer> memberClubIds = findClubIdsForMember(currentUserId); // Utilise la méthode helper
 
         if (memberClubIds.isEmpty()) {
             return Collections.emptyList();
         }
-        return eventRepository.findByOrganisateurIdInAndStartAfter(memberClubIds, LocalDateTime.now());
+
+        LocalDateTime now = LocalDateTime.now();
+
+        // Appliquer le filtre basé sur le paramètre statusFilter
+        if ("active".equalsIgnoreCase(statusFilter)) {
+            // Récupère seulement les futurs actifs
+            return eventRepository.findByOrganisateurIdInAndActifAndStartAfter(memberClubIds, true, now);
+        } else if ("inactive".equalsIgnoreCase(statusFilter)) {
+            // Récupère seulement les futurs inactifs (annulés)
+            return eventRepository.findByOrganisateurIdInAndActifAndStartAfter(memberClubIds, false, now);
+        } else { // null, "all", ou une valeur invalide -> retourne TOUT (comportement par défaut)
+            // Récupère tous les futurs pour ces clubs (actifs et inactifs)
+            return eventRepository.findByOrganisateurIdInAndStartAfter(memberClubIds, now);
+        }
     }
 
-    // Méthode helper (à placer ici ou dans MembreService/AdhesionDao)
+    // --- Méthode Helper ---
+    // Assure-toi que cette méthode est correctement implémentée
     private List<Integer> findClubIdsForMember(Integer membreId) {
-        // Exemple d'implémentation (à adapter selon votre DAO)
-        // return adhesionRepository.findByMembreId(membreId).stream()
-        //         .map(adhesion -> adhesion.getClub().getId())
-        //         .collect(Collectors.toList());
-        return List.of(); // Placeholder
+
+        Membre membre = membreRepository.findById(membreId)
+                .orElse(null); // Gère le cas où le membre n'est pas trouvé
+
+        if (membre == null || membre.getAdhesions() == null) {
+            return Collections.emptyList();
+        }
+
+        return adhesionRepository.findClubIdsByMembreId(membreId); // Si cette méthode existe
     }
 
 
@@ -136,7 +204,9 @@ public class EventService {
         // 1. Vérifier et récupérer le club organisateur
         Club organisateur = clubRepository.findById(clubId)
                 .orElseThrow(() -> new EntityNotFoundException("Club organisateur non trouvé avec l'ID " + clubId)); // -> 404
-
+        if (!organisateur.getActif()) { // Utilise le getter généré par Lombok
+            throw new IllegalStateException("Impossible de créer un événement pour un club désactivé (ID: " + clubId + ")."); // -> 409
+        }
         // 2. Vérification Sécurité Contextuelle : Est-ce un manager DE CE club ?
         securityService.checkManagerOfClubOrThrow(clubId); // Lance 403 si non manager
 
@@ -154,6 +224,7 @@ public class EventService {
         newEvent.setDescription(eventData.getDescription());
         newEvent.setLocation(eventData.getLocation());
         newEvent.setOrganisateur(organisateur); // Lier au club
+        newEvent.setActif(true);
         newEvent.setCategories(new ArrayList<>()); // Initialiser collections
         newEvent.setNotations(new ArrayList<>());
         newEvent.setId(null);
@@ -169,7 +240,9 @@ public class EventService {
     public Event updateEvent(Integer eventId, Event eventDetails) {
         // 1. Récupérer l'événement existant
         Event existingEvent = getEventByIdOrThrow(eventId); // Lance 404 si non trouvé
-
+        if (!existingEvent.getActif()) {
+            throw new IllegalStateException("Impossible de modifier un événement déjà annulé (ID: " + eventId + ")."); // -> 409
+        }
         // 2. Vérification Sécurité Contextuelle
         securityService.checkManagerOfClubOrThrow(existingEvent.getOrganisateur().getId()); // Lance 403 si non manager
 

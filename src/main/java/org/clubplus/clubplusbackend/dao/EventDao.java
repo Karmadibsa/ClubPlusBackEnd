@@ -82,4 +82,23 @@ public interface EventDao extends JpaRepository<Event, Integer> {
     @Query("SELECT e FROM Event e LEFT JOIN FETCH e.categories c LEFT JOIN FETCH c.reservations r WHERE e.id = :eventId")
     Optional<Event> findByIdFetchingCategoriesAndReservations(@Param("eventId") Integer eventId);
 
+
+    // --- Ajouts pour filtrage par statut ---
+
+    // Trouver tous les événements par statut actif/inactif
+    List<Event> findByActif(boolean actif);
+
+    // Trouver les événements d'un organisateur par statut actif/inactif
+    List<Event> findByOrganisateurIdAndActif(Integer organisateurId, boolean actif);
+
+    // Trouver les événements futurs ACTIFS d'un organisateur
+    List<Event> findByOrganisateurIdAndActifAndStartAfter(Integer organisateurId, boolean actif, LocalDateTime startTime);
+
+    // Trouver les événements futurs ACTIFS pour une liste de clubs
+    List<Event> findByOrganisateurIdInAndActifAndStartAfter(Collection<Integer> clubIds, boolean actif, LocalDateTime now);
+
+    // Trouver tous les événements futurs par statut actif/inactif
+    List<Event> findByActifAndStartAfter(boolean actif, LocalDateTime startTime);
+
+
 }

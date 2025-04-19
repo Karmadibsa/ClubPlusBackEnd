@@ -16,6 +16,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -103,27 +104,74 @@ public class ReservationService {
     }
 
     /**
-     * Récupère les réservations de l'utilisateur courant.
-     * Sécurité: Utilisateur authentifié.
+     * Récupère les réservations de l'utilisateur courant, potentiellement filtrées par statut.
+     * Par défaut (statusFilter = null ou "all"), retourne tous les statuts.
+     *
+     * @param statusFilter "CONFIRMED", "USED", "CANCELLED", ou null/"all".
+     * @return La liste des réservations filtrée.
      */
     @Transactional(readOnly = true)
-    public List<Reservation> findMyReservations() {
+    // Ajouter le paramètre statusFilter à la signature de la méthode
+    public List<Reservation> findMyReservations(String statusFilter) {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow();
-        return reservationRepository.findByMembreId(currentUserId);
+        try {
+            ReservationStatus status = null; // Par défaut, on veut tout
+
+            // Si un filtre est fourni et n'est pas "all", on essaie de le convertir en Enum
+            if (statusFilter != null && !"all".equalsIgnoreCase(statusFilter)) {
+                // Convertit la chaîne (ex: "CONFIRMED") en valeur Enum. Le toUpperCase() gère la casse.
+                status = ReservationStatus.valueOf(statusFilter.toUpperCase());
+            }
+
+            // Appelle la méthode du repository appropriée
+            if (status != null) {
+                // Si un statut valide est trouvé, filtre par ce statut
+                return reservationRepository.findByMembreIdAndStatus(currentUserId, status);
+            } else {
+                // Sinon (statusFilter est null, "all", ou invalide après le try-catch), retourne tout
+                return reservationRepository.findByMembreId(currentUserId);
+            }
+        } catch (IllegalArgumentException e) {
+            // Si statusFilter est une chaîne qui ne correspond à aucun Enum ReservationStatus
+            System.err.println("Statut de réservation invalide fourni pour findMyReservations: " + statusFilter);
+            // Retourne une liste vide ou lance une exception BadRequestException si tu préfères
+            return Collections.emptyList();
+        }
     }
 
     /**
-     * Récupère les réservations pour un événement donné.
-     * Sécurité: L'utilisateur doit être MANAGER du club organisateur.
-     * Lance 404 (Event non trouvé), 403 (Non manager).
+     * Récupère les réservations d'un événement, avec sécurité et filtrage par statut.
+     * Par défaut (statusFilter = null ou "all"), retourne tous les statuts.
+     *
+     * @param eventId      L'ID de l'événement.
+     * @param statusFilter "CONFIRMED", "USED", "CANCELLED", ou null/"all".
+     * @return La liste des réservations filtrée.
      */
     @Transactional(readOnly = true)
-    public List<Reservation> findReservationsByEventIdWithSecurityCheck(Integer eventId) {
+    // Ajouter le paramètre statusFilter à la signature de la méthode
+    public List<Reservation> findReservationsByEventIdWithSecurityCheck(Integer eventId, String statusFilter) {
+        // 1. Vérifier existence event & sécurité (inchangé)
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Événement non trouvé (ID: " + eventId + ")")); // -> 404
-        // Sécurité Contextuelle
-        securityService.checkManagerOfClubOrThrow(event.getOrganisateur().getId()); // -> 403
-        return reservationRepository.findByEventId(eventId);
+                .orElseThrow(() -> new EntityNotFoundException("Événement non trouvé (ID: " + eventId + ")"));
+        securityService.checkManagerOfClubOrThrow(event.getOrganisateur().getId());
+
+        // 2. Appliquer le filtre (logique similaire à findMyReservations)
+        try {
+            ReservationStatus status = null; // Par défaut, on veut tout
+
+            if (statusFilter != null && !"all".equalsIgnoreCase(statusFilter)) {
+                status = ReservationStatus.valueOf(statusFilter.toUpperCase());
+            }
+
+            if (status != null) {
+                return reservationRepository.findByEventIdAndStatus(eventId, status);
+            } else {
+                return reservationRepository.findByEventId(eventId); // Récupère tout
+            }
+        } catch (IllegalArgumentException e) {
+            System.err.println("Statut de réservation invalide fourni pour findReservationsByEventId: " + statusFilter);
+            return Collections.emptyList(); // Ou lancer une exception BadRequestException
+        }
     }
 
     /**

@@ -4,11 +4,11 @@ import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.model.Event;
+import org.clubplus.clubplusbackend.security.annotation.IsConnected;
 import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.EventService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -27,10 +27,13 @@ public class EventController {
      * Sécurité: Authentifié.
      */
     @GetMapping
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected // Sécurité Ok
     @JsonView(GlobalView.Base.class)
-    public List<Event> getAllEvents() {
-        return eventService.findAllEvents();
+    public List<Event> getAllEvents(
+            @RequestParam(required = false) String status
+    ) {
+        // Passer le paramètre au service
+        return eventService.findAllEvents(status);
     }
 
     /**
@@ -40,7 +43,7 @@ public class EventController {
      * Exceptions (globales): 404 (Non trouvé), 403 (Non membre).
      */
     @GetMapping("/{id}")
-    @PreAuthorize("isAuthenticated()") // L'utilisateur doit être connecté
+    @IsConnected // L'utilisateur doit être connecté
     @JsonView(GlobalView.EventView.class)
     public Event getEventById(@PathVariable Integer id) {
         // Le service lance 404 ou 403 si nécessaire
@@ -53,10 +56,10 @@ public class EventController {
      * Sécurité: Authentifié.
      */
     @GetMapping("/upcoming")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.Base.class)
-    public List<Event> getUpcomingEvents() {
-        return eventService.findUpcomingEvents();
+    public List<Event> getUpcomingEvents(@RequestParam(required = false) String status) {
+        return eventService.findUpcomingEvents(status);
     }
 
     /**
@@ -66,10 +69,10 @@ public class EventController {
      * Exceptions (globales): 404 (Club non trouvé), 403 (Non membre).
      */
     @GetMapping("/organisateur/{clubId}")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.Base.class)
-    public List<Event> getEventsByOrganisateur(@PathVariable Integer clubId) {
-        return eventService.findEventsByOrganisateurWithSecurityCheck(clubId);
+    public List<Event> getEventsByOrganisateur(@PathVariable Integer clubId, @RequestParam(required = false) String status) {
+        return eventService.findEventsByOrganisateurWithSecurityCheck(clubId, status);
     }
 
     /**
@@ -79,10 +82,10 @@ public class EventController {
      * Exceptions (globales): 404 (Club non trouvé), 403 (Non membre).
      */
     @GetMapping("/organisateur/{clubId}/upcoming")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.Base.class)
-    public List<Event> getUpcomingEventsByOrganisateur(@PathVariable Integer clubId) {
-        return eventService.findUpcomingEventsByOrganisateurWithSecurityCheck(clubId);
+    public List<Event> getUpcomingEventsByOrganisateur(@PathVariable Integer clubId, @RequestParam(required = false, defaultValue = "active") String status) {
+        return eventService.findUpcomingEventsByOrganisateurWithSecurityCheck(clubId, status);
     }
 
     /**
@@ -92,11 +95,11 @@ public class EventController {
      * Exceptions (globales): 401 (Si SecurityService ne trouve pas l'user).
      */
     @GetMapping("/my-clubs/upcoming")
-    @PreAuthorize("isAuthenticated()")
+    @IsConnected
     @JsonView(GlobalView.Base.class)
-    public List<Event> getMyClubsUpcomingEvents() {
+    public List<Event> getMyClubsUpcomingEvents(@RequestParam(required = false) String status) {
         // Le service utilise SecurityService pour trouver l'utilisateur et ses clubs
-        return eventService.findUpcomingEventsForMemberClubs();
+        return eventService.findUpcomingEventsForMemberClubs(status);
     }
 
     /**
@@ -141,7 +144,7 @@ public class EventController {
     @ResponseStatus(HttpStatus.NO_CONTENT) // 204
     public void deleteEvent(@PathVariable Integer id) {
         // Le service gère la suppression, la sécurité contextuelle, et les erreurs métier
-        eventService.deleteEvent(id);
+        eventService.deactivateEvent(id);
     }
 
     // Le @ExceptionHandler pour MethodArgumentNotValidException doit être dans GlobalExceptionHandler.

@@ -68,6 +68,9 @@ public class CategorieService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Impossible d'ajouter la catégorie: Événement non trouvé (ID: " + eventId + ")"));
 
+        if (!event.getActif()) { // Utilise le getter de Lombok
+            throw new IllegalStateException("Impossible d'ajouter une catégorie à un événement annulé (ID: " + eventId + ")."); // -> 409
+        }
         // 2. Vérification de Sécurité Contextuelle : L'utilisateur peut-il gérer les catégories pour ce club ?
         Integer clubId = event.getOrganisateur().getId();
         securityService.checkManagerOfClubOrThrow(clubId); // Lance AccessDeniedException (403) si non manager
@@ -104,6 +107,10 @@ public class CategorieService {
         Categorie existingCategorie = categorieRepository.findByIdAndEventId(categorieId, eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Catégorie ID " + categorieId + " non trouvée ou n'appartient pas à l'événement ID " + eventId));
 
+        // Vérifier si l'événement associé est ACTIF
+        if (!existingCategorie.getEvent().getActif()) {
+            throw new IllegalStateException("Impossible de modifier une catégorie d'un événement annulé (ID: " + eventId + ")."); // -> 409
+        }
         // 2. Vérification de Sécurité Contextuelle.
         Integer clubId = existingCategorie.getEvent().getOrganisateur().getId();
         securityService.checkManagerOfClubOrThrow(clubId);
@@ -120,7 +127,7 @@ public class CategorieService {
                         throw new IllegalArgumentException("Une autre catégorie nommée '" + newNom.trim() + "' existe déjà pour cet événement."); // 400/409
                     });
             existingCategorie.setNom(newNom.trim());
-            updated = true;
+            updated = true; // Signale qu'une modification a eu lieu
         }
 
         // 4. Traiter la mise à jour de la capacité (si fournie et différente).
@@ -130,22 +137,23 @@ public class CategorieService {
             if (newCapacite < 0) {
                 throw new IllegalArgumentException("La nouvelle capacité ne peut pas être négative."); // 400
             }
-            // Validation Métier : La nouvelle capacité est-elle suffisante par rapport aux réservations actuelles ?
-            // IMPORTANT: L'accès à existingCategorie.getReservations() va déclencher le chargement LAZY
-            // car nous sommes dans une méthode @Transactional.
-            int placesReservees = existingCategorie.getReservations().size(); // Utilise le getter pour LAZY loading
-            if (newCapacite < placesReservees) {
-                throw new IllegalArgumentException("Impossible de réduire la capacité à " + newCapacite + " car " + placesReservees + " places sont déjà réservées."); // 409 Conflict
+            // Utilise la méthode getPlaceReserve() qui compte les réservations CONFIRMED
+            int placesConfirmees = existingCategorie.getPlaceReserve();
+            if (newCapacite < placesConfirmees) {
+                // Message d'erreur mis à jour pour refléter "confirmées"
+                throw new IllegalArgumentException("Impossible de réduire la capacité à " + newCapacite + " car " + placesConfirmees + " places sont déjà confirmées."); // 409 Conflict
             }
             existingCategorie.setCapacite(newCapacite);
-            updated = true;
+            updated = true; // Signale qu'une modification a eu lieu
         }
 
         // 5. Sauvegarder uniquement si des modifications ont été détectées.
         if (updated) {
+            // Sauvegarde si le nom OU la capacité (ou les deux) ont changé
             return categorieRepository.save(existingCategorie);
         } else {
-            return existingCategorie; // Retourner l'objet existant si rien n'a changé.
+            // Retourne l'objet existant si aucune modification n'a été faite
+            return existingCategorie;
         }
     }
 
@@ -160,18 +168,20 @@ public class CategorieService {
         Categorie categorieToDelete = categorieRepository.findByIdAndEventIdFetchingReservations(categorieId, eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Catégorie ID " + categorieId + " non trouvée ou n'appartient pas à l'événement ID " + eventId));
 
+        if (!categorieToDelete.getEvent().getActif()) {
+            throw new IllegalStateException("Impossible de supprimer une catégorie d'un événement annulé (ID: " + eventId + ")."); // -> 409
+        }
         // 2. Vérification de Sécurité Contextuelle.
         Integer clubId = categorieToDelete.getEvent().getOrganisateur().getId();
         securityService.checkManagerOfClubOrThrow(clubId);
 
         // 3. Validation Métier : Y a-t-il des réservations existantes ?
-        // Comme on a utilisé JOIN FETCH, la collection 'reservations' est chargée.
-        if (!categorieToDelete.getReservations().isEmpty()) {
-            int nbReservations = categorieToDelete.getReservations().size();
-            // Utiliser IllegalStateException pour indiquer une opération invalide dans l'état actuel.
-            throw new IllegalStateException("Impossible de supprimer la catégorie '" + categorieToDelete.getNom() + "' car elle contient " + nbReservations + " réservation(s)."); // Sera transformée en 409 par GlobalExceptionHandler
+        // Utilise la méthode getPlaceReserve() qui compte les confirmées.
+        int placesConfirmees = categorieToDelete.getPlaceReserve();
+        if (placesConfirmees > 0) {
+            // Message d'erreur mis à jour
+            throw new IllegalStateException("Impossible de supprimer la catégorie '" + categorieToDelete.getNom() + "' car elle contient " + placesConfirmees + " réservation(s) confirmée(s)."); // Sera transformée en 409
         }
-
         // 4. Si aucune réservation, procéder à la suppression.
         categorieRepository.delete(categorieToDelete);
     }

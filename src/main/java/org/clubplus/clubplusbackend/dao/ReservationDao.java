@@ -50,4 +50,8 @@ public interface ReservationDao extends JpaRepository<Reservation, Integer> {
     Optional<Reservation> findByReservationUuid(String uuid);
 
     long countByMembreIdAndEventIdAndStatus(Integer membreId, Integer membreId1, ReservationStatus status);
+
+    List<Reservation> findByMembreIdAndStatus(Integer currentUserId, ReservationStatus status);
+
+    List<Reservation> findByEventIdAndStatus(Integer eventId, ReservationStatus status);
 }
