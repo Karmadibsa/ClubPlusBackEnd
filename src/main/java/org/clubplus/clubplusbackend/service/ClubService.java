@@ -6,6 +6,7 @@ import org.clubplus.clubplusbackend.dao.AdhesionDao;
 import org.clubplus.clubplusbackend.dao.ClubDao;
 import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.dto.CreateClubRequestDto;
+import org.clubplus.clubplusbackend.dto.UpdateClubDto;
 import org.clubplus.clubplusbackend.model.Adhesion;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Event;
@@ -169,7 +170,7 @@ public class ClubService {
      * Sécurité: Seul l'ADMINISTRATEUR spécifique de ce club peut le faire.
      * Lance EntityNotFoundException (404), AccessDeniedException (403), IllegalArgumentException (409).
      */
-    public Club updateClub(Integer id, Club clubDetails) {
+    public Club updateClub(Integer id, UpdateClubDto updateDto) {
         // 1. Vérification Sécurité Contextuelle : Est-ce l'admin DE CE club ?
         securityService.checkIsActualAdminOfClubOrThrow(id); // Lance 403 si non admin du club
 
@@ -179,47 +180,40 @@ public class ClubService {
         boolean updated = false;
 
         // 3. Mettre à jour les champs modifiables (adresse, contact...)
-        if (clubDetails.getNom() != null && !clubDetails.getNom().isBlank()) {
-            existingClub.setNom(clubDetails.getNom());
+        if (updateDto.getNom() != null && !updateDto.getNom().isBlank()) {
+            existingClub.setNom(updateDto.getNom());
             updated = true;
         }
         // ... (Mettre à jour numero_voie, rue, codepostal, ville, telephone pareil) ...
-        if (clubDetails.getNumero_voie() != null) {
-            existingClub.setNumero_voie(clubDetails.getNumero_voie());
+        if (updateDto.getNumero_voie() != null) {
+            existingClub.setNumero_voie(updateDto.getNumero_voie());
             updated = true;
         }
-        if (clubDetails.getRue() != null) {
-            existingClub.setRue(clubDetails.getRue());
+        if (updateDto.getRue() != null) {
+            existingClub.setRue(updateDto.getRue());
             updated = true;
         }
-        if (clubDetails.getCodepostal() != null) {
-            existingClub.setCodepostal(clubDetails.getCodepostal());
+        if (updateDto.getCodepostal() != null) {
+            existingClub.setCodepostal(updateDto.getCodepostal());
             updated = true;
         }
-        if (clubDetails.getVille() != null) {
-            existingClub.setVille(clubDetails.getVille());
+        if (updateDto.getVille() != null) {
+            existingClub.setVille(updateDto.getVille());
             updated = true;
         }
-        if (clubDetails.getTelephone() != null) {
-            existingClub.setTelephone(clubDetails.getTelephone());
+        if (updateDto.getTelephone() != null) {
+            existingClub.setTelephone(updateDto.getTelephone());
             updated = true;
         }
 
         // Mettre à jour l'email (avec vérification d'unicité)
-        String newEmail = clubDetails.getEmail();
+        String newEmail = updateDto.getEmail();
         if (newEmail != null && !newEmail.isBlank() && !newEmail.equalsIgnoreCase(existingClub.getEmail())) {
             String normalizedNewEmail = newEmail.toLowerCase().trim();
             if (clubRepository.existsByEmailAndIdNot(normalizedNewEmail, id)) {
                 throw new IllegalArgumentException("Email déjà utilisé par un autre club: " + newEmail); // -> 409 Conflict
             }
             existingClub.setEmail(normalizedNewEmail);
-            updated = true;
-        }
-
-        // Mettre à jour la date de création "réelle" si fournie (date inscription app non modifiable)
-        if (clubDetails.getDate_creation() != null && !clubDetails.getDate_creation().equals(existingClub.getDate_creation())) {
-            // Ajouter une validation si nécessaire (ex: doit être dans le passé)
-            existingClub.setDate_creation(clubDetails.getDate_creation());
             updated = true;
         }
 

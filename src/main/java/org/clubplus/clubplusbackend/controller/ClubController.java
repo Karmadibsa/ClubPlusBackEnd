@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.dto.CreateClubRequestDto;
+import org.clubplus.clubplusbackend.dto.UpdateClubDto;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.model.Membre;
@@ -99,10 +100,10 @@ public class ClubController {
     @PutMapping("/{id}")
     @IsAdmin
     @JsonView(GlobalView.ClubView.class)
-    public Club updateClub(@PathVariable Integer id, @Valid @RequestBody Club clubDetails) {
+    public Club updateClub(@PathVariable Integer id, @Valid @RequestBody UpdateClubDto updateDto) {
         // @Valid gère validation Bean -> 400
         // Le service gère existence (-> 404), sécurité admin (-> 403), conflits (-> 409)
-        return clubService.updateClub(id, clubDetails);
+        return clubService.updateClub(id, updateDto);
     }
 
     /**

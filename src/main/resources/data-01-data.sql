@@ -62,9 +62,6 @@ VALUES ('Tournoi Badminton CSC (Passé)', '2025-02-15 14:00:00', '2025-02-15 18:
        ('Soirée CSC Mars (Passé)', '2025-03-20 19:00:00', '2025-03-20 23:00:00', 'Rencontre membres.', 'Club House',
         1,
         1, NULL), -- ID: 2
-       ('Tournoi Padel Lyon (Futur)', '2025-06-07 10:00:00', '2025-06-07 17:00:00', 'Tournoi P100 Hommes.',
-        'Lyon Padel Est', 2,
-        1, NULL), -- ID: 3
        ('Initiation Escalade CSC (Futur)', '2025-05-18 14:00:00', '2025-05-18 16:00:00', 'Découverte salle.',
         'Salle GrimpUp', 1,
         1, NULL),
@@ -80,8 +77,7 @@ VALUES (1, 'Simple H', 16),   -- cat ID: 1
        (1, 'Simple F', 16),   -- cat ID: 2
        (2, 'Buffet', 50),     -- cat ID: 3
        (3, 'P100 Hommes', 24),-- cat ID: 4
-       (4, 'Débutant', 10),
-       (5, 'Prout', 100);
+       (4, 'Débutant', 10);
 -- cat ID: 5
 
 -- 6. Insertion des Réservations (Vérifier membre_id, event_id, categorie_id)
@@ -97,9 +93,8 @@ VALUES (1, 1, 1, '2025-02-01 10:00:00', UUID(), 'UTILISE'),  -- Alice (Admin) au
        (5, 3, 4, '2025-05-02 10:00:00', UUID(), 'CONFIRME'), -- Eva (Membre C2) au tournoi Lyon
        (1, 4, 5, '2025-04-20 14:00:00', UUID(), 'CONFIRME'),
 -- Alice (Admin C1) à l'initiation escalade
-       (4, 4, 5, '2025-04-21 15:00:00', UUID(), 'ANNULE'),   -- David initiation escalade, ANNULÉE --- AJOUT ---
-       (5, 5, 6, '2025-04-10 10:00:00', UUID(), 'ANNULE');
--- Eva stage annulé, résa ANNULÉE aussi (logique) --- AJOUT ---
+       (4, 4, 5, '2025-04-21 15:00:00', UUID(), 'ANNULE');
+-- David initiation escalade, ANNULÉE --- AJOUT ---
 
 -- 7. Insertion des Demandes d'Amis (Vérifier envoyeur_id, recepteur_id)
 INSERT INTO demande_ami (envoyeur_id, recepteur_id, statut, date_demande)
