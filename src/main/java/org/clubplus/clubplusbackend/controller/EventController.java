@@ -61,7 +61,7 @@ public class EventController {
      */
     @GetMapping("/my-clubs/upcoming")
     @IsConnected
-    @JsonView(GlobalView.Base.class)
+    @JsonView(GlobalView.EventView.class)
     public List<Event> getMyClubsUpcomingEvents(@RequestParam(required = false) String status) {
         // Le service utilise SecurityService pour trouver l'utilisateur et ses clubs
         return eventService.findUpcomingEventsForMemberClubs(status);
