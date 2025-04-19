@@ -44,7 +44,7 @@ public class Reservation {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) // LAZY, non optionnel
     @JoinColumn(name = "membre_id", nullable = false) // FK non nulle
     // JsonView: Base est un bon choix ici pour ne pas surcharger.
-    @JsonView({GlobalView.Base.class, GlobalView.ReservationView.class})
+    @JsonView(GlobalView.ReservationView.class)
     private Membre membre;
 
     // Relation vers l'Événement concerné
@@ -54,7 +54,7 @@ public class Reservation {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) // LAZY, non optionnel
     @JoinColumn(name = "event_id", nullable = false) // FK non nulle
     // JsonView: Base est un bon choix.
-    @JsonView({GlobalView.Base.class, GlobalView.ReservationView.class})
+    @JsonView({GlobalView.MembreView.class, GlobalView.ReservationView.class})
     private Event event;
 
     // Relation vers la Catégorie spécifique réservée

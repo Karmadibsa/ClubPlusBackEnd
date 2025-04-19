@@ -49,7 +49,6 @@ public class Membre {
     private LocalDate date_naissance;
 
     // Date d'inscription gérée par le système, pas d'annotation de validation d'entrée nécessaire
-    @NotNull // Assurons-nous qu'elle n'est jamais nulle dans l'objet
     @Column(nullable = false)
     @JsonView(GlobalView.MembreView.class)
     private LocalDate date_inscription;
@@ -99,7 +98,6 @@ public class Membre {
     // N'autoriser que l'écriture (désérialisation), pas la lecture (sérialisation)
     private String password; // Mot de passe en clair pour l'entrée/validation, hashé avant sauvegarde
 
-    @NotNull(message = "Le rôle est obligatoire.") // Le rôle doit être défini
     @Enumerated(EnumType.STRING) // Stocke "ADMIN", "MEMBRE", etc.
     @Column(nullable = false)
     @JsonView(GlobalView.MembreView.class) // Visible dans la vue détaillée
@@ -143,7 +141,7 @@ public class Membre {
             joinColumns = @JoinColumn(name = "membre_id"), // Clé étrangère vers l'ID de CE membre
             inverseJoinColumns = @JoinColumn(name = "ami_id") // Clé étrangère vers l'ID de l'AUTRE membre (l'ami)
     )
-    @JsonIgnore // Ne pas inclure par défaut dans le JSON (CRUCIAL pour éviter boucles et fuites)
+    @JsonView(GlobalView.MembreView.class)
     private Set<Membre> amis = new HashSet<>();
 
     @OneToMany(mappedBy = "membre", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
@@ -204,13 +202,13 @@ public class Membre {
         // Anonymisation des champs personnels
         this.nom = "Utilisateur";
         this.prenom = "Supprimé" + anonymizedSuffix; // Rend le prénom unique si jamais nécessaire
-        this.date_naissance = null; // Mettre à null si la colonne de la BDD le permet
+        this.date_naissance = LocalDate.of(1990, 1, 1); // Mettre à null si la colonne de la BDD le permet
         this.numero_voie = "N/A";
         this.rue = "N/A";
         this.codepostal = "00000";
         this.ville = "N/A";
         this.telephone = "0123456789"; // Mettre à null si la colonne de la BDD le permet
-        this.email = "deleted" + anonymizedSuffix + LocalDateTime.now() + "@anom.com"; // Format unique et invalide
+        this.email = "user_" + this.id + "@anonymized.com"; // Format unique et invalide
         this.password = "invalid_password_hash_placeholder"; // Met un hash invalide/inutilisable
 
         this.role = Role.ANONYME; // Ou un rôle dédié comme Role.ANONYME

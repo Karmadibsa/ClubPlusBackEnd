@@ -30,15 +30,15 @@ VALUES ('AdminClub', 'Alice', '1988-03-10', '2024-01-10', '10', 'Rue Principale'
 
 -- 2. Insertion des Clubs (SANS admin_id)
 INSERT INTO club (nom, date_creation, date_inscription, numero_voie, rue, codepostal, ville, telephone, email, actif,
-                  desactivation_date)
+                  desactivation_date, code_club)
 VALUES ('Club Omnisports Paris Centre', '2010-01-15', '2024-01-10', '1', 'Place du Sport', '75001', 'Paris',
-        '0102030405', 'contact@csc-paris.fr', 1, NULL), -- ID: 1
+        '0102030405', 'contact@csc-paris.fr', 1, NULL, 'CLUB-0001'), -- ID: 1
        ('Lyon Padel Club', '2018-06-01', '2025-01-01', '200', 'Avenue Padel', '69007', 'Lyon', '0477889900',
-        'contact@lyonpadel.fr', 1, NULL),
+        'contact@lyonpadel.fr', 1, NULL, 'CLUB-0002'),
 -- ID: 2
        ('[Désactivé] Ancien Club Test', '2005-05-05', '2022-01-01', '12', 'Rue Oubliée', '12345', 'TestVille',
         '0000000000', 'inactive+3@clubplus.invalid', -- Email modifié
-        0, '2024-11-15 10:00:00');
+        0, '2024-11-15 10:00:00', 'CLUB-0003');
 -- Club 3 inactif
 -- Note: code_club sera généré par @PostPersist lors du démarrage de l'app avec ces données.
 

@@ -88,4 +88,14 @@ public interface AdhesionDao extends JpaRepository<Adhesion, Integer> {
 
     @Query("SELECT COUNT(a) FROM Adhesion a JOIN a.membre m WHERE a.club.id = :clubId AND m.actif = true")
     long countActiveMembersByClubId(@Param("clubId") Integer clubId);
+
+
+    /**
+     * Trouve les IDs des clubs ACTIFS auxquels un membre spécifique appartient.
+     *
+     * @param membreId L'ID du membre.
+     * @return Une liste d'IDs de clubs actifs.
+     */
+    @Query("SELECT a.club.id FROM Adhesion a WHERE a.membre.id = :membreId AND a.club.actif = true")
+    List<Integer> findActiveClubIdsByMembreId(@Param("membreId") Integer membreId);
 }

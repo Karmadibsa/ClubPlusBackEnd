@@ -162,18 +162,36 @@ public class SecurityService {
     }
 
     /**
-     * Vérifie si l'utilisateur courant est l'ADMIN spécifique du club.
+     * Vérifie si l'utilisateur courant est ADMIN et membre du club spécifié.
+     * (Basé sur le rôle global du Membre).
      */
     @Transactional(readOnly = true)
     public boolean isActualAdminOfClub(Integer clubId) {
-        Optional<Object[]> resultOpt = getCurrentUserIdOptional()
-                .flatMap(userId -> adhesionRepository.findMembreIdAndRoleByMembreIdAndClubId(userId, clubId));
+        // 1. Récupérer l'ID de l'utilisateur courant
+        Optional<Integer> userIdOpt = getCurrentUserIdOptional();
+        if (userIdOpt.isEmpty()) {
+            return false; // Utilisateur non connecté
+        }
+        Integer userId = userIdOpt.get();
 
-        if (resultOpt.isEmpty()) {
+        // 2. Vérifier si une adhésion existe entre l'utilisateur et le club
+        //    (On suppose que AdhesionDao a cette méthode simple)
+        boolean isMemberOfClub = adhesionRepository.existsByMembreIdAndClubId(userId, clubId);
+
+        if (!isMemberOfClub) {
+            return false; // L'utilisateur n'est pas membre du club
+        }
+
+        // 3. Si membre, récupérer le rôle global de l'utilisateur
+        //    On récupère le Membre complet pour obtenir son rôle
+        Optional<Membre> membreOpt = membreRepository.findById(userId);
+        if (membreOpt.isEmpty()) {
+            // Ne devrait pas arriver si une adhésion existe, mais sécurité
             return false;
         }
-        Role userRole = (Role) resultOpt.get()[1];
-        return userRole == Role.ADMIN;
+
+        // 4. Vérifier si le rôle global est ADMIN
+        return membreOpt.get().getRole() == Role.ADMIN;
     }
 
     /**

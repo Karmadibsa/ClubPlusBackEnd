@@ -40,7 +40,7 @@ public class Adhesion {
     @ManyToOne(fetch = FetchType.LAZY, // TRÈS BIEN: On ne charge pas le club sauf si besoin.
             optional = false) // Renforce la contrainte NotNull au niveau JPA.
     @JoinColumn(name = "club_id", nullable = false) // Définit la colonne FK et la contrainte BDD. Parfait.
-    // @JsonView(GlobalView.Base.class) // Si besoin de sérialiser le club (sa vue de base)
+    @JsonView(GlobalView.MembreView.class)
     private Club club;
 
     @NotNull // La date d'adhésion est une information importante.

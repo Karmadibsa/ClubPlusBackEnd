@@ -10,12 +10,14 @@ import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.Role;
 import org.clubplus.clubplusbackend.security.SecurityService;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -47,11 +49,50 @@ public class MembreService {
      * Lance 404 (Non trouvé) ou 403 (Accès refusé).
      */
     @Transactional(readOnly = true)
-    public Membre getMembreByIdWithSecurityCheck(Integer id) {
-        Membre membre = getMembreByIdOrThrow(id);
-        // Sécurité: Est-ce l'utilisateur courant OU un admin global ?
-        securityService.checkIsOwnerOrGlobalAdminOrThrow(membre.getId()); // Méthode à ajouter dans SecurityService
-        return membre;
+    public Membre getMembreByIdWithSecurityCheck(Integer targetUserId) {
+        // 1. Récupérer l'ID de l'utilisateur courant
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+
+        // 2. Récupérer le membre cible (doit être actif pour être visible via cet endpoint)
+        //    Utilise la méthode standard findById qui respecte @Where sur Membre
+        Membre targetUser = membreRepository.findById(targetUserId)
+                .orElseThrow(() -> new EntityNotFoundException("Membre non trouvé ou inactif (ID: " + targetUserId + ")")); // -> 404
+
+        // 3. Vérifier si l'utilisateur courant est le propriétaire
+        if (currentUserId.equals(targetUserId)) {
+            return targetUser; // C'est soi-même, accès autorisé
+        }
+
+        // --- NOUVELLE LOGIQUE : Vérifier l'appartenance à un club commun ---
+        // 4. Récupérer l'utilisateur courant (actif)
+        Membre currentUser = membreRepository.findById(currentUserId)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur courant non trouvé (ID: " + currentUserId + ")")); // Devrait pas arriver si connecté, mais sécurité
+
+        // 5. Trouver les IDs des clubs actifs communs aux deux membres
+        //    (Nécessite une méthode helper ou une requête DAO spécifique)
+        List<Integer> currentUserActiveClubIds = findActiveClubIdsForMember(currentUserId);
+        List<Integer> targetUserActiveClubIds = findActiveClubIdsForMember(targetUserId);
+
+        // Cherche une intersection (au moins un club actif en commun)
+        boolean hasCommonActiveClub = currentUserActiveClubIds.stream()
+                .anyMatch(targetUserActiveClubIds::contains);
+
+        if (hasCommonActiveClub) {
+            return targetUser; // Accès autorisé car dans le même club actif
+        }
+        // --- FIN NOUVELLE LOGIQUE ---
+
+        // 6. Si aucune des conditions précédentes n'est remplie, refuser l'accès
+        throw new AccessDeniedException("Accès refusé : Vous n'êtes pas autorisé à voir ce profil."); // -> 403
+    }
+
+    /**
+     * Méthode privée pour récupérer les IDs des clubs actifs pour un membre donné.
+     * Utilise AdhesionDao pour interroger la base.
+     */
+    private List<Integer> findActiveClubIdsForMember(Integer membreId) {
+        // Appelle la méthode que nous avons définie dans AdhesionDao
+        return adhesionRepository.findActiveClubIdsByMembreId(membreId);
     }
 
     // --- Inscription (Logique déjà revue, semble OK) ---

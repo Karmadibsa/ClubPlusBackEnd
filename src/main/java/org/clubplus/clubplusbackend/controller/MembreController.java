@@ -3,7 +3,6 @@ package org.clubplus.clubplusbackend.controller;
 import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.clubplus.clubplusbackend.model.Adhesion;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.Role;
@@ -107,8 +106,9 @@ public class MembreController {
     @IsConnected
     @ResponseStatus(HttpStatus.CREATED) // 201
     @JsonView(GlobalView.Base.class) // Retourner juste l'adhésion ou le club ?
-    public Adhesion joinClub(@RequestParam String codeClub) { // Retourne l'adhésion créée
-        return membreService.joinClub(codeClub);
+    public Set<Club> joinClub(@RequestParam String codeClub) { // Retourne l'adhésion créée
+        membreService.joinClub(codeClub);
+        return membreService.findClubsForCurrentUser();
     }
 
     /**
