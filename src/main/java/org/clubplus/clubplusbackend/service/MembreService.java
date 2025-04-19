@@ -137,23 +137,43 @@ public class MembreService {
         return existingMembre;
     }
 
-    // --- Suppression Compte (Utilisateur Courant) ---
+    /**
+     * Désactive et anonymise le compte de l'utilisateur actuellement connecté.
+     * Remplace la suppression physique par une désactivation logique et une anonymisation.
+     * Respecte la logique métier interdisant la suppression d'un admin ayant des adhésions.
+     *
+     * @throws IllegalStateException   si l'utilisateur est un ADMIN avec des adhésions.
+     * @throws EntityNotFoundException si l'utilisateur actif n'est pas trouvé.
+     */
+    @Transactional // Indispensable pour garantir que tout réussit ou échoue ensemble
     public void deleteMyAccount() {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow();
-        Membre membreToDelete = getMembreByIdOrThrow(currentUserId);
+        Membre membreToDelete = getMembreByIdOrThrow(currentUserId); // Récupère le membre actif
 
+        // --- Vérification Admin (Logique métier conservée comme demandé) ---
         if (membreToDelete.getRole() == Role.ADMIN) {
-            // Vérifier s'il est admin d'un club (il ne devrait pas pouvoir se supprimer si c'est le cas)
-            // Long numberOfClubsAdministered = adhesionRepository.countByMembreIdAndRole(currentUserId, Role.ADMIN); // Méthode hypothétique
-            boolean isAdminOfAnyClub = !membreToDelete.getAdhesions().isEmpty() && membreToDelete.getRole() == Role.ADMIN; // Simplifié: si rôle ADMIN et a des adhésions
+            // La logique métier spécifiée : un Admin ne peut se supprimer s'il a des adhésions.
+            boolean isAdminOfAnyClub = !membreToDelete.getAdhesions().isEmpty();
             if (isAdminOfAnyClub) {
-                throw new IllegalStateException("Impossible de supprimer un compte ADMIN qui gère encore un club."); // -> 409
+                // Utilise une exception appropriée, peut-être une 409 Conflict ou 403 Forbidden au niveau du contrôleur
+                throw new IllegalStateException("Impossible de supprimer un compte ADMIN qui gère encore un club.");
             }
-            // Si le rôle est ADMIN mais qu'il n'a plus d'adhésions (cas étrange), on pourrait autoriser. À discuter.
+            // Si c'est un Admin sans adhésion (cas possiblement rare), la suppression est autorisée.
         }
 
-        // Les cascades et orphanRemoval gèrent la suppression des données liées
-        membreRepository.delete(membreToDelete);
+        // --- Logique de Désactivation et Anonymisation ---
+        // 1. Appeler la méthode d'anonymisation DANS l'entité Membre
+        membreToDelete.anonymizeData(); // L'entité se charge de modifier ses propres données
+
+        // 2. Marquer le compte comme inactif
+        membreToDelete.setActif(false);
+        // Note: la date d'anonymisation est déjà mise à jour DANS anonymizeData()
+
+        // 3. Sauvegarder l'état modifié (fait un UPDATE en BDD)
+        membreRepository.save(membreToDelete);
+
+        // FIN - Pas d'appel à membreRepository.delete() requis.
+        // L'approche find-modify-save est utilisée ici.
     }
 
     // --- Gestion Adhésions Club (Utilisateur Courant) ---

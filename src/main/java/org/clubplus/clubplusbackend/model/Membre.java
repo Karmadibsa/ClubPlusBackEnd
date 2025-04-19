@@ -11,8 +11,10 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.clubplus.clubplusbackend.security.Role;
 import org.clubplus.clubplusbackend.view.GlobalView;
+import org.hibernate.annotations.Where;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Entity
@@ -20,6 +22,8 @@ import java.util.*;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+// Filtre TOUTES les requêtes SELECT pour ne retourner que les actifs par défaut
+@Where(clause = "actif = true")
 public class Membre {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -101,6 +105,12 @@ public class Membre {
     @JsonView(GlobalView.MembreView.class) // Visible dans la vue détaillée
     private Role role;
 
+    @NotNull
+    @Column(nullable = false)
+    private Boolean actif = true;
+
+    private LocalDateTime anonymizeDate;
+
     // --- Relations ---
     // Pas besoin de validation directe sur les collections ici,
     // la validation se fait sur les objets DANS les collections (ex: une Réservation doit être valide)
@@ -172,5 +182,65 @@ public class Membre {
             ami.getAmis().remove(this);
         }
 
+    }
+
+    // --- Méthode d'Anonymisation ---
+
+    /**
+     * Anonymise les données personnelles de ce membre et nettoie les relations sensibles.
+     * Doit être appelée AVANT de sauvegarder le membre désactivé.
+     * Ne PAS appeler sur une entité non persistée (ID null).
+     *
+     * @throws IllegalStateException si l'ID du membre est null.
+     */
+    public void anonymizeData() {
+        if (this.id == null) {
+            // Sécurité pour s'assurer qu'on a un ID pour l'unicité de l'email, etc.
+            throw new IllegalStateException("Impossible d'anonymiser un membre sans ID persistant.");
+        }
+
+        String anonymizedSuffix = "+id" + this.id; // Suffixe basé sur l'ID pour garantir l'unicité
+
+        // Anonymisation des champs personnels
+        this.nom = "Utilisateur";
+        this.prenom = "Supprimé" + anonymizedSuffix; // Rend le prénom unique si jamais nécessaire
+        this.date_naissance = null; // Mettre à null si la colonne de la BDD le permet
+        this.numero_voie = "N/A";
+        this.rue = "N/A";
+        this.codepostal = "00000";
+        this.ville = "N/A";
+        this.telephone = "0123456789"; // Mettre à null si la colonne de la BDD le permet
+        this.email = "deleted" + anonymizedSuffix + LocalDateTime.now() + "@anom.com"; // Format unique et invalide
+        this.password = "invalid_password_hash_placeholder"; // Met un hash invalide/inutilisable
+
+        this.role = Role.ANONYME; // Ou un rôle dédié comme Role.ANONYME
+
+        // --- Nettoyage des Relations ---
+        // Les demandes d'amis en attente n'ont plus lieu d'être
+        if (this.demandesEnvoyees != null) {
+            this.demandesEnvoyees.clear();
+        }
+        if (this.demandesRecues != null) {
+            this.demandesRecues.clear();
+        }
+
+        // Supprimer les liens d'amitié bilatéraux
+        if (this.amis != null && !this.amis.isEmpty()) {
+            // Créer une copie pour éviter ConcurrentModificationException pendant l'itération
+            Set<Membre> currentAmis = new HashSet<>(this.amis);
+            for (Membre ami : currentAmis) {
+                // Utilise la méthode qui gère la bidirectionnalité
+                this.removeAmi(ami);
+            }
+        }
+
+        // Les réservations, adhésions, notations sont généralement conservées
+        // car elles représentent l'historique, même d'un utilisateur anonymisé.
+        // L'annotation @Where sur Membre empêchera de les lier facilement à cet utilisateur
+        // depuis d'autres points de l'application.
+
+        // --- Marqueur temporel ---
+        // Mettre à jour la date d'anonymisation (déjà présent dans ton entité)
+        this.anonymizeDate = LocalDateTime.now();
     }
 }

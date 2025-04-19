@@ -3,5 +3,6 @@ package org.clubplus.clubplusbackend.security;
 public enum Role {
     MEMBRE,
     RESERVATION,
-    ADMIN
+    ADMIN,
+    ANONYME
 }
