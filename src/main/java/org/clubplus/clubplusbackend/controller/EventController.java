@@ -3,6 +3,8 @@ package org.clubplus.clubplusbackend.controller;
 import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.clubplus.clubplusbackend.dto.CreateEventDto;
+import org.clubplus.clubplusbackend.dto.UpdateEventDto;
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.security.annotation.IsConnected;
 import org.clubplus.clubplusbackend.security.annotation.IsReservation;
@@ -27,13 +29,13 @@ public class EventController {
      * Sécurité: Authentifié.
      */
     @GetMapping
-    @IsConnected // Sécurité Ok
-    @JsonView(GlobalView.Base.class)
-    public List<Event> getAllEvents(
-            @RequestParam(required = false) String status
+    @IsConnected // Garder: on a besoin de savoir QUI est connecté
+    @JsonView(GlobalView.EventView.class)
+    public List<Event> getAllEventsForMyClubs( // Renommer la méthode pour la clarté est une bonne idée
+                                               @RequestParam(required = false) String status
     ) {
-        // Passer le paramètre au service
-        return eventService.findAllEvents(status);
+        // Le service doit maintenant récupérer l'utilisateur courant
+        return eventService.findAllEventsForMemberClubs(status); // Appeler une nouvelle méthode de service ou une version modifiée
     }
 
     /**
@@ -50,43 +52,6 @@ public class EventController {
         return eventService.getEventByIdWithSecurityCheck(id);
     }
 
-    /**
-     * GET /api/events/upcoming
-     * Récupère tous les événements futurs.
-     * Sécurité: Authentifié.
-     */
-    @GetMapping("/upcoming")
-    @IsConnected
-    @JsonView(GlobalView.Base.class)
-    public List<Event> getUpcomingEvents(@RequestParam(required = false) String status) {
-        return eventService.findUpcomingEvents(status);
-    }
-
-    /**
-     * GET /api/events/organisateur/{clubId}
-     * Récupère les événements (tous) d'un club spécifique.
-     * Sécurité: Authentifié + Membre de ce club (vérifié dans service).
-     * Exceptions (globales): 404 (Club non trouvé), 403 (Non membre).
-     */
-    @GetMapping("/organisateur/{clubId}")
-    @IsConnected
-    @JsonView(GlobalView.Base.class)
-    public List<Event> getEventsByOrganisateur(@PathVariable Integer clubId, @RequestParam(required = false) String status) {
-        return eventService.findEventsByOrganisateurWithSecurityCheck(clubId, status);
-    }
-
-    /**
-     * GET /api/events/organisateur/{clubId}/upcoming
-     * Récupère les événements FUTURS d'un club spécifique.
-     * Sécurité: Authentifié + Membre de ce club (vérifié dans service).
-     * Exceptions (globales): 404 (Club non trouvé), 403 (Non membre).
-     */
-    @GetMapping("/organisateur/{clubId}/upcoming")
-    @IsConnected
-    @JsonView(GlobalView.Base.class)
-    public List<Event> getUpcomingEventsByOrganisateur(@PathVariable Integer clubId, @RequestParam(required = false, defaultValue = "active") String status) {
-        return eventService.findUpcomingEventsByOrganisateurWithSecurityCheck(clubId, status);
-    }
 
     /**
      * GET /api/events/my-clubs/upcoming
@@ -113,9 +78,9 @@ public class EventController {
     @IsReservation // Rôle minimum
     @ResponseStatus(HttpStatus.CREATED) // 201
     @JsonView(GlobalView.EventView.class)
-    public Event createEvent(@RequestParam Integer organisateurId, @Valid @RequestBody Event event) {
+    public Event createEvent(@RequestParam Integer organisateurId, @Valid @RequestBody CreateEventDto eventDto) {
         // Le service gère la création, la sécurité contextuelle, et les erreurs métier
-        return eventService.createEvent(organisateurId, event);
+        return eventService.createEvent(organisateurId, eventDto);
     }
 
     /**
@@ -128,9 +93,9 @@ public class EventController {
     @PutMapping("/{id}")
     @IsReservation // Rôle minimum
     @JsonView(GlobalView.EventView.class)
-    public Event updateEvent(@PathVariable Integer id, @Valid @RequestBody Event eventDetails) {
+    public Event updateEvent(@PathVariable Integer id, @Valid @RequestBody UpdateEventDto eventDto) {
         // Le service gère la mise à jour, la sécurité contextuelle, et les erreurs métier
-        return eventService.updateEvent(id, eventDetails);
+        return eventService.updateEvent(id, eventDto);
     }
 
     /**

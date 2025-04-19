@@ -81,7 +81,7 @@ public interface AdhesionDao extends JpaRepository<Adhesion, Integer> {
      * Utile pour vérifier rapidement si un utilisateur est ADMIN ou RESERVATION d'un club.
      * NOTE: Renvoie Optional<Object[]> car un membre peut ne pas avoir d'adhésion.
      */
-    @Query("SELECT m.id, m.role FROM Adhesion a JOIN a.membre m WHERE a.membre.id = :membreId AND a.club.id = :clubId")
+    @Query("SELECT m.id, m.role FROM Adhesion a JOIN a.membre m WHERE m.id = :membreId AND a.club.id = :clubId")
     Optional<Object[]> findMembreIdAndRoleByMembreIdAndClubId(@Param("membreId") Integer membreId, @Param("clubId") Integer clubId);
 
     List<Integer> findClubIdsByMembreId(Integer membreId);
@@ -98,4 +98,8 @@ public interface AdhesionDao extends JpaRepository<Adhesion, Integer> {
      */
     @Query("SELECT a.club.id FROM Adhesion a WHERE a.membre.id = :membreId AND a.club.actif = true")
     List<Integer> findActiveClubIdsByMembreId(@Param("membreId") Integer membreId);
+
+    // Dans AdhesionDao / AdhesionRepository
+
+
 }

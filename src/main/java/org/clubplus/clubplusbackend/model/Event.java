@@ -65,6 +65,7 @@ public class Event {
     // --- Champs pour Soft Delete ---
     @NotNull // Important pour @Where
     @Column(nullable = false)
+    @JsonView(GlobalView.Base.class)
     private Boolean actif = true; // Statut de l'événement
 
     @Column(name = "desactivation_date") // Nom de colonne explicite

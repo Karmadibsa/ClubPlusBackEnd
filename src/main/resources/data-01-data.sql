@@ -65,6 +65,9 @@ VALUES ('Tournoi Badminton CSC (Passé)', '2025-02-15 14:00:00', '2025-02-15 18:
        ('Initiation Escalade CSC (Futur)', '2025-05-18 14:00:00', '2025-05-18 16:00:00', 'Découverte salle.',
         'Salle GrimpUp', 1,
         1, NULL),
+       ('Initiation Escalade CSC (Futur)', '2025-05-18 14:00:00', '2025-05-18 16:00:00', 'Découverte salle.',
+        'Salle GrimpUp', 2,
+        1, NULL),
 -- ID: 4
        ('[Annulé] Stage Tennis CSC (Futur)', '2025-07-10 09:00:00', '2025-07-12 17:00:00', 'Stage intensif.',
         'Courts Central', 1,

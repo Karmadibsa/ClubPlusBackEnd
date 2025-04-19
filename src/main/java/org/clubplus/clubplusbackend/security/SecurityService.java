@@ -139,17 +139,20 @@ public class SecurityService {
      */
     @Transactional(readOnly = true)
     public boolean isManagerOfClub(Integer clubId) {
-        // Utilise la requête DAO optimisée qui récupère ID et Role
-        Optional<Object[]> resultOpt = getCurrentUserIdOptional()
-                .flatMap(userId -> adhesionRepository.findMembreIdAndRoleByMembreIdAndClubId(userId, clubId));
+        Optional<Integer> userIdOpt = getCurrentUserIdOptional();
+        if (userIdOpt.isEmpty()) return false;
+        Integer userId = userIdOpt.get();
 
-        if (resultOpt.isEmpty()) {
-            return false; // Pas d'adhésion trouvée ou non authentifié
-        }
-        Object[] result = resultOpt.get();
-        // result[0] est userId (pas utile ici), result[1] est Role
-        Role userRole = (Role) result[1];
+        boolean isMemberOfClub = adhesionRepository.existsByMembreIdAndClubId(userId, clubId);
+        if (!isMemberOfClub) return false;
+
+        Optional<Membre> membreOpt = membreRepository.findById(userId);
+        if (membreOpt.isEmpty()) return false;
+
+        // ----- MODIFICATION ICI -----
+        Role userRole = membreOpt.get().getRole();
         return userRole == Role.ADMIN || userRole == Role.RESERVATION;
+        // -----------------------------
     }
 
     /**

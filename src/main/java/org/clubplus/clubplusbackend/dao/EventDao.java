@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface EventDao extends JpaRepository<Event, Integer> {
@@ -104,4 +105,10 @@ public interface EventDao extends JpaRepository<Event, Integer> {
 
 
     long countByOrganisateurIdAndActifAndStartBetween(Integer clubId, boolean actif, LocalDateTime start, LocalDateTime end);
+
+    List<Event> findByOrganisateurIdIn(Set<Integer> memberClubIds);
+
+    List<Event> findByOrganisateurIdInAndActifIsFalse(Set<Integer> memberClubIds);
+
+    List<Event> findByOrganisateurIdInAndActifIsTrue(Set<Integer> memberClubIds);
 }

@@ -6,6 +6,8 @@ import org.clubplus.clubplusbackend.dao.AdhesionDao;
 import org.clubplus.clubplusbackend.dao.ClubDao;
 import org.clubplus.clubplusbackend.dao.EventDao;
 import org.clubplus.clubplusbackend.dao.MembreDao;
+import org.clubplus.clubplusbackend.dto.CreateEventDto;
+import org.clubplus.clubplusbackend.dto.UpdateEventDto;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.model.Membre;
@@ -14,9 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -200,35 +203,35 @@ public class EventService {
      * Sécurité: Vérifie que l'utilisateur est MANAGER du club organisateur.
      * Lance 404 (Club non trouvé), 403 (Non manager), 400 (Données invalides).
      */
-    public Event createEvent(Integer clubId, Event eventData) {
-        // 1. Vérifier et récupérer le club organisateur
-        Club organisateur = clubRepository.findById(clubId)
-                .orElseThrow(() -> new EntityNotFoundException("Club organisateur non trouvé avec l'ID " + clubId)); // -> 404
-        if (!organisateur.getActif()) { // Utilise le getter généré par Lombok
-            throw new IllegalStateException("Impossible de créer un événement pour un club désactivé (ID: " + clubId + ")."); // -> 409
-        }
-        // 2. Vérification Sécurité Contextuelle : Est-ce un manager DE CE club ?
-        securityService.checkManagerOfClubOrThrow(clubId); // Lance 403 si non manager
+    public Event createEvent(Integer organisateurId, CreateEventDto eventDto) {
+        // 1. Sécurité: Vérifier si l'utilisateur courant est manager du club organisateur
+        securityService.checkManagerOfClubOrThrow(organisateurId);
 
-        // 3. Validation Métier (Dates)
-        if (eventData.getStart() == null || eventData.getEnd() == null || eventData.getEnd().isBefore(eventData.getStart())) {
-            throw new IllegalArgumentException("Dates de début/fin invalides ou manquantes."); // -> 400
-        }
-        // Autres validations si nécessaire (nom non vide, etc.) - @Valid dans le contrôleur gère déjà beaucoup
+        // 2. Récupérer le club organisateur
+        Club organisateur = clubRepository.findById(organisateurId)
+                .orElseThrow(() -> new IllegalStateException("Probleme au niveau de la recuperation du club"));
 
-        // 4. Création et sauvegarde
+        // 3. Créer la nouvelle entité Event
         Event newEvent = new Event();
-        newEvent.setNom(eventData.getNom());
-        newEvent.setStart(eventData.getStart());
-        newEvent.setEnd(eventData.getEnd());
-        newEvent.setDescription(eventData.getDescription());
-        newEvent.setLocation(eventData.getLocation());
-        newEvent.setOrganisateur(organisateur); // Lier au club
-        newEvent.setActif(true);
-        newEvent.setCategories(new ArrayList<>()); // Initialiser collections
-        newEvent.setNotations(new ArrayList<>());
-        newEvent.setId(null);
 
+        // 4. Mapper les champs du DTO vers l'entité
+        newEvent.setNom(eventDto.getNom());
+        newEvent.setStart(eventDto.getStart());
+        newEvent.setEnd(eventDto.getEnd());
+        newEvent.setDescription(eventDto.getDescription());
+        newEvent.setLocation(eventDto.getLocation());
+
+        // 5. Définir l'organisateur et l'état initial
+        newEvent.setOrganisateur(organisateur); // <-- L'assignation clé !
+        newEvent.setActif(true); // Par défaut, un nouvel événement est actif
+
+        // 6. Validation métier supplémentaire (ex: start < end)
+        if (newEvent.getStart().isAfter(newEvent.getEnd())) {
+            throw new IllegalArgumentException("La date de début doit être avant la date de fin.");
+            // Ou une exception plus spécifique gérée par GlobalExceptionHandler -> 400
+        }
+
+        // 7. Sauvegarder
         return eventRepository.save(newEvent);
     }
 
@@ -237,55 +240,44 @@ public class EventService {
      * Sécurité: Vérifie que l'utilisateur est MANAGER du club organisateur.
      * Lance 404 (Event non trouvé), 403 (Non manager), 400 (Données invalides).
      */
-    public Event updateEvent(Integer eventId, Event eventDetails) {
-        // 1. Récupérer l'événement existant
-        Event existingEvent = getEventByIdOrThrow(eventId); // Lance 404 si non trouvé
-        if (!existingEvent.getActif()) {
-            throw new IllegalStateException("Impossible de modifier un événement déjà annulé (ID: " + eventId + ")."); // -> 409
-        }
-        // 2. Vérification Sécurité Contextuelle
-        securityService.checkManagerOfClubOrThrow(existingEvent.getOrganisateur().getId()); // Lance 403 si non manager
+    public Event updateEvent(Integer eventId, UpdateEventDto eventDto) {
+        // 1. Récupérer l'entité Event existante
+        Event existingEvent = eventRepository.findById(eventId)
+                .orElseThrow(() -> new IllegalStateException("L'event non recuperé"));
 
-        boolean updated = false;
+        // 2. Sécurité: Vérifier si l'utilisateur est manager du club organisateur
+        //    (Suppose que Event a une relation `getOrganisateur()` vers Club)
+        if (existingEvent.getOrganisateur() == null) {
+            // Cas étrange, un événement devrait toujours avoir un organisateur
+            throw new IllegalStateException("L'événement ID " + eventId + " n'a pas d'organisateur défini.");
+        }
+        securityService.checkManagerOfClubOrThrow(existingEvent.getOrganisateur().getId());
+        // Ou si vous avez/préférez : securityService.checkManagerOfEventClubOrThrow(eventId);
 
-        // 3. Mise à jour des champs (avec validation)
-        if (eventDetails.getNom() != null && !eventDetails.getNom().isBlank()) {
-            existingEvent.setNom(eventDetails.getNom());
-            updated = true;
+        // 3. Vérifications métier (exemples, à adapter) :
+        //    - Ne pas modifier un événement passé ?
+        if (existingEvent.getEnd().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("Impossible de modifier un événement déjà terminé.");
         }
+        //    - Vérifier start < end pour les nouvelles dates
+        if (eventDto.getStart().isAfter(eventDto.getEnd())) {
+            throw new IllegalArgumentException("La date de début doit être avant la date de fin.");
+            // Ou une exception plus spécifique gérée par GlobalExceptionHandler -> 400
+        }
+        //    - Vérifier si la mise à jour affecte des réservations existantes de manière problématique ? (logique complexe)
 
-        LocalDateTime newStart = eventDetails.getStart();
-        LocalDateTime newEnd = eventDetails.getEnd();
-        if (newStart != null || newEnd != null) { // Si au moins une date est fournie
-            LocalDateTime checkStart = (newStart != null) ? newStart : existingEvent.getStart();
-            LocalDateTime checkEnd = (newEnd != null) ? newEnd : existingEvent.getEnd();
-            if (checkEnd.isBefore(checkStart)) {
-                throw new IllegalArgumentException("La date de fin ne peut pas être antérieure à la date de début."); // -> 400
-            }
-            if (newStart != null) {
-                existingEvent.setStart(newStart);
-                updated = true;
-            }
-            if (newEnd != null) {
-                existingEvent.setEnd(newEnd);
-                updated = true;
-            }
-        }
+        // 4. Mapper les champs du DTO vers l'entité EXISTANTE
+        //    IMPORTANT: Ne modifiez QUE les champs présents dans le DTO.
+        existingEvent.setNom(eventDto.getNom());
+        existingEvent.setStart(eventDto.getStart());
+        existingEvent.setEnd(eventDto.getEnd());
+        existingEvent.setDescription(eventDto.getDescription());
+        existingEvent.setLocation(eventDto.getLocation());
+        // Ne touchez PAS à existingEvent.setId(), existingEvent.setOrganisateur(),
+        // existingEvent.setActif() (sauf si c'est une action dédiée), etc.
 
-        if (eventDetails.getDescription() != null) { // Permet de mettre à jour avec une description vide/nulle si besoin
-            existingEvent.setDescription(eventDetails.getDescription());
-            updated = true;
-        }
-        if (eventDetails.getLocation() != null) { // Idem pour la localisation
-            existingEvent.setLocation(eventDetails.getLocation());
-            updated = true;
-        }
-
-        // 4. Sauvegarder si nécessaire
-        if (updated) {
-            return eventRepository.save(existingEvent);
-        }
-        return existingEvent;
+        // 5. Sauvegarder l'entité mise à jour
+        return eventRepository.save(existingEvent);
     }
 
     /**
@@ -319,4 +311,30 @@ public class EventService {
         eventRepository.save(eventToDeactivate);    // Sauvegarde (UPDATE)
     }
 
+    public List<Event> findAllEventsForMemberClubs(String status) {
+        // 1. Récupérer l'utilisateur courant
+        Membre currentUser = securityService.getCurrentMembreOrThrow();
+
+        // 2. Récupérer les IDs des clubs dont l'utilisateur est membre actif
+        // (Attention: assurez-vous que l'adhésion et le club sont actifs si nécessaire)
+        Set<Integer> memberClubIds = currentUser.getAdhesions().stream()
+                .filter(adhesion -> adhesion.getClub() != null && adhesion.getClub().getActif()) // Filtre optionnel sur club actif
+                .map(adhesion -> adhesion.getClub().getId())
+                .collect(Collectors.toSet());
+
+        if (memberClubIds.isEmpty()) {
+            return Collections.emptyList(); // L'utilisateur n'est membre d'aucun club actif
+        }
+
+        // 3. Appeler le Repository pour trouver les événements de ces clubs
+        //    en fonction du statut demandé (actif, inactif, all)
+        if ("all".equalsIgnoreCase(status)) {
+            return eventRepository.findByOrganisateurIdIn(memberClubIds); // Méthode à créer dans EventRepository
+        } else if ("inactive".equalsIgnoreCase(status)) {
+            return eventRepository.findByOrganisateurIdInAndActifIsFalse(memberClubIds); // Méthode à créer
+        } else { // "active" ou par défaut
+            return eventRepository.findByOrganisateurIdInAndActifIsTrue(memberClubIds); // Méthode à créer
+        }
+        // Ajoutez la logique de tri si nécessaire (par date par exemple)
+    }
 }
