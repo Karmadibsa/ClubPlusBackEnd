@@ -9,6 +9,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
 import java.net.URLEncoder;
@@ -71,6 +72,12 @@ public class Reservation {
     @JsonView(GlobalView.ReservationView.class) // Date pertinente dans vue détaillée
     private LocalDateTime dateReservation;
 
+    @NotNull(message = "Le statut de la réservation est obligatoire.")
+    @Enumerated(EnumType.STRING) // Stocke "CONFIRMED", "USED", "CANCELLED" en BDD (lisible)
+    @Column(nullable = false, length = 20) // Ajuster length si besoin
+    @JsonView(GlobalView.Base.class) // Statut utile dans les listes
+    private ReservationStatus status;
+
     // --- QR Code ---
     // Donnée calculée, non persistée
     @Transient
@@ -79,22 +86,26 @@ public class Reservation {
 
     // Constructeur principal: EXCELLENT
     public Reservation(Membre membre, Event event, Categorie categorie) {
-        // Validation des arguments
         if (membre == null || event == null || categorie == null) {
-            throw new IllegalArgumentException("Membre, Event et Categorie sont requis pour une réservation.");
+            throw new IllegalArgumentException("Membre, Event et Categorie sont requis.");
         }
-        // Validation de cohérence: la catégorie appartient bien à l'événement ! Très important.
         if (!categorie.getEvent().getId().equals(event.getId())) {
             throw new IllegalArgumentException("La catégorie ID " + categorie.getId() + " n'appartient pas à l'événement ID " + event.getId());
         }
+        // Vérifier si l'événement est actif au moment de la création de la réservation
+        if (!event.getActif()) { // Utilise le getter généré par Lombok
+            throw new IllegalStateException("Impossible de créer une réservation pour un événement annulé (ID: " + event.getId() + ").");
+        }
 
-        // Initialisation des champs
+
         this.membre = membre;
         this.event = event;
         this.categorie = categorie;
         this.dateReservation = LocalDateTime.now();
-        this.reservationUuid = UUID.randomUUID().toString(); // Génération UUID au moment de la création objet
+        this.reservationUuid = UUID.randomUUID().toString();
+        this.status = ReservationStatus.CONFIRME; // Statut par défaut à la création
     }
+
 
     // Getter pour QR Code (avec génération paresseuse): TRÈS BIEN
     public String getQrcodeData() {

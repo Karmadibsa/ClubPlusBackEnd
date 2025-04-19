@@ -10,6 +10,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
 import java.util.ArrayList;
@@ -61,23 +62,22 @@ public class Categorie {
     // --- Méthodes Calculées ---
 
     /**
-     * Calcule le nombre de places réservées DANS CETTE CATEGORIE.
-     * Suppose qu'une réservation = 1 place.
+     * Calcule le nombre de places actuellement réservées ET CONFIRMEES dans cette catégorie.
+     * Les réservations annulées ou utilisées ne sont pas comptées.
      *
-     * @return Le nombre de réservations pour cette catégorie.
+     * @return Le nombre de réservations confirmées.
      */
-    @Transient // Ne pas mapper en DB, valeur calculée.
-    // Bonne idée d'inclure ce calcul dans les vues où c'est pertinent.
+    @Transient
     @JsonView({GlobalView.EventView.class, GlobalView.CategorieView.class})
     public int getPlaceReserve() {
-        // Utilisation du getter est importante pour la compatibilité avec LAZY loading
-        List<Reservation> currentReservations = getReservations();
+        List<Reservation> currentReservations = getReservations(); // Utilise le getter (LAZY)
         if (currentReservations == null) {
             return 0;
         }
-        // Si une réservation peut correspondre à plusieurs places, la logique devrait être différente
-        // (par exemple, sommer un champ 'quantite' dans chaque réservation).
-        return currentReservations.size();
+        // Filtrer par statut avant de compter
+        return (int) currentReservations.stream()
+                .filter(r -> r.getStatus() == ReservationStatus.CONFIRME)
+                .count();
     }
 
     /**

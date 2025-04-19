@@ -1,6 +1,7 @@
 package org.clubplus.clubplusbackend.dao;
 
 import org.clubplus.clubplusbackend.model.Reservation;
+import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -47,4 +48,6 @@ public interface ReservationDao extends JpaRepository<Reservation, Integer> {
 
     // Optionnel: Trouver par UUID si nécessaire pour une API externe/validation QR code
     Optional<Reservation> findByReservationUuid(String uuid);
+
+    long countByMembreIdAndEventIdAndStatus(Integer membreId, Integer membreId1, ReservationStatus status);
 }

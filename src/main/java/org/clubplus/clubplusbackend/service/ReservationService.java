@@ -10,6 +10,7 @@ import org.clubplus.clubplusbackend.model.Categorie;
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.model.Reservation;
+import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,49 +34,55 @@ public class ReservationService {
 
     /**
      * Crée une nouvelle réservation pour l'utilisateur courant.
-     * Sécurité: Utilisateur authentifié.
-     * Règles: Event futur, catégorie valide, limite/capacité non atteinte.
-     * Lance 404, 403 (implicite via service), 409, 400.
+     * Vérifie l'état actif de l'événement et la capacité de la catégorie (places confirmées).
+     * ... (autres règles inchangées)
      */
     public Reservation createMyReservation(Integer eventId, Integer categorieId) {
-        Integer currentUserId = securityService.getCurrentUserIdOrThrow(); // Récupère ID ou lance exception
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
 
-        // 1. Récupérer les entités (lancent 404 si non trouvées)
         Membre membre = membreRepository.findById(currentUserId)
-                .orElseThrow(() -> new EntityNotFoundException("Membre courant non trouvé (ID: " + currentUserId + ")")); // Devrait être rare
-        Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Événement non trouvé (ID: " + eventId));
-        // Récupérer la catégorie pour vérifier capacité et appartenance à l'event
+                .orElseThrow(() -> new EntityNotFoundException("Membre courant non trouvé (ID: " + currentUserId + ")"));
+        // Récupérer la catégorie suffit, elle contient l'événement
         Categorie categorie = categorieRepository.findById(categorieId)
-                .orElseThrow(() -> new EntityNotFoundException("Catégorie non trouvée (ID: " + categorieId));
+                .orElseThrow(() -> new EntityNotFoundException("Catégorie non trouvée (ID: " + categorieId + ")"));
+        Event event = categorie.getEvent(); // Récupérer l'événement via la catégorie
 
-        // --- Validation Règles Métier ---
+        // --- VALIDATIONS ---
+        // 1. Événement existe (implicite via catégorie) et est ACTIF
+        if (event == null) { // Sécurité si la relation est rompue
+            throw new EntityNotFoundException("Événement lié à la catégorie non trouvé.");
+        }
+        // La vérification event.getActif() est maintenant dans le constructeur de Reservation,
+        // mais la garder ici est une bonne double vérification avant de charger/créer.
+        if (!event.getActif()) {
+            throw new IllegalStateException("Impossible de réserver : l'événement (ID: " + eventId + ") est annulé."); // -> 409
+        }
 
-        // 2. Vérifier appartenance catégorie à événement (déjà dans constructeur mais double check ici OK)
+        // 2. Cohérence catégorie/événement (déjà dans constructeur, mais ok ici)
         if (!categorie.getEvent().getId().equals(eventId)) {
-            throw new IllegalArgumentException("La catégorie (ID " + categorieId + ") n'appartient pas à l'événement (ID " + eventId + ")."); // -> 400
+            throw new IllegalArgumentException("La catégorie (ID " + categorieId + ") n'appartient pas à l'événement (ID " + eventId + ").");
         }
 
         // 3. Événement futur ?
         if (event.getStart() == null || event.getStart().isBefore(LocalDateTime.now())) {
-            throw new IllegalStateException("Impossible de réserver : l'événement est déjà commencé ou passé."); // -> 409
+            throw new IllegalStateException("Impossible de réserver : l'événement est déjà commencé ou passé.");
         }
 
-        // 4. Limite de réservations par membre pour cet événement ?
-        long existingReservationsCount = reservationRepository.countByMembreIdAndEventId(currentUserId, eventId);
+        // 4. Limite par membre
+        long existingReservationsCount = reservationRepository.countByMembreIdAndEventIdAndStatus(currentUserId, eventId, ReservationStatus.CONFIRME); // Compte seulement CONFIRMED
         if (existingReservationsCount >= RESERVATION_MAX_PER_EVENT_PER_MEMBER) {
-            throw new IllegalStateException("Limite de " + RESERVATION_MAX_PER_EVENT_PER_MEMBER + " réservations/membre atteinte pour cet événement."); // -> 409
+            throw new IllegalStateException("Limite de " + RESERVATION_MAX_PER_EVENT_PER_MEMBER + " réservations confirmées/membre atteinte pour cet événement.");
         }
 
-        // 5. Capacité de la catégorie ? (Vérification atomique moins critique ici, mais OK)
-        long currentReservedInCategory = reservationRepository.countByCategorieId(categorieId);
-        Integer capaciteCategorie = categorie.getCapacite(); // Utiliser getter
-        if (capaciteCategorie == null || currentReservedInCategory >= capaciteCategorie) {
-            throw new IllegalStateException("Capacité maximale atteinte pour la catégorie '" + categorie.getNom() + "'."); // -> 409
+        // 5. Capacité de la catégorie (basée sur les places CONFIRMEES)
+        // Utiliser la méthode de Categorie qui filtre par statut
+        if (categorie.getPlaceDisponible() <= 0) { // Vérifie si > 0 places dispo
+            throw new IllegalStateException("Capacité maximale (confirmée) atteinte pour la catégorie '" + categorie.getNom() + "'."); // -> 409
         }
 
-        // --- Création et Sauvegarde ---
-        Reservation newReservation = new Reservation(membre, event, categorie); // Constructeur gère UUID, date, et lien
+        // --- Création ---
+        // Le constructeur met le statut à CONFIRMED et vérifie event actif
+        Reservation newReservation = new Reservation(membre, event, categorie);
         return reservationRepository.save(newReservation);
     }
 
@@ -137,26 +144,92 @@ public class ReservationService {
     // --- Suppression ---
 
     /**
-     * Supprime (annule) une réservation par son ID.
-     * Sécurité: L'utilisateur doit être le propriétaire OU manager du club organisateur.
-     * Règle: Annulation impossible si l'événement est commencé/passé.
-     * Lance 404 (Non trouvé), 403 (Accès refusé), 409 (Event passé).
+     * Annule une réservation par son ID.
+     * Sécurité: Propriétaire OU manager du club.
+     * Règle: Annulation impossible si l'événement est commencé/passé OU si la résa est déjà annulée/utilisée.
      */
-    public void deleteReservationById(Integer reservationId) {
-        // 1. Récupérer la réservation (lance 404)
+    public void cancelReservationById(Integer reservationId) {
+        // 1. Récupérer la réservation (peu importe son statut initial)
         Reservation reservation = reservationRepository.findById(reservationId)
                 .orElseThrow(() -> new EntityNotFoundException("Réservation non trouvée (ID: " + reservationId + ")"));
 
-        // 2. Vérification Sécurité Contextuelle (lance 403)
-        securityService.checkIsOwnerOrManagerOfAssociatedClubOrThrow(reservation); // Méthode à créer
+        // 2. Sécurité Contextuelle
+        securityService.checkIsOwnerOrManagerOfAssociatedClubOrThrow(reservation);
 
-        // 3. Vérification métier (événement futur ?)
+        // 3. Vérification métier: Événement futur ?
         if (reservation.getEvent() == null || reservation.getEvent().getStart() == null ||
                 reservation.getEvent().getStart().isBefore(LocalDateTime.now())) {
             throw new IllegalStateException("Annulation impossible : l'événement est déjà commencé ou passé."); // -> 409
         }
 
-        // 4. Suppression
-        reservationRepository.delete(reservation);
+        // 4. Vérification métier: Statut actuel ?
+        if (reservation.getStatus() != ReservationStatus.CONFIRME) {
+            throw new IllegalStateException("Annulation impossible : la réservation n'est pas au statut CONFIRMED (statut actuel: " + reservation.getStatus() + ")."); // -> 409
+        }
+
+        // 5. Mettre à jour le statut
+        reservation.setStatus(ReservationStatus.ANNULE);
+        reservationRepository.save(reservation); // Sauvegarder le changement de statut
+    }
+
+    /**
+     * Marque une réservation comme UTILISÉE (par exemple, après scan QR code).
+     * Utilise l'UUID pour l'identifier, idéal pour une API mobile.
+     * Sécurité: Rôle spécifique (SCANNER, MANAGER, etc.) - à définir dans SecurityService.
+     * Règles: Événement actif et en cours, Réservation doit être CONFIRMED.
+     *
+     * @param reservationUuid L'UUID unique de la réservation.
+     * @throws EntityNotFoundException Si aucune réservation avec cet UUID n'est trouvée.
+     * @throws SecurityException       Si l'utilisateur n'a pas le droit de scanner pour cet événement.
+     * @throws IllegalStateException   Si l'événement n'est pas actif/en cours ou si la réservation n'est pas confirmée.
+     */
+    public Reservation markReservationAsUsed(String reservationUuid) {
+        // 1. Récupérer la réservation par UUID
+        Reservation reservation = reservationRepository.findByReservationUuid(reservationUuid)
+                .orElseThrow(() -> new EntityNotFoundException("Réservation non trouvée avec l'UUID : " + reservationUuid));
+
+        Event event = reservation.getEvent(); // Récupérer l'événement lié
+
+        // 2. Sécurité Contextuelle: L'utilisateur peut-il "scanner" pour cet événement/club ?
+        // securityService.checkCanScanForEventOrThrow(event); // Méthode à créer dans SecurityService
+
+        // 3. Vérifications Métier:
+        //    a) Événement existe et est actif ?
+        if (event == null || !event.getActif()) {
+            throw new IllegalStateException("Impossible de marquer comme utilisée : l'événement lié est annulé ou introuvable."); // -> 409
+        }
+        //    b) Est-on dans la fenêtre de scan autorisée ? (1h avant début jusqu'à la fin)
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime eventStart = event.getStart();
+        LocalDateTime eventEnd = event.getEnd();
+
+        if (eventStart == null || eventEnd == null) {
+            // Sécurité supplémentaire, bien que @NotNull devrait l'empêcher
+            throw new IllegalStateException("Dates de début ou de fin manquantes pour l'événement (ID: " + event.getId() + ").");
+        }
+
+        // Calculer le début de la fenêtre de scan
+        LocalDateTime scanWindowStart = eventStart.minusHours(1);
+        // La fin de la fenêtre de scan est la fin de l'événement
+        LocalDateTime scanWindowEnd = eventEnd;
+
+        // Vérifier si 'now' est EN DEHORS de la fenêtre [scanWindowStart, scanWindowEnd]
+        // now < scanWindowStart  OU  now > scanWindowEnd
+        if (now.isBefore(scanWindowStart) || now.isAfter(scanWindowEnd)) {
+            // Lancer une exception si on est hors de la fenêtre de temps autorisée
+            // Importer DateTimeFormatter pour un meilleur formatage
+            java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm 'le' dd/MM/yyyy");
+            throw new IllegalStateException("Scan non autorisé actuellement. Fenêtre de scan : de "
+                    + scanWindowStart.format(formatter) + " à "
+                    + scanWindowEnd.format(formatter) + "."); // -> 409
+        }
+        //    c) Statut actuel de la réservation ?
+        if (reservation.getStatus() != ReservationStatus.CONFIRME) {
+            throw new IllegalStateException("Impossible de marquer comme utilisée : la réservation n'est pas au statut CONFIRMED (statut actuel: " + reservation.getStatus() + ")."); // -> 409
+        }
+
+        // 4. Mettre à jour le statut
+        reservation.setStatus(ReservationStatus.UTILISE);
+        return reservationRepository.save(reservation); // Sauvegarder et retourner la réservation mise à jour
     }
 }
