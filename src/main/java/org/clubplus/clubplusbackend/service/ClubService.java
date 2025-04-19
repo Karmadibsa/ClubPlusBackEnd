@@ -8,6 +8,7 @@ import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.dto.CreateClubRequestDto;
 import org.clubplus.clubplusbackend.model.Adhesion;
 import org.clubplus.clubplusbackend.model.Club;
+import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.Role;
 import org.clubplus.clubplusbackend.security.SecurityService;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor // Gère l'injection des dépendances final
@@ -233,42 +235,52 @@ public class ClubService {
     /**
      * Désactive un club après vérifications de sécurité et métier.
      * Remplace la suppression physique par une désactivation logique.
-     * Empêche la désactivation si le club a des événements futurs planifiés.
+     * Empêche la désactivation si le club a des événements futurs qui sont encore ACTIFS.
+     * Ne désactive PAS les événements en cascade.
      *
      * @param id L'ID du club à désactiver.
      * @throws EntityNotFoundException si le club actif n'est pas trouvé.
      * @throws SecurityException       (ou similaire) si l'utilisateur n'est pas admin du club.
-     * @throws IllegalStateException   si le club a des événements futurs.
+     * @throws IllegalStateException   si le club a des événements futurs actifs.
      */
-    @Transactional // Garantit l'atomicité de l'opération complète
-    public void deactivateClub(Integer id) { // Renommée pour la clarté
-        // 1. Vérification Sécurité Contextuelle (inchangée)
-        securityService.checkIsActualAdminOfClubOrThrow(id); // Doit être implémentée dans SecurityService
+    @Transactional
+    public void deactivateClub(Integer id) {
+        // 1. Vérification Sécurité Contextuelle
+        securityService.checkIsActualAdminOfClubOrThrow(id);
 
-        // 2. Récupérer le club ACTIF (lance 404 si non trouvé ou déjà inactif)
-        Club clubToDeactivate = getClubByIdOrThrow(id);
+        // 2. Récupérer le club ACTIF
+        Club clubToDeactivate = getActiveClubByIdOrThrow(id);
 
-        // 3. Validation Métier : Vérifier s'il y a des événements futurs (inchangée).
-        //    Accéder à clubToDeactivate.getEvenements() chargera la collection (si transaction active).
-        //    NOTE: Cette vérification est bonne, mais idéalement, désactiver le club
-        //    devrait aussi cascader la désactivation aux événements futurs.
-        //    Cela nécessiterait d'avoir un champ 'actif' et une logique similaire sur Event.
-        boolean hasFutureEvents = clubToDeactivate.getEvenements().stream()
-                .anyMatch(event -> event.getStart() != null && event.getStart().isAfter(LocalDateTime.now()));
-        if (hasFutureEvents) {
-            throw new IllegalStateException("Impossible de désactiver le club: des événements futurs sont encore planifiés. Annulez-les d'abord."); // Message plus clair
+        // 3. Validation Métier : Vérifier l'existence d'événements futurs ACTIFS
+        LocalDateTime now = LocalDateTime.now();
+        // IMPORTANT: clubToDeactivate.getEvenements() charge TOUS les événements (actifs/inactifs)
+        // car @Where a été retiré de Event. Il faut donc filtrer explicitement ici.
+        List<Event> activeFutureEvents = clubToDeactivate.getEvenements().stream()
+                .filter(Event::getActif) // Ne considère que les événements actifs
+                .filter(event -> event.getStart() != null && event.getStart().isAfter(now)) // Qui sont dans le futur
+                .collect(Collectors.toList()); // Récupère la liste des événements correspondants
+
+        if (!activeFutureEvents.isEmpty()) {
+            // Construit un message d'erreur informatif
+            String eventNames = activeFutureEvents.stream()
+                    .map(event -> "'" + event.getNom() + "' (ID: " + event.getId() + ")")
+                    .collect(Collectors.joining(", "));
+            throw new IllegalStateException("Impossible de désactiver le club : Des événements futurs actifs existent encore : " + eventNames
+                    + ". Veuillez d'abord les annuler ou les supprimer."); // -> 409 Conflict
         }
 
-        // 4. Procéder à la Désactivation Logique
-        //    a) Préparer l'entité (modifier nom, email, mettre date désactivation)
-        clubToDeactivate.prepareForDeactivation();
-
-        //    b) Marquer comme inactif
-        clubToDeactivate.setActif(false);
-
-        //    c) Sauvegarder les modifications (Hibernate fera un UPDATE)
-        clubRepository.save(clubToDeactivate);
+        // 4. Si la vérification passe (pas d'événements futurs actifs), procéder à la Désactivation du Club
+        clubToDeactivate.prepareForDeactivation(); // Modifie nom, email, met date
+        clubToDeactivate.setActif(false);          // Met le flag à false
+        clubRepository.save(clubToDeactivate);    // Sauvegarde (UPDATE)
     }
+
+    // Récupère un club ACTIF (grâce au @Where sur Club)
+    public Club getActiveClubByIdOrThrow(Integer id) {
+        return clubRepository.findById(id)
+                .orElseThrow(() -> new EntityNotFoundException("Club actif non trouvé avec l'ID : " + id));
+    }
+
 
     // --- Récupération d'informations liées ---
 

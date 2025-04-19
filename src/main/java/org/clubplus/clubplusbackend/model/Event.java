@@ -62,6 +62,13 @@ public class Event {
     @JsonView(GlobalView.Base.class) // Location utile dans les listes
     private String location;
 
+    // --- Champs pour Soft Delete ---
+    @NotNull // Important pour @Where
+    @Column(nullable = false)
+    private Boolean actif = true; // Statut de l'événement
+
+    @Column(name = "desactivation_date") // Nom de colonne explicite
+    private LocalDateTime desactivationDate; // Date de désactivation/annulation
     // --- Relations ---
 
     // Relation vers Categorie : CORRECT
@@ -81,6 +88,32 @@ public class Event {
     @JsonIgnore // Moins prioritaire à afficher par défaut, peut être récupéré via endpoint dédié
     private List<Notation> notations = new ArrayList<>();
 
+
+    // --- Méthode de Préparation à la Désactivation ---
+
+    /**
+     * Prépare l'entité Event pour la désactivation (annulation).
+     * Modifie le nom pour indiquer l'état et met à jour la date de désactivation.
+     * À appeler AVANT de sauvegarder l'événement désactivé.
+     *
+     * @throws IllegalStateException si l'ID de l'événement est null.
+     */
+    public void prepareForDeactivation() {
+        if (this.id == null) {
+            throw new IllegalStateException("Impossible de désactiver un événement sans ID persistant.");
+        }
+
+        // Modifier le nom pour indiquer clairement l'état (ex: Annulé)
+        if (!this.nom.startsWith("[Annulé]")) { // Évite double préfixe
+            this.nom = "[Annulé] " + this.nom;
+        }
+
+        // Les dates (start, end), description, location restent inchangées pour l'historique.
+
+        // Mettre à jour la date de désactivation
+        this.desactivationDate = LocalDateTime.now();
+
+    }
     // --- Méthodes Calculées (@Transient) ---
 
     /**

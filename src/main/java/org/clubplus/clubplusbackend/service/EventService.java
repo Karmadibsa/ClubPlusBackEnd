@@ -216,29 +216,34 @@ public class EventService {
     }
 
     /**
-     * Supprime un événement.
+     * Désactive (annule) un événement.
+     * Remplace la suppression physique par une désactivation logique.
      * Sécurité: Vérifie que l'utilisateur est MANAGER du club organisateur.
-     * Règle métier: Empêche la suppression s'il existe des réservations.
-     * Lance 404 (Event non trouvé), 403 (Non manager), 409 (Réservations existent).
+     * N'est PLUS bloqué par l'existence de réservations.
+     *
+     * @param eventId L'ID de l'événement à désactiver.
+     * @throws EntityNotFoundException si l'événement n'est pas trouvé.
+     * @throws SecurityException       (ou similaire) si l'utilisateur n'est pas manager du club.
      */
-    public void deleteEvent(Integer eventId) {
-        // 1. Récupérer l'événement et ses dépendances pour la vérification
-        Event eventToDelete = eventRepository.findByIdFetchingCategoriesAndReservations(eventId) // Utilise la requête avec FETCH
-                .orElseThrow(() -> new EntityNotFoundException("Événement non trouvé avec l'ID : " + eventId)); // -> 404
+    @Transactional
+    public void deactivateEvent(Integer eventId) {
+        // 1. Récupérer l'événement (actif ou inactif, peu importe ici, on veut le désactiver s'il est actif)
+        Event eventToDeactivate = getEventByIdOrThrow(eventId);
 
-        // 2. Vérification Sécurité Contextuelle
-        securityService.checkManagerOfClubOrThrow(eventToDelete.getOrganisateur().getId()); // Lance 403 si non manager
-
-        // 3. Validation Métier : Vérifier l'existence de réservations
-        boolean hasReservations = eventToDelete.getCategories().stream()
-                .anyMatch(categorie -> !categorie.getReservations().isEmpty());
-
-        if (hasReservations) {
-            throw new IllegalStateException("Impossible de supprimer l'événement car il contient des réservations."); // -> 409 Conflict
+        // Si l'événement est déjà inactif, on peut soit sortir, soit continuer (idempotence)
+        if (!eventToDeactivate.getActif()) {
+            // Optionnel: logguer ou simplement retourner
+            System.out.println("L'événement " + eventId + " est déjà inactif.");
+            return;
         }
 
-        // 4. Si tout est OK, supprimer l'événement
-        // Les cascades s'occuperont des Catégories et Notations (si configurées avec CascadeType.ALL)
-        eventRepository.delete(eventToDelete);
+        // 2. Vérification Sécurité Contextuelle
+        securityService.checkManagerOfClubOrThrow(eventToDeactivate.getOrganisateur().getId());
+
+        // 4. Procéder à la Désactivation Logique
+        eventToDeactivate.prepareForDeactivation(); // Modifie nom, met date
+        eventToDeactivate.setActif(false);          // Met le flag à false
+        eventRepository.save(eventToDeactivate);    // Sauvegarde (UPDATE)
     }
+
 }
