@@ -55,19 +55,21 @@ public interface EventDao extends JpaRepository<Event, Integer> {
     /**
      * Récupère les IDs des événements passés d'un organisateur.
      */
-    @Query("SELECT e.id FROM Event e WHERE e.organisateur.id = :clubId AND e.end < :now")
+    @Query("SELECT e.id FROM Event e WHERE e.organisateur.id = :clubId AND e.end < :now AND e.actif = true")
     List<Integer> findPastEventIdsByOrganisateurId(@Param("clubId") Integer clubId, @Param("now") LocalDateTime now);
+
+    long countByOrganisateurIdAndActif(Integer clubId, boolean actif);
 
     /**
      * Récupère le nombre de réservations et la capacité totale pour chaque événement d'un club
      * ayant une capacité > 0.
      * Correction: Utilise LEFT JOIN pour inclure les événements sans réservation.
      */
-    @Query("SELECT e.id, COUNT(r.id), SUM(COALESCE(c.capacite, 0)) " + // Utilise COALESCE pour SUM sur potentiellement 0 catégories
+    @Query("SELECT e.id, SUM(CASE WHEN r.status = 'CONFIRMED' THEN 1 ELSE 0 END), SUM(COALESCE(c.capacite, 0)) " + // Utilise COALESCE pour SUM sur potentiellement 0 catégories
             "FROM Event e " +
             "LEFT JOIN e.categories c " + // LEFT JOIN pour inclure event sans catégorie
             "LEFT JOIN c.reservations r " + // LEFT JOIN pour inclure catégorie sans réservation
-            "WHERE e.organisateur.id = :clubId " +
+            "WHERE e.organisateur.id = :clubId AND e.actif = true " +
             "GROUP BY e.id " +
             "HAVING SUM(COALESCE(c.capacite, 0)) > 0")
     // Assure capacité totale > 0
@@ -101,4 +103,5 @@ public interface EventDao extends JpaRepository<Event, Integer> {
     List<Event> findByActifAndStartAfter(boolean actif, LocalDateTime startTime);
 
 
+    long countByOrganisateurIdAndActifAndStartBetween(Integer clubId, boolean actif, LocalDateTime start, LocalDateTime end);
 }

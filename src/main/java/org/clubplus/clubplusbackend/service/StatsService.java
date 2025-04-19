@@ -115,7 +115,7 @@ public class StatsService {
         if (!clubRepository.existsById(clubId)) {
             throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
         }
-        return eventRepository.countByOrganisateurId(clubId); // Méthode DAO simple
+        return eventRepository.countByOrganisateurIdAndActif(clubId, true); // Méthode DAO simple
     }
 
     /**
@@ -171,7 +171,7 @@ public class StatsService {
         }
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime futureDate = now.plusDays(30);
-        return eventRepository.countByOrganisateurIdAndStartBetween(clubId, now, futureDate); // Méthode DAO
+        return eventRepository.countByOrganisateurIdAndActifAndStartBetween(clubId, true, now, futureDate); // Méthode DAO
     }
 
     /**
@@ -184,7 +184,7 @@ public class StatsService {
         if (!clubRepository.existsById(clubId)) {
             throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
         }
-        return adhesionRepository.countByClubId(clubId); // Méthode DAO simple
+        return adhesionRepository.countActiveMembersByClubId(clubId);
     }
 
     // --- Méthodes Helper Privées ---
