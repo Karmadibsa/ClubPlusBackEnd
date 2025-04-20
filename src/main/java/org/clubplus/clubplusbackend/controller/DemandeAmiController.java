@@ -5,10 +5,10 @@ import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.model.DemandeAmi;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.SecurityService;
+import org.clubplus.clubplusbackend.security.annotation.IsMembre;
 import org.clubplus.clubplusbackend.service.DemandeAmiService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -36,10 +36,11 @@ public class DemandeAmiController {
      * 409 (Demande/Amitié existante), 401 (Non authentifié).
      */
     @PostMapping("/demandes/envoyer/{recepteurId}")
-    @PreAuthorize("isAuthenticated()")
+    @IsMembre
     @ResponseStatus(HttpStatus.CREATED) // Statut 201
     @JsonView(GlobalView.DemandeView.class) // Retourne la demande créée
     public DemandeAmi sendFriendRequest(@PathVariable Integer recepteurId) {
+
         // Le service utilise SecurityService pour obtenir l'envoyeurId
         return demandeAmiService.sendFriendRequest(securityService.getCurrentUserIdOrThrow(), recepteurId); // Passer l'ID courant explicitement
         // Ou si le service est modifié pour récupérer l'ID lui-même:
@@ -54,7 +55,7 @@ public class DemandeAmiController {
      * 409 (Demande pas en attente), 401 (Non authentifié).
      */
     @PutMapping("/demandes/accepter/{demandeId}")
-    @PreAuthorize("isAuthenticated()")
+    @IsMembre
     @JsonView(GlobalView.DemandeView.class) // Retourne la demande mise à jour
     public DemandeAmi acceptFriendRequest(@PathVariable Integer demandeId) {
         // Le service utilise SecurityService pour vérifier que l'utilisateur courant est le récepteur
@@ -68,7 +69,7 @@ public class DemandeAmiController {
      * Exceptions (gérées globalement): 404, 403, 409, 401.
      */
     @PutMapping("/demandes/refuser/{demandeId}")
-    @PreAuthorize("isAuthenticated()")
+    @IsMembre
     @JsonView(GlobalView.DemandeView.class) // Retourne la demande mise à jour (avec statut REFUSEE)
     public DemandeAmi refuseFriendRequest(@PathVariable Integer demandeId) {
         // Le service utilise SecurityService pour vérifier que l'utilisateur courant est le récepteur
@@ -83,7 +84,7 @@ public class DemandeAmiController {
      * Exceptions (gérées globalement): 404, 403, 409, 401.
      */
     @DeleteMapping("/demandes/annuler/{demandeId}")
-    @PreAuthorize("isAuthenticated()")
+    @IsMembre
     @ResponseStatus(HttpStatus.NO_CONTENT) // Statut 204
     public void cancelFriendRequest(@PathVariable Integer demandeId) {
         // Le service utilise SecurityService pour vérifier que l'utilisateur courant est l'envoyeur
@@ -97,7 +98,7 @@ public class DemandeAmiController {
      * Exceptions (gérées globalement): 404 (Amitié non trouvée), 400 (Auto-suppression), 401.
      */
     @DeleteMapping("/{amiId}")
-    @PreAuthorize("isAuthenticated()")
+    @IsMembre
     @ResponseStatus(HttpStatus.NO_CONTENT) // Statut 204
     public void removeFriend(@PathVariable Integer amiId) {
         // Le service utilise SecurityService pour obtenir l'ID courant et vérifier l'amitié
@@ -113,7 +114,7 @@ public class DemandeAmiController {
      * Exceptions (gérées globalement): 401.
      */
     @GetMapping("/demandes/recues")
-    @PreAuthorize("isAuthenticated()")
+    @IsMembre
     @JsonView(GlobalView.DemandeView.class)
     public List<DemandeAmi> getPendingReceivedRequests() {
         // Le service utilise SecurityService pour obtenir l'ID courant
@@ -127,7 +128,7 @@ public class DemandeAmiController {
      * Exceptions (gérées globalement): 401.
      */
     @GetMapping("/demandes/envoyees")
-    @PreAuthorize("isAuthenticated()")
+    @IsMembre
     @JsonView(GlobalView.DemandeView.class)
     public List<DemandeAmi> getPendingSentRequests() {
         // Le service utilise SecurityService pour obtenir l'ID courant
@@ -141,7 +142,7 @@ public class DemandeAmiController {
      * Exceptions (gérées globalement): 401.
      */
     @GetMapping("") // GET /api/amis
-    @PreAuthorize("isAuthenticated()")
+    @IsMembre
     @JsonView(GlobalView.Base.class) // Vue de base pour la liste d'amis
     public List<Membre> getFriends() {
         // Le service utilise SecurityService pour obtenir l'ID courant

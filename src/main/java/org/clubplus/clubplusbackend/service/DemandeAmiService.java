@@ -6,12 +6,14 @@ import org.clubplus.clubplusbackend.dao.DemandeAmiDao;
 import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.model.DemandeAmi;
 import org.clubplus.clubplusbackend.model.Membre;
+import org.clubplus.clubplusbackend.security.Role;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.clubplus.clubplusbackend.security.Statut;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -37,10 +39,14 @@ public class DemandeAmiService {
         Membre recepteur = membreRepository.findById(recepteurId)
                 .orElseThrow(() -> new EntityNotFoundException("Membre récepteur non trouvé : " + recepteurId)); // -> 404
 
+        if (recepteur.getRole() != Role.MEMBRE) {
+            throw new AccessDeniedException("Les demandes d'ami ne peuvent être envoyées qu'à des membres."); // -> 403
+        }
         // Vérifier s'il existe déjà une demande en attente ou une amitié acceptée
         if (demandeAmiRepository.existsPendingOrAcceptedRequestBetween(envoyeurId, recepteurId, Statut.ATTENTE, Statut.ACCEPTE)) {
             throw new IllegalStateException("Une demande en attente ou une relation d'amitié existe déjà."); // -> 409
         }
+
         // Note: On pourrait aussi vérifier une demande REFUSEE et éventuellement la remplacer/réactiver.
 
         DemandeAmi nouvelleDemande = new DemandeAmi(envoyeur, recepteur); // Utilise le constructeur (statut=ATTENTE, date=now)
@@ -179,13 +185,27 @@ public class DemandeAmiService {
     }
 
     /**
-     * Récupère la liste des objets Membre amis de l'utilisateur courant.
-     * Utilise la requête DAO optimisée.
+     * Récupère la liste des amis (objets Membre) de l'utilisateur courant.
+     * Modifié pour utiliser une approche en deux étapes pour éviter le bug Hibernate CASE.
      */
     @Transactional(readOnly = true)
     public List<Membre> getFriends() {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow();
-        // Appelle la méthode DAO optimisée qui retourne directement List<Membre>
-        return demandeAmiRepository.findFriendsOfUser(currentUserId, Statut.ACCEPTE);
+
+        // Étape 1: Récupérer les IDs des amis
+        List<Integer> friendIds = demandeAmiRepository.findFriendIdsOfUser(currentUserId, Statut.ACCEPTE);
+
+
+        if (friendIds == null || friendIds.isEmpty()) {
+
+            return Collections.emptyList(); // Important de retourner une liste vide
+        }
+
+        // Étape 2: Récupérer les entités Membre correspondantes
+        
+        // Utilise la vue Base pour éviter de charger trop d'infos non nécessaires ici
+        // Note: findAllById ne garantit pas l'ordre et peut nécessiter une JsonView sur le controller
+        return membreRepository.findAllById(friendIds);
     }
+
 }

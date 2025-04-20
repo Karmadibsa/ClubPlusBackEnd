@@ -1,7 +1,6 @@
 package org.clubplus.clubplusbackend.dao;
 
 import org.clubplus.clubplusbackend.model.DemandeAmi;
-import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.Statut;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -72,15 +71,12 @@ public interface DemandeAmiDao extends JpaRepository<DemandeAmi, Integer> {
     // --- Requêtes optimisées pour lister les amis ---
 
     /**
-     * Récupère directement les objets Membre qui sont amis (statut ACCEPTE) avec un utilisateur donné.
-     *
-     * @param userId L'ID de l'utilisateur dont on cherche les amis.
-     * @param statut Doit être Statut.ACCEPTE.
-     * @return Liste des objets Membre amis.
+     * Trouve les IDs des amis d'un utilisateur donné (basé sur les demandes ACCEPTÉES).
+     * Sélectionne l'ID de l'autre partie dans la relation d'amitié.
      */
-    @Query("SELECT CASE WHEN d.envoyeur.id = :userId THEN d.recepteur ELSE d.envoyeur END " +
+    @Query("SELECT CASE WHEN d.envoyeur.id = :userId THEN d.recepteur.id ELSE d.envoyeur.id END " +
             "FROM DemandeAmi d WHERE d.statut = :statut AND (d.envoyeur.id = :userId OR d.recepteur.id = :userId)")
-    List<Membre> findFriendsOfUser(@Param("userId") Integer userId, @Param("statut") Statut statut); // Passer Statut.ACCEPTE
+    List<Integer> findFriendIdsOfUser(@Param("userId") Integer userId, @Param("statut") Statut statut);
 
     // --- Méthodes par défaut (facultatives, juste pour la commodité) ---
     default List<DemandeAmi> findPendingReceivedRequests(Integer recepteurId) {
