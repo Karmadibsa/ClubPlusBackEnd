@@ -47,6 +47,7 @@ public class ReservationService {
         Categorie categorie = categorieRepository.findById(categorieId)
                 .orElseThrow(() -> new EntityNotFoundException("Catégorie non trouvée (ID: " + categorieId + ")"));
         Event event = categorie.getEvent(); // Récupérer l'événement via la catégorie
+        securityService.checkMemberOfEventClubOrThrow(eventId);
 
         // --- VALIDATIONS ---
         // 1. Événement existe (implicite via catégorie) et est ACTIF
@@ -63,6 +64,7 @@ public class ReservationService {
         if (!categorie.getEvent().getId().equals(eventId)) {
             throw new IllegalArgumentException("La catégorie (ID " + categorieId + ") n'appartient pas à l'événement (ID " + eventId + ").");
         }
+
 
         // 3. Événement futur ?
         if (event.getStart() == null || event.getStart().isBefore(LocalDateTime.now())) {

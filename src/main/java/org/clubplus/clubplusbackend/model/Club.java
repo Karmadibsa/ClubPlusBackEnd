@@ -54,19 +54,19 @@ public class Club {
     @NotBlank(message = "Le numéro de voie est obligatoire.")
     @Size(max = 10, message = "Le numéro de voie ne doit pas dépasser 10 caractères.")
     @Column(nullable = false, length = 10)
-    @JsonView(GlobalView.ClubView.class)
+    @JsonView({GlobalView.ClubView.class, GlobalView.ReservationView.class})
     private String numero_voie;
 
     @NotBlank(message = "La rue est obligatoire.")
     @Size(max = 100, message = "La rue ne doit pas dépasser 100 caractères.")
     @Column(nullable = false, length = 100)
-    @JsonView(GlobalView.ClubView.class)
+    @JsonView({GlobalView.ClubView.class, GlobalView.ReservationView.class})
     private String rue;
 
     @NotBlank(message = "Le code postal est obligatoire.")
     @Size(min = 3, max = 10, message = "Le code postal doit contenir entre 3 et 10 caractères.")
     @Column(nullable = false, length = 10)
-    @JsonView(GlobalView.ClubView.class)
+    @JsonView({GlobalView.ClubView.class, GlobalView.ReservationView.class})
     private String codepostal;
 
     @NotBlank(message = "La ville est obligatoire.")
@@ -80,14 +80,14 @@ public class Club {
     @NotBlank(message = "Le numéro de téléphone est obligatoire.")
     @Size(max = 20, message = "Le numéro de téléphone ne doit pas dépasser 20 caractères.")
     @Column(nullable = false, length = 20)
-    @JsonView(GlobalView.ClubView.class)
+    @JsonView({GlobalView.ClubView.class, GlobalView.ReservationView.class})
     private String telephone;
 
     @NotBlank(message = "L'email du club est obligatoire.")
     @Email(message = "Le format de l'email est invalide.")
     @Size(max = 254, message = "L'email ne doit pas dépasser 254 caractères.")
     @Column(nullable = false, unique = true, length = 254) // Unicité + taille
-    @JsonView(GlobalView.ClubView.class)
+    @JsonView({GlobalView.ClubView.class, GlobalView.ReservationView.class})
     private String email;
 
     // --- Code Club ---

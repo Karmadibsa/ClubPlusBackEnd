@@ -81,7 +81,8 @@ public class Event {
     @NotNull(message = "L'événement doit avoir un organisateur.")
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "organisateur_id", nullable = false)
-    @JsonView(GlobalView.EventView.class) // OK, mais attention à la vue de Club utilisée ici (Base est préférable)
+    @JsonView({GlobalView.EventView.class, GlobalView.ReservationView.class})
+    // OK, mais attention à la vue de Club utilisée ici (Base est préférable)
     private Club organisateur;
 
     // Relation vers Notation : CORRECT

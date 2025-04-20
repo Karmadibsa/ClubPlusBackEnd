@@ -75,7 +75,7 @@ VALUES -- Existants (Club 1 & 2)
         1, 1, NULL),
        (3, 'Tournoi Padel Lyon (Futur)', '2025-06-07 10:00:00', '2025-06-07 17:00:00', 'Tournoi P100 Hommes.',
         'Lyon Padel Est', 2, 1, NULL),                                -- Organisateur Club 2
-       (4, 'Initiation Escalade CSC (Futur)', '2025-05-18 14:00:00', '2025-05-18 16:00:00', 'Découverte salle.',
+       (4, 'Initiation Escalade CSC (Futur)', '2025-04-20 14:00:00', '2025-04-20 16:00:00', 'Découverte salle.',
         'Salle GrimpUp', 1, 1, NULL),                                 -- Avec résa Alice
        (5, '[Annulé] Stage Tennis CSC (Futur)', '2025-07-10 09:00:00', '2025-07-12 17:00:00', 'Stage intensif.',
         'Courts Central', 1, 0, '2025-04-15 09:30:00'),
@@ -99,7 +99,7 @@ VALUES -- Existantes
        (2, 1, 'Simple F', 16),
        (3, 2, 'Buffet', 50),
        (4, 3, 'P100 Hommes', 24),
-       (5, 4, 'Débutant', 10),
+       (5, 4, 'Débutant', 2),
        (6, 5, 'Stage Intensif', 10),
        -- Nouvelles catégories
        (7, 4, 'Confirmés', 8),             -- Event 4 (Escalade)
@@ -120,7 +120,7 @@ VALUES -- Existantes
        (3, 1, 2, '2025-02-02 11:00:00', UUID(), 'UTILISE'),
        (1, 2, 3, '2025-03-01 10:00:00', UUID(), 'UTILISE'),
        (3, 2, 3, '2025-03-01 11:00:00', UUID(), 'UTILISE'),
-       (6, 3, 4, '2025-05-01 09:00:00', UUID(), 'CONFIRME'),
+       (5, 3, 4, '2025-03-01 12:00:00', UUID(), 'CONFIRME'),
        (5, 3, 4, '2025-05-02 10:00:00', UUID(), 'CONFIRME'),
        (1, 4, 5, '2025-04-20 14:00:00', UUID(), 'CONFIRME'),  -- Alice @ Escalade (CRUCIAL pour conflit)
        (2, 4, 5, '2025-04-20 14:00:00', UUID(), 'CONFIRME'),  -- Alice @ Escalade (CRUCIAL pour conflit)

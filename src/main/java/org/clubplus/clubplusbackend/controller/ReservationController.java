@@ -3,6 +3,7 @@ package org.clubplus.clubplusbackend.controller;
 import com.fasterxml.jackson.annotation.JsonView;
 import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.model.Reservation;
+import org.clubplus.clubplusbackend.security.annotation.IsConnected;
 import org.clubplus.clubplusbackend.security.annotation.IsMembre;
 import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.ReservationService;
@@ -63,7 +64,7 @@ public class ReservationController {
      * Exceptions (globales): 404 (Non trouvé), 403 (Accès refusé).
      */
     @GetMapping("/{id}")
-    @IsMembre // Rôle minimum pour tenter
+    @IsConnected
     @JsonView(GlobalView.ReservationView.class)
     public Reservation getReservationById(@PathVariable Integer id) {
         // Le service gère l'existence et la sécurité (owner/manager)
@@ -112,7 +113,7 @@ public class ReservationController {
      * @return La réservation mise à jour avec le statut CANCELLED.
      */
     @PutMapping("/{id}/cancel") // Changement de méthode HTTP et de path
-    @IsMembre // Rôle minimum pour tenter
+    @IsConnected // Rôle minimum pour tenter
     @ResponseStatus(HttpStatus.OK) // Retourne 200 OK avec le corps de la réponse
     @JsonView(GlobalView.ReservationView.class) // Retourner l'objet mis à jour
     public Reservation cancelReservation(@PathVariable Integer id) {
