@@ -6,7 +6,10 @@ import org.clubplus.clubplusbackend.dao.AdhesionDao;
 import org.clubplus.clubplusbackend.dao.ClubDao;
 import org.clubplus.clubplusbackend.dao.EventDao;
 import org.clubplus.clubplusbackend.dao.NotationDao;
+import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.clubplus.clubplusbackend.security.SecurityService;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,39 +58,51 @@ public class StatsService {
      * Sécurité: Vérifie que l'appelant est MANAGER du club.
      * Lance 404 (Club non trouvé), 403 (Non manager).
      */
+    private static final Logger log = LoggerFactory.getLogger(StatsService.class); // Ajouter logger
+
+
     public Map<String, Double> getClubAverageEventRatings(Integer clubId) {
         securityService.checkManagerOfClubOrThrow(clubId); // -> 403
         if (!clubRepository.existsById(clubId)) {
             throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
         }
+        log.debug("Calcul des moyennes de notation pour clubId: {}", clubId);
 
+        // On ne cherche les moyennes que pour les événements passés ET notés.
+        // Plutôt que de chercher les events puis les notes, on peut directement chercher les moyennes
+        // sur les notations liées aux events du club qui sont passés.
+
+        // Récupérer les IDs des événements passés du club (cette partie reste utile)
         List<Integer> pastEventIds = eventRepository.findPastEventIdsByOrganisateurId(clubId, LocalDateTime.now());
+        log.debug("IDs des événements passés trouvés pour clubId {}: {}", clubId, pastEventIds);
+
         if (pastEventIds.isEmpty()) {
+            log.debug("Aucun événement passé trouvé pour clubId {}, retour des moyennes par défaut.", clubId);
             return defaultRatingMap(); // Pas d'événements passés = pas de notes
         }
 
-        // Appeler le DAO qui calcule toutes les moyennes en une fois
-        Optional<Object[]> averagesResult = notationRepository.findAverageRatingsForEventIds(pastEventIds);
-        if (averagesResult.isEmpty() || averagesResult.get()[0] == null) {
-            // Si la première moyenne est null, aucune notation n'a été trouvée pour ces events
-            return defaultRatingMap();
-        }
+        // --- Utilisation des requêtes AVG individuelles sur les events passés ---
+        // Note: Ces requêtes calculent la moyenne sur TOUTES les notations des events passés combinés.
+        // C'est ce que faisait la requête findAverageRatingsForEventIds.
+        log.debug("Calcul des moyennes individuelles pour les eventIds: {}", pastEventIds);
 
-        Object[] averagesArray = averagesResult.get();
+        double avgAmbiance = notationRepository.findAverageAmbianceForEventIds(pastEventIds).orElse(0.0);
+        double avgProprete = notationRepository.findAveragePropreteForEventIds(pastEventIds).orElse(0.0);
+        double avgOrganisation = notationRepository.findAverageOrganisationForEventIds(pastEventIds).orElse(0.0);
+        double avgFairPlay = notationRepository.findAverageFairPlayForEventIds(pastEventIds).orElse(0.0);
+        double avgNiveauJoueurs = notationRepository.findAverageNiveauJoueursForEventIds(pastEventIds).orElse(0.0);
+
+        // --- FIN Utilisation des requêtes AVG individuelles ---
+
         Map<String, Double> averagesMap = new LinkedHashMap<>();
         double sum = 0;
         int count = 0;
-
-        // Extraction plus sûre et calcul moyenne générale
-        double[] notes = new double[5];
-        notes[0] = extractDouble(averagesArray, 0); // ambiance
-        notes[1] = extractDouble(averagesArray, 1); // proprete
-        notes[2] = extractDouble(averagesArray, 2); // organisation
-        notes[3] = extractDouble(averagesArray, 3); // fairPlay
-        notes[4] = extractDouble(averagesArray, 4); // niveauJoueurs
+        double[] notes = {avgAmbiance, avgProprete, avgOrganisation, avgFairPlay, avgNiveauJoueurs};
 
         for (double note : notes) {
-            if (note > 0) { // AVG retourne null si aucune ligne, ce qui donne 0.0 ici. On ne compte que les vraies moyennes.
+            // On ne compte que les moyennes > 0 pour la moyenne générale
+            // car Optional.orElse(0.0) retourne 0 si AVG était NULL.
+            if (note > 0.0) {
                 sum += note;
                 count++;
             }
@@ -98,12 +113,15 @@ public class StatsService {
         averagesMap.put("organisation", notes[2]);
         averagesMap.put("fairPlay", notes[3]);
         averagesMap.put("niveauJoueurs", notes[4]);
-        averagesMap.put("moyenneGenerale", (count > 0) ? sum / count : 0.0);
+        averagesMap.put("moyenneGenerale", (count > 0) ? (sum / count) : 0.0);
 
-        // Arrondir
-        averagesMap.replaceAll((key, value) -> Math.round(value * 10.0) / 10.0); // 1 décimale suffit peut-être
+        // Arrondir à une décimale
+        averagesMap.replaceAll((key, value) -> Math.round(value * 10.0) / 10.0);
+
+        log.debug("Moyennes calculées et arrondies pour clubId {}: {}", clubId, averagesMap);
         return averagesMap;
     }
+
 
     /**
      * STAT 3: Nombre total d'événements pour un club.
@@ -124,40 +142,63 @@ public class StatsService {
      * Lance 404 (Club non trouvé), 403 (Non manager).
      */
     public double getClubAverageEventOccupancy(Integer clubId) {
-        securityService.checkManagerOfClubOrThrow(clubId); // -> 403
+        securityService.checkManagerOfClubOrThrow(clubId);
         if (!clubRepository.existsById(clubId)) {
-            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
+            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")");
         }
+        log.debug("Calcul du taux d'occupation moyen pour clubId: {}", clubId);
 
-        List<Object[]> eventStatsList = eventRepository.findEventStatsForOccupancy(clubId); // Utilise la requête DAO optimisée
+        // Définir les statuts de réservation à compter pour l'occupation
+        List<ReservationStatus> statusesToCount = List.of(ReservationStatus.CONFIRME, ReservationStatus.UTILISE);
+        log.debug("Statuts considérés pour l'occupation: {}", statusesToCount);
+
+        // Appeler la méthode DAO mise à jour
+        List<Object[]> eventStatsList = eventRepository.findEventStatsForOccupancy(clubId, statusesToCount);
+        log.debug("Statistiques brutes reçues pour l'occupation ({} événements): {}", eventStatsList.size(), eventStatsList);
+
+
         if (eventStatsList.isEmpty()) {
+            log.debug("Aucun événement actif avec capacité > 0 trouvé pour clubId {}", clubId);
             return 0.0;
         }
 
         double totalOccupancyPercentageSum = 0;
-        // On utilise la taille de la liste car chaque ligne représente un événement valide (capacité > 0)
-        int numberOfEventsConsidered = eventStatsList.size();
+        int numberOfEventsConsidered = eventStatsList.size(); // Initialisé avec le nombre d'events retournés
 
         for (Object[] stats : eventStatsList) {
             // stats[0] = eventId (inutilisé ici)
-            long reservedCount = stats[1] != null ? ((Number) stats[1]).longValue() : 0L; // COUNT peut être null si LEFT JOIN
-            long totalCapacity = stats[2] != null ? ((Number) stats[2]).longValue() : 0L; // SUM peut être null si LEFT JOIN
+            // Utilisation de extractDouble pour la robustesse (même si SUM devrait retourner Long/BigDecimal)
+            long reservedCount = (long) extractDouble(stats, 1); // Nombre de CONFIRME + UTILISE
+            long totalCapacity = (long) extractDouble(stats, 2); // Capacité totale
+
+            log.debug("Stats pour Event ID {}: reserved={}, capacity={}", stats[0], reservedCount, totalCapacity);
 
             // La clause HAVING assure totalCapacity > 0, mais une vérification reste prudente
             if (totalCapacity > 0) {
-                totalOccupancyPercentageSum += ((double) reservedCount / totalCapacity) * 100.0;
+                double eventOccupancy = ((double) reservedCount / totalCapacity) * 100.0;
+                log.debug(" Taux d'occupation pour cet événement: {}%", eventOccupancy);
+                totalOccupancyPercentageSum += eventOccupancy;
             } else {
-                numberOfEventsConsidered--; // Ne pas compter cet événement s'il a une capacité nulle malgré HAVING
+                // Ne devrait pas arriver à cause du HAVING, mais sécurité
+                log.warn("Événement ID {} retourné avec capacité <= 0 malgré HAVING clause.", stats[0]);
+                numberOfEventsConsidered--; // Décrémenter si l'événement ne doit pas être compté
             }
         }
 
         if (numberOfEventsConsidered == 0) {
+            log.debug("Aucun événement avec capacité > 0 n'a pu être traité.");
             return 0.0;
         }
 
         double averageRate = totalOccupancyPercentageSum / numberOfEventsConsidered;
-        return Math.round(averageRate * 10.0) / 10.0; // Arrondir à 1 décimale
+        log.debug("Somme des pourcentages: {}, Nombre d'événements: {}, Taux moyen brut: {}", totalOccupancyPercentageSum, numberOfEventsConsidered, averageRate);
+
+        // Arrondir à 1 décimale
+        double roundedAverageRate = Math.round(averageRate * 10.0) / 10.0;
+        log.debug("Taux moyen arrondi: {}", roundedAverageRate);
+        return roundedAverageRate;
     }
+
 
     /**
      * STAT 5: Nombre d'événements à venir (30j) pour un club.
@@ -225,8 +266,23 @@ public class StatsService {
                 .collect(Collectors.toList());
     }
 
+    // Helper method to safely extract Double from Object array (handles null and different number types)
+    private double extractDouble(Object[] array, int index) {
+        if (array == null || index < 0 || index >= array.length || array[index] == null) {
+            log.debug("extractDouble: Valeur nulle ou index invalide à l'index {}", index);
+            return 0.0; // AVG retourne NULL si aucune ligne, on représente ça par 0.0
+        }
+        Object value = array[index];
+        if (value instanceof Number) {
+            // Convertit n'importe quel Number (Double, BigDecimal, Long etc.) en double
+            return ((Number) value).doubleValue();
+        } else {
+            log.warn("extractDouble: Type inattendu {} à l'index {}", value.getClass().getName(), index);
+            return 0.0; // Retourne 0.0 si le type est inattendu
+        }
+    }
+
     private Map<String, Double> defaultRatingMap() {
-        // Utiliser LinkedHashMap si l'ordre d'insertion est important pour l'affichage
         Map<String, Double> map = new LinkedHashMap<>();
         map.put("ambiance", 0.0);
         map.put("proprete", 0.0);
@@ -237,14 +293,8 @@ public class StatsService {
         return map;
     }
 
-    private double extractDouble(Object[] array, int index) {
-        if (array == null || index < 0 || index >= array.length || array[index] == null) {
-            return 0.0; // AVG(col) retourne NULL si aucune ligne, ce qui devient 0.0
-        }
-        if (array[index] instanceof Number) {
-            return ((Number) array[index]).doubleValue();
-        }
-        System.err.println("WARN: Type inattendu pour moyenne de notation à l'index " + index + ": " + array[index].getClass()); // -> Logger
-        return 0.0;
+    // Méthode pour récupérer une moyenne optionnelle et retourner 0.0 si absente
+    private double getAverageOrDefault(Optional<Double> avgOpt) {
+        return avgOpt.orElse(0.0);
     }
 }

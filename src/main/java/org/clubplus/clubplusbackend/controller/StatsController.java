@@ -3,8 +3,8 @@ package org.clubplus.clubplusbackend.controller;
 // Retrait des imports non nécessaires (ResponseEntity, HttpStatus, EntityNotFoundException)
 
 import lombok.RequiredArgsConstructor;
+import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.StatsService;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -18,19 +18,11 @@ import java.util.Map;
 @RequestMapping("/api/stats/clubs/{clubId}") // Base URL inclut clubId
 @RequiredArgsConstructor
 @CrossOrigin
+@IsReservation
 public class StatsController {
 
     private final StatsService statsService;
-    // Pas besoin de SecurityService ici, utilisé dans @PreAuthorize ou dans StatsService
 
-    // Annotation de sécurité unique pour toute la classe si toutes les méthodes ont la même exigence
-    // Utilise la méthode isManagerOfClub de SecurityService via SpEL (#clubId fait référence à la variable de chemin)
-    @PreAuthorize("@securityService.isManagerOfClub(#clubId)") // Applique à toutes les méthodes
-    // Note: Assurez-vous que SecurityService est un bean (@Component/@Service) et que la méthode
-    // isManagerOfClub(Integer clubId) existe et fonctionne correctement (elle retourne boolean).
-    // Si la méthode isManagerOfClub lance AccessDeniedException, il faut utiliser
-    // @securityService.checkManagerOfClubOrThrow(#clubId) mais @PreAuthorize attend un booléen.
-    // On garde donc isManagerOfClub() qui retourne boolean.
 
     /**
      * STAT 1: GET /api/stats/clubs/{clubId}/registrations-monthly
@@ -39,6 +31,7 @@ public class StatsController {
      * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
     @GetMapping("/registrations-monthly")
+    @IsReservation
     public List<Map<String, Object>> getClubMonthlyRegistrations(@PathVariable Integer clubId) {
         // Le service lance 404 si club non trouvé
         return statsService.getClubMonthlyRegistrations(clubId);
@@ -51,6 +44,7 @@ public class StatsController {
      * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
     @GetMapping("/average-event-ratings")
+    @IsReservation
     public Map<String, Double> getClubAverageEventRatings(@PathVariable Integer clubId) {
         // Le service lance 404 si club non trouvé
         return statsService.getClubAverageEventRatings(clubId);
@@ -63,6 +57,7 @@ public class StatsController {
      * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
     @GetMapping("/total-events")
+    @IsReservation
     public Map<String, Long> getTotalEventsForClub(@PathVariable Integer clubId) {
         // Le service lance 404 si club non trouvé
         long total = statsService.getTotalEventsForClub(clubId);
@@ -76,6 +71,7 @@ public class StatsController {
      * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
     @GetMapping("/average-event-occupancy")
+    @IsReservation
     public Map<String, Double> getClubAverageEventOccupancy(@PathVariable Integer clubId) {
         // Le service lance 404 si club non trouvé
         double averageRate = statsService.getClubAverageEventOccupancy(clubId);
@@ -89,6 +85,7 @@ public class StatsController {
      * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
     @GetMapping("/upcoming-event-count-30d")
+    @IsReservation
     public Map<String, Long> getClubUpcomingEventCount30d(@PathVariable Integer clubId) {
         // Le service lance 404 si club non trouvé
         long count = statsService.getClubUpcomingEventCount30d(clubId);
@@ -102,6 +99,7 @@ public class StatsController {
      * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
      */
     @GetMapping("/total-members")
+    @IsReservation
     public Map<String, Long> getTotalMembers(@PathVariable Integer clubId) {
         // Le service lance 404 si club non trouvé
         long total = statsService.getTotalMembersForClub(clubId);

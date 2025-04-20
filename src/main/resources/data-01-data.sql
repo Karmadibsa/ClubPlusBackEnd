@@ -69,7 +69,7 @@ VALUES (1, 'Tournoi Badminton CSC (Passé)', '2025-02-15 14:00:00', '2025-02-15 
         1, 1, NULL),
        (3, 'Tournoi Padel Lyon (Futur)', '2025-06-07 10:00:00', '2025-06-07 17:00:00', 'Tournoi P100 Hommes.',
         'Lyon Padel Est', 2, 1, NULL),
-       (4, 'Initiation Escalade CSC (En Cours)', '2025-04-20 14:00:00', '2025-04-20 18:00:00', 'Découverte salle.',
+       (4, 'Initiation Escalade CSC (En Cours)', '2025-04-21 14:00:00', '2025-04-21 18:00:00', 'Découverte salle.',
         'Salle GrimpUp', 1, 1, NULL), -- DATE MODIFIEE
        (5, '[Annulé] Stage Tennis CSC (Futur)', '2025-07-10 09:00:00', '2025-07-12 17:00:00', 'Stage intensif.',
         'Courts Central', 1, 0, '2025-04-15 09:30:00'),
@@ -114,7 +114,9 @@ VALUES -- Réservations pour MEMBREs uniquement
        (9, 8, 12, '2025-06-11 10:00:00', UUID(), 'CONFIRME'), -- Helene @ Volley Bordeaux (Futur)
        -- Ajout pour Test Capacité Pleine (Test 53)
        (3, 4, 5, '2025-04-20 15:00:00', UUID(), 'CONFIRME'),  -- Bob @ Escalade (Cat 5, Capa 2)
-       (5, 4, 5, '2025-04-20 15:01:00', UUID(), 'CONFIRME');
+       (5, 4, 5, '2025-04-20 15:01:00', UUID(), 'CONFIRME'),
+       (4, 1, 1, '2025-02-01 10:00:00', UUID(), 'UTILISE');
+-- David (4) a participé à Event 1 / Cat 1;
 -- Eva @ Escalade (Cat 5, Capa 2)
 
 -- 7. DEMANDES D'AMIS (NETTOYÉES : Uniquement entre MEMBREs)
@@ -128,7 +130,7 @@ VALUES -- Interactions entre MEMBREs uniquement
 -- Helene (9) a demandé Testeur (10)
 
 -- 8. NOTATIONS (Inchangé pour l'instant - Supposant que tous peuvent noter les events auxquels ils ont participé)
-INSERT INTO notations (event_id, membre_id, ambiance, propreté, organisation, fair_play, niveau_joueurs, date_notation)
+INSERT INTO notations (event_id, membre_id, ambiance, proprete, organisation, fair_play, niveau_joueurs, date_notation)
 VALUES (1, 1, 5, 4, 5, 5, 4, '2025-02-16 10:00:00'), -- Alice (ADMIN) note Event 1
        (1, 3, 4, 3, 4, 4, 3, '2025-02-16 11:00:00'), -- Bob (MEMBRE) note Event 1
        (2, 1, 5, 5, 4, 5, 3, '2025-03-21 10:00:00'), -- Alice (ADMIN) note Event 2

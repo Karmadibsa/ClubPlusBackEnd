@@ -1,6 +1,7 @@
 package org.clubplus.clubplusbackend.dao;
 
 import org.clubplus.clubplusbackend.model.Event;
+import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -66,15 +67,24 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * ayant une capacité > 0.
      * Correction: Utilise LEFT JOIN pour inclure les événements sans réservation.
      */
-    @Query("SELECT e.id, SUM(CASE WHEN r.status = 'CONFIRMED' THEN 1 ELSE 0 END), SUM(COALESCE(c.capacite, 0)) " + // Utilise COALESCE pour SUM sur potentiellement 0 catégories
+    /**
+     * Récupère le nombre de réservations (avec statuts spécifiés) et la capacité totale
+     * pour chaque événement actif d'un club ayant une capacité > 0.
+     */
+    @Query("SELECT e.id, " +
+            // Compte les réservations dont le statut est dans la liste fournie
+            "SUM(CASE WHEN r.status IN :consideredStatuses THEN 1 ELSE 0 END), " +
+            "SUM(COALESCE(c.capacite, 0)) " +
             "FROM Event e " +
-            "LEFT JOIN e.categories c " + // LEFT JOIN pour inclure event sans catégorie
-            "LEFT JOIN c.reservations r " + // LEFT JOIN pour inclure catégorie sans réservation
-            "WHERE e.organisateur.id = :clubId AND e.actif = true " +
+            "LEFT JOIN e.categories c " +
+            "LEFT JOIN c.reservations r " + // LEFT JOIN pour inclure events/cats sans résa
+            "WHERE e.organisateur.id = :clubId AND e.actif = true " + // Événements actifs du club
             "GROUP BY e.id " +
             "HAVING SUM(COALESCE(c.capacite, 0)) > 0")
-    // Assure capacité totale > 0
-    List<Object[]> findEventStatsForOccupancy(@Param("clubId") Integer clubId);
+    // Capacité totale > 0
+    List<Object[]> findEventStatsForOccupancy(@Param("clubId") Integer clubId,
+                                              @Param("consideredStatuses") List<ReservationStatus> consideredStatuses); // Nouveau paramètre
+
 
     // --- Ajout pour suppression sécurisée ---
 

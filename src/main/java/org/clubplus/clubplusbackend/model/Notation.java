@@ -58,7 +58,7 @@ public class Notation {
     @Max(value = 5, message = "La note de propreté doit être au maximum 5")
     @Column(nullable = false)
     @JsonView({GlobalView.EventView.class, GlobalView.NotationView.class})
-    private int propreté;
+    private int proprete;
 
     @Min(value = 1, message = "La note d'organisation doit être au minimum 1")
     @Max(value = 5, message = "La note d'organisation doit être au maximum 5")
@@ -99,7 +99,7 @@ public class Notation {
     @JsonView({GlobalView.EventView.class, GlobalView.NotationView.class}) // Inclure dans les vues pertinentes
     public double getNoteMoyenne() {
         // La division par 5.0 assure un résultat double
-        return (ambiance + propreté + organisation + fairPlay + niveauJoueurs) / 5.0;
+        return (ambiance + proprete + organisation + fairPlay + niveauJoueurs) / 5.0;
     }
 
     // --- equals et hashCode : ESSENTIEL (basé sur la clé fonctionnelle event+membre) ---

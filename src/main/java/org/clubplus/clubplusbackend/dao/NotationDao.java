@@ -22,25 +22,19 @@ public interface NotationDao extends JpaRepository<Notation, Integer> {
      */
     boolean existsByEventIdAndMembreId(Integer eventId, Integer membreId);
 
-    // --- Requêtes pour les moyennes par critère (utiles pour l'affichage de l'event) ---
-    @Query("SELECT AVG(n.ambiance) FROM Notation n WHERE n.event.id = :eventId")
-    Optional<Double> findAverageAmbianceByEventId(@Param("eventId") Integer eventId);
+    // Méthodes pour StatsService (moyennes sur une liste d'events)
+    @Query("SELECT AVG(n.ambiance) FROM Notation n WHERE n.event.id IN :eventIds")
+    Optional<Double> findAverageAmbianceForEventIds(@Param("eventIds") List<Integer> eventIds);
 
-    @Query("SELECT AVG(n.propreté) FROM Notation n WHERE n.event.id = :eventId")
-    Optional<Double> findAveragePropreteByEventId(@Param("eventId") Integer eventId);
+    @Query("SELECT AVG(n.proprete) FROM Notation n WHERE n.event.id IN :eventIds")
+    Optional<Double> findAveragePropreteForEventIds(@Param("eventIds") List<Integer> eventIds);
 
-    @Query("SELECT AVG(n.organisation) FROM Notation n WHERE n.event.id = :eventId")
-    Optional<Double> findAverageOrganisationByEventId(@Param("eventId") Integer eventId);
+    @Query("SELECT AVG(n.organisation) FROM Notation n WHERE n.event.id IN :eventIds")
+    Optional<Double> findAverageOrganisationForEventIds(@Param("eventIds") List<Integer> eventIds);
 
-    @Query("SELECT AVG(n.fairPlay) FROM Notation n WHERE n.event.id = :eventId")
-    Optional<Double> findAverageFairPlayByEventId(@Param("eventId") Integer eventId);
+    @Query("SELECT AVG(n.fairPlay) FROM Notation n WHERE n.event.id IN :eventIds")
+    Optional<Double> findAverageFairPlayForEventIds(@Param("eventIds") List<Integer> eventIds);
 
-    @Query("SELECT AVG(n.niveauJoueurs) FROM Notation n WHERE n.event.id = :eventId")
-    Optional<Double> findAverageNiveauJoueursByEventId(@Param("eventId") Integer eventId);
-
-    // --- Requête pour les moyennes globales (StatsService - inchangée) ---
-    @Query("SELECT AVG(n.ambiance), AVG(n.propreté), AVG(n.organisation), AVG(n.fairPlay), AVG(n.niveauJoueurs) " +
-            "FROM Notation n " +
-            "WHERE n.event.id IN :eventIds")
-    Optional<Object[]> findAverageRatingsForEventIds(@Param("eventIds") List<Integer> eventIds);
+    @Query("SELECT AVG(n.niveauJoueurs) FROM Notation n WHERE n.event.id IN :eventIds")
+    Optional<Double> findAverageNiveauJoueursForEventIds(@Param("eventIds") List<Integer> eventIds);
 }

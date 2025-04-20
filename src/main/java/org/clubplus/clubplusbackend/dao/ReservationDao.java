@@ -54,4 +54,6 @@ public interface ReservationDao extends JpaRepository<Reservation, Integer> {
     List<Reservation> findByMembreIdAndStatus(Integer currentUserId, ReservationStatus status);
 
     List<Reservation> findByEventIdAndStatus(Integer eventId, ReservationStatus status);
+
+    boolean existsByMembreIdAndEventIdAndStatus(Integer currentUserId, Integer eventId, ReservationStatus reservationStatus);
 }

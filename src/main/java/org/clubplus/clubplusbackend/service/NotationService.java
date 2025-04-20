@@ -6,9 +6,11 @@ import org.clubplus.clubplusbackend.dao.EventDao;
 import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.dao.NotationDao;
 import org.clubplus.clubplusbackend.dao.ReservationDao;
+import org.clubplus.clubplusbackend.dto.CreateNotationDto;
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.model.Notation;
+import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,41 +36,42 @@ public class NotationService {
      * Sécurité: L'utilisateur doit être authentifié.
      * Lance 404 (Event non trouvé), 409 (Règle métier violée), 401/500 (Non auth).
      */
-    public Notation createMyNotation(Notation notationInput, Integer eventId) {
+    public Notation createMyNotation(CreateNotationDto notationDto, Integer eventId) {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow();
 
-        // On ne récupère le Membre que pour l'associer, pas besoin pour la validation si on a l'ID
         Membre membre = membreRepository.findById(currentUserId)
-                .orElseThrow(() -> new EntityNotFoundException("Utilisateur courant non trouvé (ID: " + currentUserId + ")")); // Devrait être rare
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur courant non trouvé (ID: " + currentUserId + ")"));
         Event event = eventRepository.findById(eventId)
-                .orElseThrow(() -> new EntityNotFoundException("Événement non trouvé (ID: " + eventId)); // -> 404
+                .orElseThrow(() -> new EntityNotFoundException("Événement non trouvé (ID: " + eventId));
 
-        // --- Validation Règles Métier ---
+        // --- Validation Règles Métier (inchangées) ---
         if (event.getEnd() == null || event.getEnd().isAfter(LocalDateTime.now())) {
-            throw new IllegalStateException("Impossible de noter : l'événement n'est pas terminé."); // -> 409
+            throw new IllegalStateException("Impossible de noter : l'événement n'est pas terminé.");
         }
-        if (!reservationRepository.existsByMembreIdAndEventId(currentUserId, eventId)) { // Nécessite cette méthode dans ReservationDao
-            throw new IllegalStateException("Notation impossible : participation non trouvée pour cet événement."); // -> 409
+        // Vérifier participation via statut UTILISE
+        if (!reservationRepository.existsByMembreIdAndEventIdAndStatus(currentUserId, eventId, ReservationStatus.UTILISE)) {
+            throw new IllegalStateException("Notation impossible : seule une participation validée (réservation utilisée) permet de noter cet événement.");
         }
         if (notationRepository.existsByEventIdAndMembreId(eventId, currentUserId)) {
-            throw new IllegalStateException("Vous avez déjà noté cet événement."); // -> 409
+            throw new IllegalStateException("Vous avez déjà noté cet événement.");
         }
 
         // --- Préparation & Sauvegarde ---
+        // Créer une NOUVELLE entité Notation
         Notation newNotation = new Notation();
-        newNotation.setId(null);
-        newNotation.setMembre(membre); // Associer le membre (invisible dans JSON)
-        newNotation.setEvent(event);   // Associer l'événement
-        // @PrePersist gère dateNotation
+        newNotation.setId(null); // JPA générera l'ID
+        newNotation.setMembre(membre); // Associer le membre récupéré
+        newNotation.setEvent(event);   // Associer l'événement récupéré
+        // @PrePersist devrait gérer dateNotation
 
-        // Copie des notes
-        newNotation.setAmbiance(notationInput.getAmbiance());
-        newNotation.setPropreté(notationInput.getPropreté());
-        newNotation.setOrganisation(notationInput.getOrganisation());
-        newNotation.setFairPlay(notationInput.getFairPlay());
-        newNotation.setNiveauJoueurs(notationInput.getNiveauJoueurs());
-        // Validation @Min/@Max gérée par @Valid dans le contrôleur + JPA
+        // Copier les notes depuis le DTO validé
+        newNotation.setAmbiance(notationDto.getAmbiance());
+        newNotation.setProprete(notationDto.getProprete());
+        newNotation.setOrganisation(notationDto.getOrganisation());
+        newNotation.setFairPlay(notationDto.getFairPlay());
+        newNotation.setNiveauJoueurs(notationDto.getNiveauJoueurs());
 
+        // Sauvegarder la nouvelle entité complète
         return notationRepository.save(newNotation);
     }
 
@@ -82,7 +85,7 @@ public class NotationService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Événement non trouvé (ID: " + eventId)); // -> 404
         // Sécurité Contextuelle
-        securityService.checkIsCurrentUserMemberOfClubOrThrow(event.getOrganisateur().getId()); // -> 403
+        securityService.checkManagerOfClubOrThrow(event.getOrganisateur().getId()); // -> 403
         // Le DAO retourne la liste, le champ 'membre' ne sera pas sérialisé grâce aux @JsonView
         return notationRepository.findByEventId(eventId);
     }

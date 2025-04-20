@@ -3,12 +3,13 @@ package org.clubplus.clubplusbackend.controller;
 import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.clubplus.clubplusbackend.dto.CreateNotationDto;
 import org.clubplus.clubplusbackend.model.Notation;
+import org.clubplus.clubplusbackend.security.annotation.IsMembre;
 import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.NotationService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -33,15 +34,15 @@ public class NotationController {
      * 400 (Validation @Valid échouée).
      */
     @PostMapping
-    @PreAuthorize("isAuthenticated()") // Seul un utilisateur connecté peut noter
+    @IsMembre
     @ResponseStatus(HttpStatus.CREATED) // 201
     // Retourne la notation créée (mais le membre sera anonyme grâce à l'entité)
     @JsonView(GlobalView.NotationView.class)
     public Notation createMyNotation(@PathVariable Integer eventId,
-                                     @Valid @RequestBody Notation notationInput) {
+                                     @Valid @RequestBody CreateNotationDto notationDto) {
         // Le service utilise SecurityService pour obtenir l'ID courant
         // et gère toute la logique métier et les erreurs.
-        return notationService.createMyNotation(notationInput, eventId);
+        return notationService.createMyNotation(notationDto, eventId);
     }
 
     /**
