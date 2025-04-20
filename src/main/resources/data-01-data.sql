@@ -123,6 +123,7 @@ VALUES -- Existantes
        (6, 3, 4, '2025-05-01 09:00:00', UUID(), 'CONFIRME'),
        (5, 3, 4, '2025-05-02 10:00:00', UUID(), 'CONFIRME'),
        (1, 4, 5, '2025-04-20 14:00:00', UUID(), 'CONFIRME'),  -- Alice @ Escalade (CRUCIAL pour conflit)
+       (2, 4, 5, '2025-04-20 14:00:00', UUID(), 'CONFIRME'),  -- Alice @ Escalade (CRUCIAL pour conflit)
        (4, 4, 5, '2025-04-21 15:00:00', UUID(), 'ANNULE'),    -- David @ Escalade (Annulée)
        (5, 5, 6, '2025-04-10 10:00:00', UUID(), 'ANNULE'),    -- Eva @ Stage Annulé
        -- Nouvelles réservations

@@ -3,8 +3,10 @@ package org.clubplus.clubplusbackend.controller;
 import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.clubplus.clubplusbackend.dto.CreateCategorieDto;
+import org.clubplus.clubplusbackend.dto.UpdateCategorieDto;
 import org.clubplus.clubplusbackend.model.Categorie;
-import org.clubplus.clubplusbackend.security.annotation.IsMembre;
+import org.clubplus.clubplusbackend.security.annotation.IsConnected;
 import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.CategorieService;
 import org.clubplus.clubplusbackend.view.GlobalView;
@@ -28,8 +30,8 @@ public class CategorieController {
      * Exceptions (gérées globalement) : 404 (Event non trouvé), 403 (Non membre).
      */
     @GetMapping
-    @IsMembre // Vérification du rôle minimum au niveau du contrôleur
-    @JsonView(GlobalView.Base.class) // Vue pour la liste
+    @IsConnected // Vérification du rôle minimum au niveau du contrôleur
+    @JsonView(GlobalView.CategorieView.class) // Vue pour la liste
     public List<Categorie> getCategoriesByEvent(@PathVariable Integer eventId) {
         // Appelle directement le service.
         // Si une exception (EntityNotFound, AccessDenied) est levée, GlobalExceptionHandler la prendra en charge.
@@ -44,7 +46,7 @@ public class CategorieController {
      * Exceptions (gérées globalement) : 404 (Non trouvé/Non lié), 403 (Non membre).
      */
     @GetMapping("/{categorieId}")
-    @IsMembre // Vérification du rôle minimum
+    @IsConnected // Vérification du rôle minimum
     @JsonView(GlobalView.CategorieView.class) // Vue détaillée
     public Categorie getCategorieByIdAndEvent(@PathVariable Integer eventId, @PathVariable Integer categorieId) {
         return categorieService.getCategorieByIdAndEventIdWithSecurityCheck(eventId, categorieId);
@@ -64,9 +66,9 @@ public class CategorieController {
     @IsReservation // Vérification rôle minimum (RESERVATION ou ADMIN)
     @ResponseStatus(HttpStatus.CREATED) // Code 201 si succès
     @JsonView(GlobalView.CategorieView.class) // Retourne la catégorie créée
-    public Categorie addCategorieToEvent(@PathVariable Integer eventId, @Valid @RequestBody Categorie categorie) {
+    public Categorie addCategorieToEvent(@PathVariable Integer eventId, @Valid @RequestBody CreateCategorieDto categorieDto) {
         // @Valid déclenche la validation Bean. Si échec -> MethodArgumentNotValidException (gérée globalement -> 400).
-        return categorieService.addCategorieToEvent(eventId, categorie);
+        return categorieService.addCategorieToEvent(eventId, categorieDto);
     }
 
     /**
@@ -84,8 +86,8 @@ public class CategorieController {
     @JsonView(GlobalView.CategorieView.class) // Retourne la catégorie mise à jour
     public Categorie updateCategorie(@PathVariable Integer eventId,
                                      @PathVariable Integer categorieId,
-                                     @Valid @RequestBody Categorie categorieDetails) {
-        return categorieService.updateCategorie(eventId, categorieId, categorieDetails);
+                                     @Valid @RequestBody UpdateCategorieDto categorieDto) {
+        return categorieService.updateCategorie(eventId, categorieId, categorieDto);
     }
 
     /**

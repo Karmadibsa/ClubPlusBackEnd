@@ -62,7 +62,7 @@ public class Reservation {
     @ManyToOne(fetch = FetchType.LAZY, optional = false) // LAZY, non optionnel
     @JoinColumn(name = "categorie_id", nullable = false) // FK non nulle
     // JsonView: Base est un bon choix.
-    @JsonView({GlobalView.Base.class, GlobalView.ReservationView.class})
+    @JsonView(GlobalView.ReservationView.class)
     private Categorie categorie;
 
     // Timestamp de la réservation
