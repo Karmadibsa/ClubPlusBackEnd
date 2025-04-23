@@ -55,5 +55,15 @@ public interface ReservationDao extends JpaRepository<Reservation, Integer> {
 
     List<Reservation> findByEventIdAndStatus(Integer eventId, ReservationStatus status);
 
+
     boolean existsByMembreIdAndEventIdAndStatus(Integer currentUserId, Integer eventId, ReservationStatus reservationStatus);
+
+    /**
+     * Compte le nombre de réservations pour un club donné ayant un statut spécifique.
+     *
+     * @param status Le statut de réservation recherché (ex: "utilisé").
+     * @param clubId L'identifiant du club.
+     * @return Le nombre de réservations correspondantes.
+     */
+    long countByStatusAndEventOrganisateurId(ReservationStatus status, Integer clubId);
 }

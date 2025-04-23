@@ -3,6 +3,7 @@ package org.clubplus.clubplusbackend.controller;
 // Retrait des imports non nécessaires (ResponseEntity, HttpStatus, EntityNotFoundException)
 
 import lombok.RequiredArgsConstructor;
+import org.clubplus.clubplusbackend.dto.DashboardSummaryDto;
 import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.StatsService;
 import org.springframework.web.bind.annotation.*;
@@ -92,19 +93,11 @@ public class StatsController {
         return Map.of("count", count);
     }
 
-    /**
-     * STAT 6: GET /api/stats/clubs/{clubId}/total-members
-     * Nombre total de membres du club.
-     * Sécurité: Vérifiée par @PreAuthorize sur la classe.
-     * Exceptions (globales): 404 (Club non trouvé), 403 (Pas manager).
-     */
-    @GetMapping("/total-members")
+    @GetMapping("/dashboard-summary")
     @IsReservation
-    public Map<String, Long> getTotalMembers(@PathVariable Integer clubId) {
-        // Le service lance 404 si club non trouvé
-        long total = statsService.getTotalMembersForClub(clubId);
-        return Map.of("totalMembers", total);
+    public DashboardSummaryDto getDashboardSummary(@PathVariable Integer clubId) {
+        // Le service gère la sécurité et l'existence du club
+        return statsService.getDashboardSummary(clubId);
     }
-
     // Pas de @ExceptionHandler ici, doit être dans GlobalExceptionHandler.
 }

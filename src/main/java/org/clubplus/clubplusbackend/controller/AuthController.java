@@ -9,13 +9,14 @@ import org.clubplus.clubplusbackend.security.AppUserDetails;
 import org.clubplus.clubplusbackend.security.SecurityUtils;
 import org.clubplus.clubplusbackend.service.MembreService;
 import org.clubplus.clubplusbackend.view.GlobalView;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth") // Point d'entrée public pour l'authentification
@@ -57,7 +58,7 @@ public class AuthController {
      */
     @PostMapping("/connexion")
     // Pas besoin de @ResponseStatus(OK) car c'est le défaut pour POST/PUT/GET sans erreur
-    public Map<String, String> connexion(
+    public ResponseEntity<String> connexion(
             @Valid @RequestBody LoginRequestDto loginRequest // Utilise le DTO dédié et @Valid
     ) {
         // Tente l'authentification via Spring Security.
@@ -76,8 +77,9 @@ public class AuthController {
         // Générer le token JWT.
         String jwtToken = jwtUtils.generateToken(userDetails);
 
-        // Retourner le token dans une structure JSON simple.
-        return Map.of("token", jwtToken);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.TEXT_PLAIN); // Indiquer que c'est du texte brut
+        return new ResponseEntity<>(jwtToken, headers, HttpStatus.OK);
     }
 
 }

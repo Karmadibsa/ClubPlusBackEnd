@@ -2,10 +2,8 @@ package org.clubplus.clubplusbackend.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.clubplus.clubplusbackend.dao.AdhesionDao;
-import org.clubplus.clubplusbackend.dao.ClubDao;
-import org.clubplus.clubplusbackend.dao.EventDao;
-import org.clubplus.clubplusbackend.dao.NotationDao;
+import org.clubplus.clubplusbackend.dao.*;
+import org.clubplus.clubplusbackend.dto.DashboardSummaryDto;
 import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.slf4j.Logger;
@@ -19,12 +17,15 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static org.clubplus.clubplusbackend.security.ReservationStatus.UTILISE;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true) // La plupart des méthodes sont en lecture seule
 public class StatsService {
 
     private final EventDao eventRepository;
+    private final ReservationDao reservationRepository;
     private final NotationDao notationRepository;
     private final ClubDao clubRepository;
     private final AdhesionDao adhesionRepository;
@@ -149,7 +150,7 @@ public class StatsService {
         log.debug("Calcul du taux d'occupation moyen pour clubId: {}", clubId);
 
         // Définir les statuts de réservation à compter pour l'occupation
-        List<ReservationStatus> statusesToCount = List.of(ReservationStatus.CONFIRME, ReservationStatus.UTILISE);
+        List<ReservationStatus> statusesToCount = List.of(ReservationStatus.CONFIRME, UTILISE);
         log.debug("Statuts considérés pour l'occupation: {}", statusesToCount);
 
         // Appeler la méthode DAO mise à jour
@@ -215,18 +216,6 @@ public class StatsService {
         return eventRepository.countByOrganisateurIdAndActifAndStartBetween(clubId, true, now, futureDate); // Méthode DAO
     }
 
-    /**
-     * STAT 6: Nombre total de membres pour un club.
-     * Sécurité: Vérifie que l'appelant est MANAGER du club.
-     * Lance 404 (Club non trouvé), 403 (Non manager).
-     */
-    public long getTotalMembersForClub(Integer clubId) {
-        securityService.checkManagerOfClubOrThrow(clubId); // -> 403
-        if (!clubRepository.existsById(clubId)) {
-            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
-        }
-        return adhesionRepository.countActiveMembersByClubId(clubId);
-    }
 
     // --- Méthodes Helper Privées ---
 
@@ -296,5 +285,56 @@ public class StatsService {
     // Méthode pour récupérer une moyenne optionnelle et retourner 0.0 si absente
     private double getAverageOrDefault(Optional<Double> avgOpt) {
         return avgOpt.orElse(0.0);
+    }
+
+    /**
+     * Récupère le nombre de membres considérés comme actifs pour un club.
+     * La définition d'"actif" dépend de tes règles métier (ex: statut, date dernière activité...).
+     */
+    public long getTotalActiveMembersForClub(Integer clubId) {
+        // Vérifications sécurité/existence club...
+        // Exemple simple : Compter les utilisateurs liés au club avec un statut "ACTIF"
+        // return userRepository.countByClubIdAndStatus(clubId, UserStatus.ACTIVE);
+        // Adapte cette logique à ta structure de données (Membership, User, etc.)
+        long count = adhesionRepository.countActiveMembersByClubId(clubId); // Supposons un champ 'actif'
+        System.out.println("Membres actifs pour Club " + clubId + ": " + count); // Log pour debug
+        return count;
+    }
+
+    /**
+     * Récupère le nombre total de participations enregistrées à tous les événements passés du club.
+     */
+    public long getTotalEventParticipationsForClub(Integer clubId) {
+        long totalParticipations = reservationRepository.countByStatusAndEventOrganisateurId(UTILISE, clubId); // Supposons une entité Inscription
+        System.out.println("Participations totales pour Club " + clubId + ": " + totalParticipations); // Log pour debug
+        return totalParticipations;
+    }
+
+    public DashboardSummaryDto getDashboardSummary(Integer clubId) {
+        securityService.checkManagerOfClubOrThrow(clubId);
+        if (!clubRepository.existsById(clubId)) {
+            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")");
+        }
+
+        // Appelle les méthodes existantes
+        long totalEvents = this.getTotalEventsForClub(clubId);
+        long upcomingCount = this.getClubUpcomingEventCount30d(clubId);
+        double avgOccupancy = this.getClubAverageEventOccupancy(clubId);
+        long totalActiveMembers = this.getTotalActiveMembersForClub(clubId);
+        long totalParticipations = this.getTotalEventParticipationsForClub(clubId);
+        List<Map<String, Object>> registrations = this.getClubMonthlyRegistrations(clubId);
+        Map<String, Double> ratings = this.getClubAverageEventRatings(clubId);
+        // Appelle les autres si tu les inclus dans le DTO...
+
+        // Construit et retourne le DTO
+        return DashboardSummaryDto.builder()
+                .totalEvents(totalEvents)
+                .upcomingEventsCount30d(upcomingCount)
+                .averageEventOccupancyRate(avgOccupancy)
+                .totalActiveMembers(totalActiveMembers)
+                .totalParticipations(totalParticipations)
+                .monthlyRegistrations(registrations) // Ajouté
+                .averageEventRatings(ratings)
+                .build();
     }
 }
