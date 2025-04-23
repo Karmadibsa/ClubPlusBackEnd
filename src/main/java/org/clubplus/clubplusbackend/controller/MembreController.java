@@ -12,10 +12,8 @@ import org.clubplus.clubplusbackend.security.annotation.IsConnected;
 import org.clubplus.clubplusbackend.service.MembreService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -143,12 +141,5 @@ public class MembreController {
 
     // Le @ExceptionHandler pour MethodArgumentNotValidException doit être dans GlobalExceptionHandler.
 
-    // Endpoint GET /api/membres désactivé par PreAuthorize("false") - OK
-    @GetMapping
-    @PreAuthorize("false") // Désactive cet endpoint
-    @JsonView(GlobalView.Base.class)
-    public List<Membre> getAllMembres() {
-        throw new UnsupportedOperationException("Lister tous les membres n'est pas autorisé.");
-    }
 }
 

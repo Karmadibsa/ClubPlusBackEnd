@@ -1,14 +1,14 @@
 package org.clubplus.clubplusbackend.security;
 
 import lombok.Getter;
+import org.clubplus.clubplusbackend.model.Adhesion;
+import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Objects;
+import java.util.*;
 
 @Getter
 // Cette classe implémente l'interface UserDetails de Spring Security [4]
@@ -66,6 +66,42 @@ public class AppUserDetails implements UserDetails {
             throw new IllegalStateException("Membre associé à AppUserDetails est null lors de l'appel à getId().");
         }
         return membre.getId(); // CORRECT
+    }
+
+    /**
+     * Récupère l'ID de l'unique club géré par cet utilisateur, si son rôle
+     * est ADMIN ou RESERVATION, en utilisant le Set d'adhésions.
+     *
+     * @return L'ID du club géré, ou null si non applicable ou non trouvé.
+     */
+    public Integer getManagedClubId() {
+        if (this.membre == null || this.membre.getRole() == null) {
+            return null;
+        }
+
+        Role userRole = this.membre.getRole();
+
+        if (userRole == Role.ADMIN || userRole == Role.RESERVATION) {
+            // Assurez-vous que membre.getAdhesions() retourne Set<Adhesion>
+            Set<Adhesion> adhesions = this.membre.getAdhesions(); // <--- Vérifier type de retour
+
+            if (adhesions != null && !adhesions.isEmpty()) {
+                // Utiliser Stream API pour trouver la première adhésion et extraire l'ID du club
+                Optional<Integer> clubIdOptional = adhesions.stream()
+                        .findFirst() // Prend le premier élément du Set (ordre non garanti mais OK si un seul)
+                        .map(Adhesion::getClub) // Extrait le Club de l'Adhesion
+                        .map(Club::getId);      // Extrait l'ID du Club
+
+                // Si l'ID a été trouvé, le retourner, sinon retourner null
+                if (clubIdOptional.isPresent()) {
+                    return clubIdOptional.get();
+                }
+            }
+            // Si aucune adhésion valide n'est trouvée (log d'anomalie)
+            System.err.println("ANOMALIE: L'utilisateur " + getUsername() + " (" + userRole + ") n'a pas d'adhésion valide pour déterminer le club géré.");
+            return null;
+        }
+        return null; // Pas ADMIN ou RESA
     }
 
     // !!! MÉTHODES MANQUANTES DE L'INTERFACE UserDetails !!! [4]

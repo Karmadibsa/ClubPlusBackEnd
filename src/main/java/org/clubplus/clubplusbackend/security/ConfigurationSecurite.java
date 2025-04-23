@@ -70,8 +70,9 @@ public class ConfigurationSecurite {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/auth/inscription").permitAll()
+                        .requestMatchers("/api/auth/inscription/**").permitAll()
                         .requestMatchers("/api/auth/connexion").permitAll()
+                        .requestMatchers("/api/clubs/inscription").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll()
                 )

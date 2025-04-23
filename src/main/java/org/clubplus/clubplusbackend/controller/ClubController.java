@@ -78,9 +78,8 @@ public class ClubController {
      * Validation: Le DTO est validé via @Valid.
      * Exceptions (gérées globalement): 400 (Validation échouée), 409 (Emails déjà utilisés).
      */
-    @PostMapping // Pas besoin de 'consumes' car @RequestBody suppose application/json par défaut
+    @PostMapping("/inscription") // Pas besoin de 'consumes' car @RequestBody suppose application/json par défaut
     @ResponseStatus(HttpStatus.CREATED)
-    @IsConnected
     @JsonView(GlobalView.ClubView.class)
     public Club createClubAndAdmin(
             @Valid @RequestBody CreateClubRequestDto creationDto // Utilise @RequestBody avec le DTO
