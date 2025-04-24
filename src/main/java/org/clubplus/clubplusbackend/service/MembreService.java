@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -311,4 +312,31 @@ public class MembreService {
         return membreRepository.save(targetMember);
     }
 
+    /**
+     * Récupère les 5 derniers membres inscrits pour le club GÉRÉ par l'utilisateur actuellement connecté.
+     * Vérifie d'abord que l'utilisateur connecté a les droits nécessaires (rôle ADMIN ou RESERVATION
+     * associé à un club spécifique) via SecurityService. Si autorisé, récupère les données.
+     *
+     * @return La liste des 5 derniers membres inscrits dans le club géré par l'utilisateur.
+     * @throws AccessDeniedException Si l'utilisateur n'est pas connecté, n'a pas le rôle requis
+     *                               ou n'est pas associé à un club gérable.
+     */
+    @Transactional(readOnly = true)
+    public List<Membre> getLatestMembersForManagedClub() { // PAS d'argument clubId ici !
+
+        // 1. Utiliser SecurityService pour obtenir l'ID du club GÉRÉ par l'utilisateur courant.
+        //    C'est CETTE méthode de SecurityService qui fait la vérification des droits (ADMIN/RESERVATION)
+        //    et trouve le club associé. Elle DOIT lever AccessDeniedException si non autorisé.
+        Integer managedClubId = securityService.getCurrentUserManagedClubIdOrThrow(); // MÉTHODE À CRÉER/CONFIRMER dans SecurityService
+
+        // 2. Récupération des données via AdhesionRepository en utilisant l'ID obtenu
+        List<Adhesion> latestAdhesions = adhesionRepository.findTop5ByClubIdOrderByDateAdhesionDesc(managedClubId);
+
+        // 3. Transformation en List<Membre>
+        return latestAdhesions.stream()
+                .map(Adhesion::getMembre)
+                .filter(Objects::nonNull)
+                .distinct()
+                .collect(Collectors.toList());
+    }
 }

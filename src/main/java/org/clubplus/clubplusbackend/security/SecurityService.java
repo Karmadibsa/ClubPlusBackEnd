@@ -6,10 +6,7 @@ import org.clubplus.clubplusbackend.dao.AdhesionDao;
 import org.clubplus.clubplusbackend.dao.EventDao;
 import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.dao.ReservationDao;
-import org.clubplus.clubplusbackend.model.DemandeAmi;
-import org.clubplus.clubplusbackend.model.Event;
-import org.clubplus.clubplusbackend.model.Membre;
-import org.clubplus.clubplusbackend.model.Reservation;
+import org.clubplus.clubplusbackend.model.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -17,6 +14,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
+import java.util.Set;
 
 @Component("securityService") // Nom du bean pour SpEL dans @PreAuthorize si besoin
 @RequiredArgsConstructor
@@ -336,6 +334,41 @@ public class SecurityService {
         }
     }
 
+    /**
+     * Récupère l'ID du club UNIQUE géré par l'utilisateur courant (rôle ADMIN ou RESERVATION).
+     * Vérifie que l'utilisateur est connecté, a le rôle requis, et est associé (via Adhesion)
+     * à UN SEUL club gérable (un Admin/Resa ne peut gérer qu'un club à la fois dans ce modèle).
+     *
+     * @return L'ID du club géré.
+     * @throws AccessDeniedException   Si non connecté, rôle insuffisant, ou non associé à un club gérable unique.
+     * @throws EntityNotFoundException Si le membre n'est pas trouvé en BDD (incohérence).
+     */
+    @Transactional(readOnly = true) // Nécessaire car on lit le membre et ses adhésions
+    public Integer getCurrentUserManagedClubIdOrThrow() {
+        // 1. Récupérer le membre complet (gère aussi l'authentification)
+        Membre currentUser = getCurrentMembreOrThrow();
+
+        // 2. Vérifier le rôle
+        Role userRole = currentUser.getRole();
+        if (userRole != Role.ADMIN && userRole != Role.RESERVATION) {
+            throw new AccessDeniedException("Accès refusé : Rôle ADMIN ou RESERVATION requis pour cette opération.");
+        }
+
+        // 3. Trouver l'adhésion (et donc le club) liée à ce rôle
+        // Récupération via la relation dans Membre (si elle existe et est chargée - Attention au FetchType)
+        Set<Adhesion> adhesions = currentUser.getAdhesions(); // Suppose que getAdhesions() existe et est utilisable ici
+
+        if (adhesions == null || adhesions.isEmpty()) {
+            throw new AccessDeniedException("Accès refusé : L'utilisateur (ADMIN/RESERVATION) n'est associé à aucun club via une adhésion.");
+        }
+
+        // 4. Retourner l'ID du club trouvé
+        Adhesion managedAdhesion = adhesions.iterator().next(); // Prend la seule adhésion
+        if (managedAdhesion.getClub() == null) {
+            throw new EntityNotFoundException("Incohérence : L'adhésion de gestion ne référence aucun club.");
+        }
+        return managedAdhesion.getClub().getId();
+    }
 
     // Ajoutez d'autres méthodes check...OrThrow selon les besoins spécifiques de vos services...
     // Exemple : checkCanManageCategorieOrThrow(Integer categorieId), checkCanReserveCategorieOrThrow(Integer categorieId), etc.

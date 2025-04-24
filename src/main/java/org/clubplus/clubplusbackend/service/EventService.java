@@ -337,4 +337,23 @@ public class EventService {
         }
         // Ajoutez la logique de tri si nécessaire (par date par exemple)
     }
+
+    /**
+     * Récupère les 5 prochains événements actifs du club géré par l’utilisateur connecté.
+     *
+     * @return Liste des 5 prochains événements.
+     * @throws AccessDeniedException si l’utilisateur n’est pas autorisé ou pas associé à un club.
+     */
+    @Transactional(readOnly = true)
+    public List<Event> getNextFiveEventsForManagedClub() {
+        // Récupérer l’ID du club géré par l’utilisateur connecté
+        Integer clubId = securityService.getCurrentUserManagedClubIdOrThrow();
+
+        // Date actuelle pour filtrage
+        LocalDateTime now = LocalDateTime.now();
+
+        // Requête pour récupérer les 5 prochains événements actifs
+        return eventRepository.findTop5ByOrganisateurIdAndActifTrueAndStartAfterOrderByStartAsc(clubId, now);
+    }
+
 }

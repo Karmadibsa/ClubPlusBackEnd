@@ -99,7 +99,16 @@ public interface AdhesionDao extends JpaRepository<Adhesion, Integer> {
     @Query("SELECT a.club.id FROM Adhesion a WHERE a.membre.id = :membreId AND a.club.actif = true")
     List<Integer> findActiveClubIdsByMembreId(@Param("membreId") Integer membreId);
 
-    // Dans AdhesionDao / AdhesionRepository
-
+    /**
+     * Trouve les 5 dernières adhésions pour un club spécifique, triées par date d'adhésion descendante.
+     * Le nom de la méthode suit les conventions Spring Data JPA :
+     * - findTop5: Limite les résultats aux 5 premiers.
+     * - ByClubId: Filtre sur l'ID de l'entité Club associée (via le champ 'club' dans Adhesion).
+     * - OrderByDateAdhesionDesc: Trie par le champ 'dateAdhesion' en ordre décroissant.
+     *
+     * @param clubId L'identifiant (Integer) du club pour lequel rechercher les adhésions.
+     * @return La liste des 5 dernières adhésions pour ce club.
+     */
+    List<Adhesion> findTop5ByClubIdOrderByDateAdhesionDesc(Integer clubId);
 
 }

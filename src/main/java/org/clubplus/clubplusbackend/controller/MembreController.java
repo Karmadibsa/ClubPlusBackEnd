@@ -9,11 +9,14 @@ import org.clubplus.clubplusbackend.security.Role;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.clubplus.clubplusbackend.security.annotation.IsAdmin;
 import org.clubplus.clubplusbackend.security.annotation.IsConnected;
+import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.MembreService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Set;
 
 @RestController
@@ -139,7 +142,25 @@ public class MembreController {
         return membreService.changeMemberRoleInClub(membreId, clubId, newRole);
     }
 
-    // Le @ExceptionHandler pour MethodArgumentNotValidException doit être dans GlobalExceptionHandler.
+    /**
+     * GET /api/membres/derniers-inscrits-mon-club
+     * Récupère les 5 derniers membres inscrits DANS LE CLUB géré par l'utilisateur connecté.
+     * La vérification des droits (rôle ADMIN/RESERVATION du club) et la récupération
+     * des données sont entièrement gérées par la méthode membreService.getLatestMembersForManagedClub().
+     *
+     * @return ResponseEntity contenant la liste des 5 derniers membres (peut être vide).
+     * Les erreurs (401, 403, 404, 500) sont gérées via les exceptions
+     * levées par le service et interceptées globalement (@ControllerAdvice).
+     */
+    @GetMapping("/derniers-inscrits-mon-club")
+    @IsReservation
+    @JsonView(GlobalView.MembreView.class)
+    public ResponseEntity<List<Membre>> getLatestMembersForMyClub() { // PAS de @RequestParam ici !
+        // Appel UNIQUE à la méthode dédiée du service SANS ARGUMENT
+        List<Membre> latestMembers = membreService.getLatestMembersForManagedClub();
 
+        // Si le service ne lève pas d'exception, retourne 200 OK avec les données
+        return ResponseEntity.ok(latestMembers);
+    }
 }
 

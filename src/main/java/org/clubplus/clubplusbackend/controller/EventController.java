@@ -11,6 +11,7 @@ import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.EventService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -112,5 +113,18 @@ public class EventController {
         eventService.deactivateEvent(id);
     }
 
+    /**
+     * GET /api/events/next
+     * Récupère les 5 prochains événements actifs du club géré par l’utilisateur connecté.
+     *
+     * @return Liste des 5 prochains événements.
+     */
+    @GetMapping("/clubs/next-event")
+    @IsReservation
+    @JsonView(GlobalView.EventView.class)
+    public ResponseEntity<List<Event>> getNextFiveEventsForMyClub() {
+        List<Event> nextEvents = eventService.getNextFiveEventsForManagedClub();
+        return ResponseEntity.ok(nextEvents);
+    }
     // Le @ExceptionHandler pour MethodArgumentNotValidException doit être dans GlobalExceptionHandler.
 }

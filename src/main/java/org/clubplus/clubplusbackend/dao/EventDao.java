@@ -52,6 +52,14 @@ public interface EventDao extends JpaRepository<Event, Integer> {
 
     long countByOrganisateurIdAndStartBetween(Integer clubId, LocalDateTime start, LocalDateTime end);
 
+    /**
+     * Trouve les 5 prochains événements actifs d’un club, triés par date de début croissante.
+     *
+     * @param clubId L’ID du club organisateur.
+     * @param now    Date actuelle pour filtrer les événements futurs.
+     * @return Liste des 5 prochains événements.
+     */
+    List<Event> findTop5ByOrganisateurIdAndActifTrueAndStartAfterOrderByStartAsc(Integer clubId, LocalDateTime now);
     // --- Requêtes Spécifiques ---
 
     /**
