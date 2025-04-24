@@ -11,6 +11,7 @@ import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.annotation.IsAdmin;
 import org.clubplus.clubplusbackend.security.annotation.IsConnected;
 import org.clubplus.clubplusbackend.security.annotation.IsMembre;
+import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.ClubService;
 import org.clubplus.clubplusbackend.service.EventService;
 import org.clubplus.clubplusbackend.view.GlobalView;
@@ -113,7 +114,7 @@ public class ClubController {
      * 409 (Événements futurs empêchent suppression).
      */
     @DeleteMapping("/{id}")
-    @IsConnected // L'utilisateur doit être connecté pour tenter
+    @IsAdmin
     @ResponseStatus(HttpStatus.NO_CONTENT) // Code 204 si succès
     public void deleteClub(@PathVariable Integer id) {
         // Le service gère existence (-> 404), sécurité admin (-> 403), conflits (-> 409)
@@ -127,7 +128,7 @@ public class ClubController {
      * Exceptions (gérées globalement): 404 (Club non trouvé), 403 (Non membre).
      */
     @GetMapping("/{id}/membres")
-    @IsConnected
+    @IsReservation
     @JsonView(GlobalView.Base.class) // Vue de base pour les membres listés
     public List<Membre> getClubMembres(@PathVariable Integer id) {
         // Le service gère existence (-> 404), sécurité membre (-> 403)

@@ -78,7 +78,7 @@ public class NotationTest {
         notation.setEvent(createMockEvent(1));
         notation.setMembre(createMockMembre(1));
         notation.setAmbiance(4);
-        notation.setPropreté(5);
+        notation.setProprete(5);
         notation.setOrganisation(3);
         notation.setFairPlay(5);
         notation.setNiveauJoueurs(4);
@@ -215,7 +215,7 @@ public class NotationTest {
             notation.setEvent(createMockEvent(1));
             notation.setMembre(createMockMembre(1));
             notation.setAmbiance(3); // Mettre les autres notes aussi
-            notation.setPropreté(3);
+            notation.setProprete(3);
             notation.setOrganisation(3);
             notation.setFairPlay(3);
             notation.setNiveauJoueurs(3);
@@ -248,7 +248,7 @@ public class NotationTest {
             notation.setMembre(createMockMembre(1));
             // ... set scores ...
             notation.setAmbiance(3);
-            notation.setPropreté(3);
+            notation.setProprete(3);
             notation.setOrganisation(3);
             notation.setFairPlay(3);
             notation.setNiveauJoueurs(3);
@@ -283,7 +283,7 @@ public class NotationTest {
         void getNoteMoyenne_allOnes() {
             Notation notation = createValidBaseNotation();
             notation.setAmbiance(1);
-            notation.setPropreté(1);
+            notation.setProprete(1);
             notation.setOrganisation(1);
             notation.setFairPlay(1);
             notation.setNiveauJoueurs(1);
@@ -296,7 +296,7 @@ public class NotationTest {
         void getNoteMoyenne_allFives() {
             Notation notation = createValidBaseNotation();
             notation.setAmbiance(5);
-            notation.setPropreté(5);
+            notation.setProprete(5);
             notation.setOrganisation(5);
             notation.setFairPlay(5);
             notation.setNiveauJoueurs(5);
@@ -309,7 +309,7 @@ public class NotationTest {
         void getNoteMoyenne_mixedNotes() {
             Notation notation = createValidBaseNotation();
             notation.setAmbiance(1);
-            notation.setPropreté(2);
+            notation.setProprete(2);
             notation.setOrganisation(3);
             notation.setFairPlay(4);
             notation.setNiveauJoueurs(5);
@@ -341,7 +341,7 @@ public class NotationTest {
             n.setMembre(m);
             n.setId(id); // ID de la notation (ignoré par equals/hashCode)
             n.setAmbiance(score); // Score (ignoré)
-            n.setPropreté(score);
+            n.setProprete(score);
             n.setOrganisation(score);
             n.setFairPlay(score);
             n.setNiveauJoueurs(score);
