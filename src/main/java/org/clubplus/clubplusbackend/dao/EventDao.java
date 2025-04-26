@@ -104,6 +104,9 @@ public interface EventDao extends JpaRepository<Event, Integer> {
     Optional<Event> findByIdFetchingCategoriesAndReservations(@Param("eventId") Integer eventId);
 
 
+    @Query("SELECT e FROM Event e LEFT JOIN FETCH e.categories LEFT JOIN FETCH e.organisateur WHERE e.id = :id")
+    Optional<Event> findByIdFetchingCategoriesWithJoinFetch(@Param("id") Integer id);
+
     // --- Ajouts pour filtrage par statut ---
 
     // Trouver tous les événements par statut actif/inactif

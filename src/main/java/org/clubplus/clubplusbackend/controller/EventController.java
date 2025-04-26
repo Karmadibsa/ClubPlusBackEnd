@@ -3,8 +3,8 @@ package org.clubplus.clubplusbackend.controller;
 import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.clubplus.clubplusbackend.dto.CreateEventDto;
-import org.clubplus.clubplusbackend.dto.UpdateEventDto;
+import org.clubplus.clubplusbackend.dto.CreateEventWithCategoriesDto;
+import org.clubplus.clubplusbackend.dto.UpdateEventWithCategoriesDto;
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.security.annotation.IsConnected;
 import org.clubplus.clubplusbackend.security.annotation.IsReservation;
@@ -68,36 +68,36 @@ public class EventController {
         return eventService.findUpcomingEventsForMemberClubs(status);
     }
 
-    /**
-     * POST /api/events?organisateurId={clubId}
-     * Crée un nouvel événement pour un club.
-     * Sécurité: Rôle RESERVATION/ADMIN requis (@IsReservation). Manager du club vérifié dans service.
-     * Validation: Données de l'événement validées (@Valid).
-     * Exceptions (globales): 404 (Club non trouvé), 403 (Non manager), 400 (Validation ou dates invalides).
-     */
-    @PostMapping
-    @IsReservation // Rôle minimum
-    @ResponseStatus(HttpStatus.CREATED) // 201
-    @JsonView(GlobalView.EventView.class)
-    public Event createEvent(@RequestParam Integer organisateurId, @Valid @RequestBody CreateEventDto eventDto) {
-        // Le service gère la création, la sécurité contextuelle, et les erreurs métier
-        return eventService.createEvent(organisateurId, eventDto);
-    }
+//    /**
+//     * POST /api/events?organisateurId={clubId}
+//     * Crée un nouvel événement pour un club.
+//     * Sécurité: Rôle RESERVATION/ADMIN requis (@IsReservation). Manager du club vérifié dans service.
+//     * Validation: Données de l'événement validées (@Valid).
+//     * Exceptions (globales): 404 (Club non trouvé), 403 (Non manager), 400 (Validation ou dates invalides).
+//     */
+//    @PostMapping
+//    @IsReservation // Rôle minimum
+//    @ResponseStatus(HttpStatus.CREATED) // 201
+//    @JsonView(GlobalView.EventView.class)
+//    public Event createEvent(@RequestParam Integer organisateurId, @Valid @RequestBody CreateEventDto eventDto) {
+//        // Le service gère la création, la sécurité contextuelle, et les erreurs métier
+//        return eventService.createEvent(organisateurId, eventDto);
+//    }
 
-    /**
-     * PUT /api/events/{id}
-     * Met à jour un événement.
-     * Sécurité: Rôle RESERVATION/ADMIN requis (@IsReservation). Manager du club vérifié dans service.
-     * Validation: Données de l'événement validées (@Valid).
-     * Exceptions (globales): 404 (Event non trouvé), 403 (Non manager), 400 (Validation ou dates invalides).
-     */
-    @PutMapping("/{id}")
-    @IsReservation // Rôle minimum
-    @JsonView(GlobalView.EventView.class)
-    public Event updateEvent(@PathVariable Integer id, @Valid @RequestBody UpdateEventDto eventDto) {
-        // Le service gère la mise à jour, la sécurité contextuelle, et les erreurs métier
-        return eventService.updateEvent(id, eventDto);
-    }
+//    /**
+//     * PUT /api/events/{id}
+//     * Met à jour un événement.
+//     * Sécurité: Rôle RESERVATION/ADMIN requis (@IsReservation). Manager du club vérifié dans service.
+//     * Validation: Données de l'événement validées (@Valid).
+//     * Exceptions (globales): 404 (Event non trouvé), 403 (Non manager), 400 (Validation ou dates invalides).
+//     */
+//    @PutMapping("/{id}")
+//    @IsReservation // Rôle minimum
+//    @JsonView(GlobalView.EventView.class)
+//    public Event updateEvent(@PathVariable Integer id, @Valid @RequestBody UpdateEventDto eventDto) {
+//        // Le service gère la mise à jour, la sécurité contextuelle, et les erreurs métier
+//        return eventService.updateEvent(id, eventDto);
+//    }
 
     /**
      * DELETE /api/events/{id}
@@ -127,4 +127,35 @@ public class EventController {
         return ResponseEntity.ok(nextEvents);
     }
     // Le @ExceptionHandler pour MethodArgumentNotValidException doit être dans GlobalExceptionHandler.
+
+    /**
+     * POST /api/events?organisateurId={clubId}
+     * Crée un nouvel événement AVEC ses catégories initiales.
+     * Sécurité: Rôle RESERVATION/ADMIN requis. Manager du club vérifié dans service.
+     */
+    @PostMapping // Utilise le même chemin POST standard
+    @IsReservation // Rôle minimum
+    @ResponseStatus(HttpStatus.CREATED)
+    @JsonView(GlobalView.EventView.class)
+    // Changer le type du @RequestBody pour utiliser le nouveau DTO
+    public Event createEventWithCategories(@RequestParam Integer organisateurId,
+                                           @Valid @RequestBody CreateEventWithCategoriesDto eventDto) {
+        // Appeler la nouvelle méthode du service
+        return eventService.createEventWithCategories(organisateurId, eventDto);
+    }
+
+
+    /**
+     * PUT /api/events/{id}/full
+     * Met à jour un événement ET réconcilie ses catégories (ajout/modif/suppression).
+     * Sécurité: Rôle RESERVATION/ADMIN requis. Manager du club vérifié dans service.
+     */
+    @PutMapping("/{id}/full") // Nouveau chemin spécifique
+    @IsReservation // Rôle minimum
+    @JsonView(GlobalView.EventView.class)
+    public Event updateEventWithCategories(@PathVariable Integer id,
+                                           @Valid @RequestBody UpdateEventWithCategoriesDto eventDto) {
+        // Appeler la nouvelle méthode du service
+        return eventService.updateEventWithCategories(id, eventDto);
+    }
 }

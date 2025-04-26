@@ -2,12 +2,9 @@ package org.clubplus.clubplusbackend.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
-import org.clubplus.clubplusbackend.dao.AdhesionDao;
-import org.clubplus.clubplusbackend.dao.ClubDao;
-import org.clubplus.clubplusbackend.dao.EventDao;
-import org.clubplus.clubplusbackend.dao.MembreDao;
-import org.clubplus.clubplusbackend.dto.CreateEventDto;
-import org.clubplus.clubplusbackend.dto.UpdateEventDto;
+import org.clubplus.clubplusbackend.dao.*;
+import org.clubplus.clubplusbackend.dto.*;
+import org.clubplus.clubplusbackend.model.Categorie;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.model.Membre;
@@ -16,9 +13,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,6 +23,7 @@ import java.util.stream.Collectors;
 public class EventService {
 
     private final EventDao eventRepository;
+    private final CategorieDao categorieRepository;
     private final AdhesionDao adhesionRepository;
     private final MembreDao membreRepository;
     private final ClubDao clubRepository;
@@ -356,4 +353,171 @@ public class EventService {
         return eventRepository.findTop5ByOrganisateurIdAndActifTrueAndStartAfterOrderByStartAsc(clubId, now);
     }
 
+    /**
+     * Crée un nouvel événement AVEC ses catégories initiales.
+     * Sécurité: Vérifie que l'utilisateur est MANAGER du club organisateur.
+     */
+    @Transactional // Transaction pour l'ensemble de l'opération
+    public Event createEventWithCategories(Integer organisateurId, CreateEventWithCategoriesDto dto) {
+        // 1. Sécurité
+        securityService.checkManagerOfClubOrThrow(organisateurId);
+
+        // 2. Récupérer le club
+        Club organisateur = clubRepository.findById(organisateurId)
+                .orElseThrow(() -> new EntityNotFoundException("Club organisateur non trouvé avec l'ID : " + organisateurId));
+
+        // 3. Validation dates
+        if (dto.getStart().isAfter(dto.getEnd())) {
+            throw new IllegalArgumentException("La date de début doit être avant la date de fin.");
+        }
+
+        // 4. Créer l'entité Event et mapper les champs
+        Event newEvent = new Event();
+        newEvent.setNom(dto.getNom());
+        newEvent.setStart(dto.getStart());
+        newEvent.setEnd(dto.getEnd());
+        newEvent.setDescription(dto.getDescription());
+        newEvent.setLocation(dto.getLocation());
+        newEvent.setOrganisateur(organisateur);
+        newEvent.setActif(true); // Nouvel événement est actif
+
+        // 5. Créer et associer les catégories
+        if (dto.getCategories() != null) {
+            for (CreateCategorieDto catDto : dto.getCategories()) {
+                // Validation nom unique pour ce nouvel événement (au sein de la transaction)
+                if (newEvent.getCategories().stream().anyMatch(c -> c.getNom().equalsIgnoreCase(catDto.getNom()))) {
+                    throw new IllegalArgumentException("Le nom de catégorie '" + catDto.getNom() + "' est dupliqué dans la requête de création."); // 400
+                }
+
+                Categorie newCategory = new Categorie();
+                newCategory.setNom(catDto.getNom());
+                newCategory.setCapacite(catDto.getCapacite());
+                newCategory.setEvent(newEvent); // Lier à l'événement
+                newEvent.getCategories().add(newCategory); // Ajouter à la collection de l'événement
+            }
+        }
+
+        // 6. Sauvegarder (CascadeType.ALL s'occupe des catégories)
+        return eventRepository.save(newEvent);
+    }
+
+
+    /**
+     * Met à jour un événement ET ses catégories (ajout/modif/suppression).
+     * Sécurité: Vérifie que l'utilisateur est MANAGER du club organisateur.
+     */
+    @Transactional // Transaction pour l'ensemble de l'opération
+    public Event updateEventWithCategories(Integer eventId, UpdateEventWithCategoriesDto dto) {
+        // 1. Récupérer l'événement existant AVEC ses catégories
+        Event existingEvent = eventRepository.findByIdFetchingCategoriesWithJoinFetch(eventId)
+                .orElseThrow(() -> new EntityNotFoundException("Événement non trouvé avec l'ID : " + eventId));
+
+        // 2. Sécurité
+        securityService.checkManagerOfClubOrThrow(existingEvent.getOrganisateur().getId());
+
+        // 3. Validation métier sur l'événement
+        if (existingEvent.getEnd().isBefore(LocalDateTime.now())) {
+            throw new IllegalStateException("Impossible de modifier un événement déjà terminé."); // 409
+        }
+        if (!existingEvent.getActif()) {
+            throw new IllegalStateException("Impossible de modifier un événement annulé."); // 409
+        }
+        if (dto.getStart().isAfter(dto.getEnd())) {
+            throw new IllegalArgumentException("La date de début doit être avant la date de fin."); // 400
+        }
+
+        // 4. Mettre à jour les champs simples de l'événement
+        existingEvent.setNom(dto.getNom());
+        existingEvent.setStart(dto.getStart());
+        existingEvent.setEnd(dto.getEnd());
+        existingEvent.setDescription(dto.getDescription());
+        existingEvent.setLocation(dto.getLocation());
+
+        // 5. Réconcilier les catégories
+        reconcileCategories(existingEvent, dto.getCategories());
+
+        // 6. Sauvegarder (Cascade gère les updates, orphanRemoval gère les deletes)
+        return eventRepository.save(existingEvent);
+    }
+
+    private void reconcileCategories(Event event, List<UpdateCategorieDto> categoryDtos) {
+        // Map des catégories existantes pour accès rapide par ID
+        Map<Integer, Categorie> existingCategoriesMap = event.getCategories().stream()
+                .collect(Collectors.toMap(Categorie::getId, Function.identity()));
+
+        // Ensemble des IDs des catégories dans le DTO (pour identifier les suppressions)
+        Set<Integer> dtoCategoryIds = categoryDtos.stream()
+                .map(UpdateCategorieDto::getId)
+                .filter(Objects::nonNull) // Ignorer les nouvelles catégories ici
+                .collect(Collectors.toSet());
+
+        // --- Suppression (grâce à orphanRemoval=true) ---
+        // Supprime de la collection les catégories qui ne sont PAS dans le DTO
+        boolean removed = event.getCategories().removeIf(cat -> !dtoCategoryIds.contains(cat.getId()));
+        if (removed) {
+            // Si la suppression échoue à cause de réservations, une exception sera levée
+            // par la contrainte de clé étrangère ou une logique métier dans un listener/callback.
+            // Il est préférable de vérifier AVANT si possible (voir CategorieService.deleteCategorie)
+            // Mais pour orphanRemoval, la vérification explicite est plus complexe ici.
+            // S'assurer que la suppression de Categorie cascade bien vers Reservation
+            // ou que deleteCategorie lève une exception si des réservations existent.
+            System.out.println("Des catégories ont été marquées pour suppression via orphanRemoval.");
+        }
+
+
+        // --- Ajout & Mise à jour ---
+        for (UpdateCategorieDto catDto : categoryDtos) {
+            if (catDto.getId() == null) {
+                // --- AJOUT ---
+                // Vérifier nom unique au sein du DTO ET par rapport aux existantes non supprimées
+                if (event.getCategories().stream().anyMatch(c -> c.getNom().equalsIgnoreCase(catDto.getNom())) ||
+                        categoryDtos.stream().filter(d -> d.getId() == null && !d.equals(catDto)).anyMatch(d -> d.getNom().equalsIgnoreCase(catDto.getNom()))) {
+                    throw new IllegalArgumentException("Le nom de catégorie '" + catDto.getNom() + "' est dupliqué.");
+                }
+
+                Categorie newCategory = new Categorie();
+                newCategory.setNom(catDto.getNom());
+                newCategory.setCapacite(catDto.getCapacite());
+                newCategory.setEvent(event);
+                event.getCategories().add(newCategory); // Ajouter à la collection
+
+            } else {
+                // --- MISE A JOUR ---
+                Categorie categoryToUpdate = existingCategoriesMap.get(catDto.getId());
+                if (categoryToUpdate == null) {
+                    // L'ID fourni dans le DTO ne correspond à aucune catégorie existante de cet événement
+                    // OU elle a été supprimée dans l'étape précédente. Dans ce dernier cas, c'est ok.
+                    // Si elle n'a jamais existé ou n'appartenait pas à cet event, c'est une erreur.
+                    // On peut choisir d'ignorer ou lever une exception. Ignorer est plus simple.
+                    System.out.println("Tentative de mise à jour d'une catégorie (ID: " + catDto.getId() + ") non trouvée ou déjà supprimée.");
+                    continue; // Passe à la catégorie suivante du DTO
+                }
+
+                // Vérifier nom unique (excluant elle-même)
+                String newNom = catDto.getNom();
+                if (!newNom.equalsIgnoreCase(categoryToUpdate.getNom())) {
+                    // Vérifier si le nouveau nom existe déjà parmi les autres catégories
+                    if (event.getCategories().stream().anyMatch(c -> !c.getId().equals(catDto.getId()) && c.getNom().equalsIgnoreCase(newNom)) ||
+                            categoryDtos.stream().anyMatch(d -> !Objects.equals(d.getId(), catDto.getId()) && d.getNom().equalsIgnoreCase(newNom))) {
+                        throw new IllegalArgumentException("Le nom de catégorie '" + newNom + "' existe déjà.");
+                    }
+                    categoryToUpdate.setNom(newNom);
+                }
+
+                // Mettre à jour la capacité (avec vérification)
+                Integer newCapacite = catDto.getCapacite();
+                if (!newCapacite.equals(categoryToUpdate.getCapacite())) {
+                    // Récupérer les réservations confirmées pour cette catégorie
+                    // Idéalement, charger les réservations ici ou utiliser une query
+                    int placesConfirmees = categorieRepository.countConfirmedReservations(categoryToUpdate.getId()); // Méthode à ajouter au DAO
+                    if (newCapacite < placesConfirmees) {
+                        throw new IllegalStateException("Impossible de réduire la capacité à " + newCapacite +
+                                " pour la catégorie '" + categoryToUpdate.getNom() + "' car " +
+                                placesConfirmees + " places sont confirmées."); // 409
+                    }
+                    categoryToUpdate.setCapacite(newCapacite);
+                }
+            }
+        }
+    }
 }

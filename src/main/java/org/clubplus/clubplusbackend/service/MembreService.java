@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.dao.AdhesionDao;
 import org.clubplus.clubplusbackend.dao.ClubDao;
 import org.clubplus.clubplusbackend.dao.MembreDao;
+import org.clubplus.clubplusbackend.dto.UpdateMembreDto;
 import org.clubplus.clubplusbackend.model.Adhesion;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
@@ -121,47 +122,47 @@ public class MembreService {
     }
 
     // --- Mise à Jour Profil (Utilisateur Courant) ---
-    public Membre updateMyProfile(Membre membreDetails) {
+    public Membre updateMyProfile(UpdateMembreDto updateMembreDto) {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow(); // Récupère ID courant
         Membre existingMembre = getMembreByIdOrThrow(currentUserId); // Pas besoin de checkIsOwner ici
 
         boolean updated = false;
         // ... (logique de copie des champs nom, prenom, date_naissance, adresse, telephone...) ...
-        if (membreDetails.getNom() != null && !membreDetails.getNom().isBlank()) {
-            existingMembre.setNom(membreDetails.getNom());
+        if (updateMembreDto.getNom() != null && !updateMembreDto.getNom().isBlank()) {
+            existingMembre.setNom(updateMembreDto.getNom());
             updated = true;
         }
-        if (membreDetails.getPrenom() != null && !membreDetails.getPrenom().isBlank()) {
-            existingMembre.setPrenom(membreDetails.getPrenom());
+        if (updateMembreDto.getPrenom() != null && !updateMembreDto.getPrenom().isBlank()) {
+            existingMembre.setPrenom(updateMembreDto.getPrenom());
             updated = true;
         }
-        if (membreDetails.getDate_naissance() != null) {
-            existingMembre.setDate_naissance(membreDetails.getDate_naissance());
+        if (updateMembreDto.getDate_naissance() != null) {
+            existingMembre.setDate_naissance(updateMembreDto.getDate_naissance());
             updated = true;
         }
-        if (membreDetails.getNumero_voie() != null) {
-            existingMembre.setNumero_voie(membreDetails.getNumero_voie());
+        if (updateMembreDto.getNumero_voie() != null) {
+            existingMembre.setNumero_voie(updateMembreDto.getNumero_voie());
             updated = true;
         }
-        if (membreDetails.getRue() != null) {
-            existingMembre.setRue(membreDetails.getRue());
+        if (updateMembreDto.getRue() != null) {
+            existingMembre.setRue(updateMembreDto.getRue());
             updated = true;
         }
-        if (membreDetails.getCodepostal() != null) {
-            existingMembre.setCodepostal(membreDetails.getCodepostal());
+        if (updateMembreDto.getCodepostal() != null) {
+            existingMembre.setCodepostal(updateMembreDto.getCodepostal());
             updated = true;
         }
-        if (membreDetails.getVille() != null) {
-            existingMembre.setVille(membreDetails.getVille());
+        if (updateMembreDto.getVille() != null) {
+            existingMembre.setVille(updateMembreDto.getVille());
             updated = true;
         }
-        if (membreDetails.getTelephone() != null) {
-            existingMembre.setTelephone(membreDetails.getTelephone());
+        if (updateMembreDto.getTelephone() != null) {
+            existingMembre.setTelephone(updateMembreDto.getTelephone());
             updated = true;
         }
 
 
-        String newEmail = membreDetails.getEmail();
+        String newEmail = updateMembreDto.getEmail();
         if (newEmail != null && !newEmail.isBlank() && !newEmail.equalsIgnoreCase(existingMembre.getEmail())) {
             String normalizedNewEmail = newEmail.toLowerCase().trim();
             if (membreRepository.existsByEmailAndIdNot(normalizedNewEmail, currentUserId)) { // Utilise DAO

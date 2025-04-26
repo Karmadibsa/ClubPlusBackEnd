@@ -51,7 +51,7 @@ public class ClubController {
      * Exceptions (gérées globalement): 404 (Club non trouvé), 403 (Non membre).
      */
     @GetMapping("/{id}")
-    @IsMembre
+    @IsReservation
     @JsonView(GlobalView.ClubView.class)
     public Club getClubById(@PathVariable Integer id) {
         // Le service gère existence + sécurité contextuelle (membre)
@@ -129,7 +129,7 @@ public class ClubController {
      */
     @GetMapping("/{id}/membres")
     @IsReservation
-    @JsonView(GlobalView.Base.class) // Vue de base pour les membres listés
+    @JsonView(GlobalView.MembreView.class) // Vue de base pour les membres listés
     public List<Membre> getClubMembres(@PathVariable Integer id) {
         // Le service gère existence (-> 404), sécurité membre (-> 403)
         Set<Membre> membresSet = clubService.findMembresForClub(id);

@@ -40,4 +40,13 @@ public interface CategorieDao extends JpaRepository<Categorie, Integer> {
      */
     @Query("SELECT c FROM Categorie c LEFT JOIN FETCH c.reservations res WHERE c.id = :categorieId AND c.event.id = :eventId")
     Optional<Categorie> findByIdAndEventIdFetchingReservations(@Param("categorieId") Integer categorieId, @Param("eventId") Integer eventId);
+
+    /**
+     * Compte le nombre de réservations confirmées pour une catégorie spécifique.
+     *
+     * @param categorieId L'ID de la catégorie.
+     * @return Le nombre de réservations avec le statut CONFIRME.
+     */
+    @Query("SELECT COUNT(r) FROM Reservation r WHERE r.categorie.id = :categorieId AND r.status = 'CONFIRME'")
+    int countConfirmedReservations(@Param("categorieId") Integer categorieId);
 }

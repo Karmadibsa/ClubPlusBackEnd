@@ -3,6 +3,7 @@ package org.clubplus.clubplusbackend.controller;
 import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.clubplus.clubplusbackend.dto.UpdateMembreDto;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.Role;
@@ -66,9 +67,9 @@ public class MembreController {
     @PutMapping("/profile")
     @IsConnected
     @JsonView(GlobalView.MembreView.class)
-    public Membre updateMyProfile(@Valid @RequestBody Membre membreDetails) {
+    public Membre updateMyProfile(@Valid @RequestBody UpdateMembreDto updateMembreDto) {
         // Le service utilisera l'ID de l'utilisateur courant
-        return membreService.updateMyProfile(membreDetails);
+        return membreService.updateMyProfile(updateMembreDto);
     }
 
     /**

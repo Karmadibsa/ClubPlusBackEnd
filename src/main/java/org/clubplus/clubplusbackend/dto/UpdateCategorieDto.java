@@ -9,6 +9,8 @@ import lombok.Setter;
 @Setter
 public class UpdateCategorieDto {
 
+    private Integer id;
+
     // Le nom est optionnel, mais s'il est fourni, il doit être valide
     @Size(min = 2, max = 100, message = "Le nom doit contenir entre 2 et 100 caractères.")
     private String nom; // Pas de @NotBlank, car on peut ne pas vouloir le changer
