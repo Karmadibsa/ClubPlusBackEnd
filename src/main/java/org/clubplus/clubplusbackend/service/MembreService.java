@@ -11,6 +11,7 @@ import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.Role;
 import org.clubplus.clubplusbackend.security.SecurityService;
+import org.springframework.data.domain.Limit;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -323,21 +324,20 @@ public class MembreService {
      *                               ou n'est pas associé à un club gérable.
      */
     @Transactional(readOnly = true)
-    public List<Membre> getLatestMembersForManagedClub() { // PAS d'argument clubId ici !
+    public List<Membre> getLatestMembersForManagedClub() {
+        Integer managedClubId = securityService.getCurrentUserManagedClubIdOrThrow();
 
-        // 1. Utiliser SecurityService pour obtenir l'ID du club GÉRÉ par l'utilisateur courant.
-        //    C'est CETTE méthode de SecurityService qui fait la vérification des droits (ADMIN/RESERVATION)
-        //    et trouve le club associé. Elle DOIT lever AccessDeniedException si non autorisé.
-        Integer managedClubId = securityService.getCurrentUserManagedClubIdOrThrow(); // MÉTHODE À CRÉER/CONFIRMER dans SecurityService
+        // 1. Créer un objet Limit pour demander les 5 premiers résultats
+        Limit topFive = Limit.of(5add ); // <-- Spécifier la limite ici
 
-        // 2. Récupération des données via AdhesionRepository en utilisant l'ID obtenu
-        List<Adhesion> latestAdhesions = adhesionRepository.findTop5ByClubIdOrderByDateAdhesionDesc(managedClubId);
+        // 2. Appeler la méthode du repository mise à jour avec le clubId et l'objet Limit
+        List<Adhesion> latestAdhesions = adhesionRepository.findLatestActiveMembersAdhesionsWithLimit(managedClubId, topFive);
 
-        // 3. Transformation en List<Membre>
+        // 3. Transformer en List<Membre> (le filtre actif est déjà dans la requête)
         return latestAdhesions.stream()
-                .map(Adhesion::getMembre)
-                .filter(Objects::nonNull)
-                .distinct()
+                .map(Adhesion::getMembre)       // Extrait le Membre de chaque Adhesion
+                .filter(Objects::nonNull)       // Sécurité
+                .distinct()                     // Évite les doublons
                 .collect(Collectors.toList());
     }
 }

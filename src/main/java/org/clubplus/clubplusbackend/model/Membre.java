@@ -80,14 +80,14 @@ public class Membre {
     @NotBlank(message = "Le numéro de téléphone est obligatoire.")
     @Size(max = 20, message = "Le numéro de téléphone ne doit pas dépasser 20 caractères.")
     @Column(nullable = false, length = 20)
-    @JsonView(GlobalView.MembreView.class)
+    @JsonView({GlobalView.MembreView.class, GlobalView.ReservationView.class})
     private String telephone;
 
     @NotBlank(message = "L'email est obligatoire.") // Assure non-vide
     @Email(message = "Le format de l'email est invalide.") // Valide le format standard
     @Size(max = 254, message = "L'email ne doit pas dépasser 254 caractères.") // Limite standard
     @Column(nullable = false, unique = true, length = 254) // Contrainte DB (unicité + taille)
-    @JsonView(GlobalView.MembreView.class) // Visible dans la vue détaillée
+    @JsonView({GlobalView.MembreView.class, GlobalView.ReservationView.class})
     private String email;
 
     @NotBlank(message = "Le mot de passe est obligatoire.")

@@ -31,6 +31,18 @@ VALUES (1, 'AdminClub', 'Alice', '1988-03-10', '2024-01-10', '10', 'Rue Principa
         'helene.membre@club3.fr', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 1, NULL),
        (10, 'MembrePourDelete', 'Testeur', '2001-01-01', '2025-04-01', '111', 'Rue Delete', '75011', 'Paris',
         '0610101010', 'testeur.delete@mail.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG',
+        'MEMBRE', 1, NULL),
+       (11, 'Nouveau', 'Gaston', '1998-05-12', '2025-04-10', '15', 'Rue des Lilas', '75019', 'Paris', '0611111111',
+        'gaston.nouveau@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 1, NULL),
+       (12, 'Martin', 'Hélène', '2001-02-20', '2025-04-11', '22', 'Avenue Gambetta', '75020', 'Paris', '0612121212',
+        'helene.martin@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 1, NULL),
+       (13, 'Dupont', 'Isabelle', '1985-10-03', '2025-04-15', '8', 'Boulevard Voltaire', '75011', 'Paris', '0613131313',
+        'isabelle.dupont@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 1, NULL),
+       (14, 'Petit', 'Jean', '1993-07-18', '2025-04-20', '1', 'Rue de la Paix', '75002', 'Paris', '0614141414',
+        'jean.petit@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 0,
+        '2025-04-25 10:00:00'), -- Membre inactif avec date
+       (15, 'Moreau', 'Karim', '1999-12-01', '2025-04-22', '55', 'Rue du Faubourg Saint-Honoré', '75008', 'Paris',
+        '0615151515', 'karim.moreau@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG',
         'MEMBRE', 1, NULL);
 
 -- 2. CLUBS (Inchangé)
@@ -39,27 +51,26 @@ INSERT INTO club (id, nom, date_creation, date_inscription, numero_voie, rue, co
 VALUES (1, 'Club Omnisports Paris Centre', '2010-01-15', '2024-01-10', '1', 'Place du Sport', '75001', 'Paris',
         '0102030405', 'contact@csc-paris.fr', 1, NULL, 'CLUB-0001'),
        (2, 'Lyon Padel Club', '2018-06-01', '2025-01-01', '200', 'Avenue Padel', '69007', 'Lyon', '0477889900',
-        'contact@lyonpadel.fr', 1, NULL, 'CLUB-0002'),
-       (3, '[Désactivé] Ancien Club Test', '2005-05-05', '2022-01-01', '12', 'Rue Oubliée', '12345', 'TestVille',
-        '0000000000', 'inactive+3@clubplus.invalid', 0, '2024-11-15 10:00:00', 'CLUB-0003'),
-       (4, 'Club Sportif Bordeaux Ouest', '2019-09-01', '2025-03-01', '50', 'Avenue de la Marne', '33700', 'Merignac',
-        '0556565656', 'contact@csbo.fr', 1, NULL, 'CLUB-0004'),
-       (5, 'Club Pour Suppression', '2021-01-01', '2025-04-10', '1', 'Impasse Test', '99999', 'DeleteVille',
-        '0707070707', 'delete@me.com', 1, NULL, 'CLUB-0005');
+        'contact@lyonpadel.fr', 1, NULL, 'CLUB-0002');
 
 -- 3. ADHESIONS (Inchangé - Associe utilisateurs aux clubs, rôles définis dans membre)
 INSERT INTO adhesion (membre_id, club_id, date_adhesion)
-VALUES (1, 1, '2024-01-10 10:00:00'), -- Alice (ADMIN) -> Club 1
-       (2, 1, '2024-08-15 11:00:00'), -- Charlie (RESA) -> Club 1
-       (3, 1, '2024-05-20 12:00:00'), -- Bob (MEMBRE) -> Club 1
-       (4, 1, '2025-02-01 13:00:00'), -- David (MEMBRE) -> Club 1
-       (5, 1, '2025-04-05 14:00:00'), -- Eva (MEMBRE) -> Club 1
-       (5, 2, '2025-04-06 15:00:00'), -- Eva (MEMBRE) -> Club 2
-       (6, 2, '2025-01-01 09:00:00'), -- Franck (ADMIN) -> Club 2
-       (8, 4, '2025-03-01 10:00:00'), -- Gerard (ADMIN) -> Club 4
-       (9, 4, '2025-03-05 11:00:00'), -- Helene (MEMBRE) -> Club 4
-       (10, 1, '2025-04-01 12:00:00');
--- Testeur (MEMBRE) -> Club 1
+VALUES (1, 1, '2024-01-10 10:00:00'),  -- Alice (ADMIN) -> Club 1
+       (2, 1, '2024-08-15 11:00:00'),  -- Charlie (RESA) -> Club 1
+       (3, 1, '2024-05-20 12:00:00'),  -- Bob (MEMBRE) -> Club 1
+       (4, 1, '2025-02-01 13:00:00'),  -- David (MEMBRE) -> Club 1
+       (5, 1, '2025-04-05 14:00:00'),  -- Eva (MEMBRE) -> Club 1
+       (5, 2, '2025-04-06 15:00:00'),  -- Eva (MEMBRE) -> Club 2
+       (6, 2, '2025-01-01 09:00:00'),  -- Franck (ADMIN) -> Club 2
+       (10, 1, '2025-04-01 12:00:00'),
+       -- Adhésions pour les nouveaux membres (principalement Club 1)
+       (11, 1, '2025-04-10 09:00:00'), -- Gaston -> Club 1
+       (12, 1, '2025-04-11 10:00:00'), -- Hélène -> Club 1
+       (13, 1, '2025-04-15 11:00:00'), -- Isabelle -> Club 1
+       (13, 2, '2025-04-16 12:00:00'), -- Isabelle -> Club 2 (Multi-club)
+       (14, 1, '2025-04-20 13:00:00'), -- Jean (inactif) -> Club 1
+       (15, 1, '2025-04-22 14:00:00');
+-- Karim -> Club 1
 
 -- 4. EVENTS (Dates Event 4 ajustées pour être en cours au 20 Avril)
 INSERT INTO events (id, nom, start, end, description, location, organisateur_id, actif, desactivation_date)
@@ -77,12 +88,14 @@ VALUES (1, 'Tournoi Badminton CSC (Passé)', '2025-02-15 14:00:00', '2025-02-15 
         'Salle Polyvalente', 1, 1, NULL),
        (7, 'Stage Padel Découverte Lyon (Passé)', '2025-03-01 10:00:00', '2025-03-01 14:00:00',
         'Initiation et découverte.', 'Lyon Padel Ouest', 2, 1, NULL),
-       (8, 'Tournoi Volley Bordeaux (Futur)', '2025-07-05 09:00:00', '2025-07-05 18:00:00',
-        'Tournoi estival sur sable.', 'Plage Océan', 4, 1, NULL),
-       (9, 'Réunion Info Suppression (Futur)', '2025-05-25 19:00:00', '2025-05-25 20:00:00', 'Présentation projet.',
-        'Local Club 5', 5, 1, NULL),
        (10, 'Nettoyage Local CSC (Passé)', '2025-04-12 09:00:00', '2025-04-12 12:00:00',
-        'Grand nettoyage de printemps.', 'Local Matériel', 1, 1, NULL);
+        'Grand nettoyage de printemps.', 'Local Matériel', 1, 1, NULL),
+       (11, 'Stage Yoga Découverte CSC (Futur)', '2025-05-10 10:00:00', '2025-05-10 12:00:00',
+        'Initiation aux postures de base.', 'Salle Zen', 1, 1, NULL),
+       (12, 'Tournoi Tennis Double Mixte CSC (Futur)', '2025-09-14 09:00:00', '2025-09-14 17:00:00',
+        'Tournoi amical ouvert à tous les niveaux.', 'Courts Central', 1, 1, NULL),
+       (13, 'Apéro Afterwork CSC (Passé)', '2025-04-01 18:30:00', '2025-04-01 21:00:00',
+        'Moment convivial après le travail.', 'Bar du Club', 1, 1, NULL);
 
 -- 5. CATEGORIES (Capacité Cat 5 ajustée pour Test 53)
 INSERT INTO categories (id, event_id, nom, capacite)
@@ -90,53 +103,84 @@ VALUES (1, 1, 'Simple H', 16),
        (2, 1, 'Simple F', 16),
        (3, 2, 'Buffet', 50),
        (4, 3, 'P100 Hommes', 24),
-       (5, 4, 'Débutant', 2), -- Capacité 2 pour Test 53
+       (5, 4, 'Débutant', 2),               -- Capacité 2 pour Test 53
        (6, 5, 'Stage Intensif', 10),
        (7, 4, 'Confirmés', 8),
        (8, 4, 'Avancés', 6),
        (9, 2, 'Boissons', 60),
        (10, 6, 'Jeux de Société', 20),
        (11, 7, 'Initiation Padel', 15),
-       (12, 8, 'Tournoi Mixte 4x4', 8),
-       (13, 8, 'Tournoi Masculin 4x4', 8),
-       (14, 9, 'Présentation', 30),
-       (15, 10, 'Equipe Nettoyage', 10);
+       (15, 10, 'Equipe Nettoyage', 10),
+       (16, 11, 'Tapis Yoga', 15),          -- Pour Stage Yoga (Event 11)
+       (17, 12, 'Equipe Double Mixte', 12), -- Pour Tournoi Tennis (Event 12) - 12 équipes = 24 joueurs
+       (18, 13, 'Participant Apéro', 40);
+-- Pour Apéro Afterwork (Event 13)
 
 -- 6. RESERVATIONS (NETTOYÉES : Uniquement MEMBREs)
 INSERT INTO reservations (membre_id, event_id, categorie_id, date_reservation, reservation_uuid, status)
 VALUES -- Réservations pour MEMBREs uniquement
-       (3, 1, 2, '2025-02-02 11:00:00', UUID(), 'UTILISE'),   -- Bob @ Badminton (Passé)
-       (3, 2, 3, '2025-03-01 11:00:00', UUID(), 'UTILISE'),   -- Bob @ Soirée Mars (Passé)
-       (5, 3, 4, '2025-05-01 09:00:00', UUID(), 'CONFIRME'),  -- Eva @ Padel Lyon (Futur) - Retrait doublon
-       (4, 4, 5, '2025-04-21 15:00:00', UUID(), 'ANNULE'),    -- David @ Escalade (Annulée)
-       (5, 5, 6, '2025-04-10 10:00:00', UUID(), 'ANNULE'),    -- Eva @ Stage Annulé
-       (5, 7, 11, '2025-02-25 10:00:00', UUID(), 'UTILISE'),  -- Eva @ Stage Padel Lyon (Passé)
-       (9, 8, 12, '2025-06-11 10:00:00', UUID(), 'CONFIRME'), -- Helene @ Volley Bordeaux (Futur)
+       (3, 1, 2, '2025-02-02 11:00:00', UUID(), 'UTILISE'),     -- Bob @ Badminton (Passé)
+       (3, 2, 3, '2025-03-01 11:00:00', UUID(), 'UTILISE'),     -- Bob @ Soirée Mars (Passé)
+       (5, 3, 4, '2025-05-01 09:00:00', UUID(), 'CONFIRME'),    -- Eva @ Padel Lyon (Futur) - Retrait doublon
+       (4, 4, 5, '2025-04-21 15:00:00', UUID(), 'ANNULE'),      -- David @ Escalade (Annulée)
+       (5, 5, 6, '2025-04-10 10:00:00', UUID(), 'ANNULE'),      -- Eva @ Stage Annulé
+       (5, 7, 11, '2025-02-25 10:00:00', UUID(), 'UTILISE'),    -- Eva @ Stage Padel Lyon (Passé)
        -- Ajout pour Test Capacité Pleine (Test 53)
-       (3, 4, 5, '2025-04-20 15:00:00', UUID(), 'CONFIRME'),  -- Bob @ Escalade (Cat 5, Capa 2)
+       (3, 4, 5, '2025-04-20 15:00:00', UUID(), 'CONFIRME'),    -- Bob @ Escalade (Cat 5, Capa 2)
        (5, 4, 5, '2025-04-20 15:01:00', UUID(), 'CONFIRME'),
-       (4, 1, 1, '2025-02-01 10:00:00', UUID(), 'UTILISE');
+       (4, 1, 1, '2025-02-01 10:00:00', UUID(), 'UTILISE'),
+       -- Event 6 (Futur)
+       (11, 6, 10, '2025-05-01 10:00:00', UUID(), 'CONFIRME'),  -- Gaston @ Soirée Jeux
+       (12, 6, 10, '2025-05-02 11:00:00', UUID(), 'CONFIRME'),  -- Hélène @ Soirée Jeux
+       -- Event 10 (Passé)
+       (13, 10, 15, '2025-04-10 09:00:00', UUID(), 'UTILISE'),  -- Isabelle @ Nettoyage
+       (15, 10, 15, '2025-04-11 10:00:00', UUID(), 'UTILISE'),  -- Karim @ Nettoyage
+       -- Event 11 (Futur)
+       (3, 11, 16, '2025-04-27 14:00:00', UUID(), 'CONFIRME'),  -- Bob @ Stage Yoga
+       (5, 11, 16, '2025-04-28 15:00:00', UUID(), 'CONFIRME'),  -- Eva @ Stage Yoga (sa 2e résa pour cet event)
+       (11, 11, 16, '2025-04-29 16:00:00', UUID(), 'ANNULE'),   -- Gaston @ Stage Yoga (annulée)
+       -- Event 12 (Futur)
+       (4, 12, 17, '2025-06-01 10:00:00', UUID(), 'CONFIRME'),  -- David @ Tournoi Tennis
+       (13, 12, 17, '2025-06-02 11:00:00', UUID(), 'CONFIRME'), -- Isabelle @ Tournoi Tennis
+       (13, 12, 17, '2025-06-03 12:00:00', UUID(), 'CONFIRME'), -- Isabelle @ Tournoi Tennis (sa 2e résa)
+       -- Event 13 (Passé)
+       (3, 13, 18, '2025-03-30 10:00:00', UUID(), 'UTILISE'),   -- Bob @ Apéro
+       (12, 13, 18, '2025-03-31 11:00:00', UUID(), 'UTILISE');
+-- Hélène @ Apéro
 -- David (4) a participé à Event 1 / Cat 1;
 -- Eva @ Escalade (Cat 5, Capa 2)
 
 -- 7. DEMANDES D'AMIS (NETTOYÉES : Uniquement entre MEMBREs)
 INSERT INTO demande_ami (envoyeur_id, recepteur_id, statut, date_demande)
 VALUES -- Interactions entre MEMBREs uniquement
-       (3, 4, 'ACCEPTE', '2025-03-15 13:00:00'), -- Bob (3) et David (4) sont amis
-       (5, 3, 'REFUSE', '2025-04-10 14:00:00'),  -- Eva (5) a refusé Bob (3)
-       (4, 5, 'ATTENTE', '2025-04-18 10:00:00'), -- David (4) a demandé Eva (5)
+       (3, 4, 'ACCEPTE', '2025-03-15 13:00:00'),   -- Bob (3) et David (4) sont amis
+       (5, 3, 'REFUSE', '2025-04-10 14:00:00'),    -- Eva (5) a refusé Bob (3)
+       (4, 5, 'ATTENTE', '2025-04-18 10:00:00'),   -- David (4) a demandé Eva (5)
        (9, 10, 'ATTENTE', '2025-04-19 11:00:00'),
-       (5, 10, 'ATTENTE', '2025-04-20 17:00:00');;
+       (5, 10, 'ATTENTE', '2025-04-20 17:00:00'),
+       -- Nouvelles demandes (impliquant aussi 11, 12, 13, 15 qui sont au Club 1)
+       (3, 11, 'ATTENTE', '2025-04-23 10:00:00'),  -- Bob (3) demande Gaston (11) (Club 1)
+       (12, 4, 'ATTENTE', '2025-04-24 11:00:00'),  -- Hélène (12) demande David (4) (Club 1)
+       (13, 15, 'ACCEPTE', '2025-04-25 12:00:00'), -- Isabelle (13) et Karim (15) sont amis (Club 1)
+       (5, 13, 'ATTENTE', '2025-04-26 09:00:00');
+-- Eva (5) demande Isabelle (13) (Club 1 ou 2, ici Club 1 commun)
 -- Helene (9) a demandé Testeur (10)
 
 -- 8. NOTATIONS (Inchangé pour l'instant - Supposant que tous peuvent noter les events auxquels ils ont participé)
 INSERT INTO notations (event_id, membre_id, ambiance, proprete, organisation, fair_play, niveau_joueurs, date_notation)
-VALUES (1, 1, 5, 4, 5, 5, 4, '2025-02-16 10:00:00'), -- Alice (ADMIN) note Event 1
-       (1, 3, 4, 3, 4, 4, 3, '2025-02-16 11:00:00'), -- Bob (MEMBRE) note Event 1
-       (2, 1, 5, 5, 4, 5, 3, '2025-03-21 10:00:00'), -- Alice (ADMIN) note Event 2
-       (2, 3, 4, 4, 3, 4, 3, '2025-03-21 11:00:00'), -- Bob (MEMBRE) note Event 2
-       (7, 5, 5, 4, 4, 5, 4, '2025-03-02 09:00:00'), -- Eva (MEMBRE) note Event 7
-       (7, 6, 4, 5, 5, 4, 3, '2025-03-02 10:00:00');
+VALUES (1, 1, 5, 4, 5, 5, 4, '2025-02-16 10:00:00'),   -- Alice (ADMIN) note Event 1
+       (1, 3, 4, 3, 4, 4, 3, '2025-02-16 11:00:00'),   -- Bob (MEMBRE) note Event 1
+       (2, 1, 5, 5, 4, 5, 3, '2025-03-21 10:00:00'),   -- Alice (ADMIN) note Event 2
+       (2, 3, 4, 4, 3, 4, 3, '2025-03-21 11:00:00'),   -- Bob (MEMBRE) note Event 2
+       (7, 5, 5, 4, 4, 5, 4, '2025-03-02 09:00:00'),   -- Eva (MEMBRE) note Event 7
+       (7, 6, 4, 5, 5, 4, 3, '2025-03-02 10:00:00'),
+       -- Nouvelles notations par des MEMBRES pour des événements PASSÉS (1, 2, 10, 13)
+       (1, 4, 5, 4, 5, 5, 4, '2025-02-17 09:00:00'),   -- David (MEMBRE) note Event 1 (Badminton)
+       (10, 13, 3, 5, 4, 5, 2, '2025-04-13 10:00:00'), -- Isabelle (MEMBRE) note Event 10 (Nettoyage)
+       (10, 15, 4, 5, 5, 5, 1, '2025-04-13 11:00:00'), -- Karim (MEMBRE) note Event 10 (Nettoyage)
+       (13, 3, 5, 4, 4, 5, 3, '2025-04-02 10:00:00'),  -- Bob (MEMBRE) note Event 13 (Apéro)
+       (13, 12, 4, 3, 3, 4, 2, '2025-04-02 11:00:00');
+-- Hélène (MEMBRE) note Event 13 (Apéro)
 -- Franck (ADMIN) note Event 7
 
 -- ============================================================

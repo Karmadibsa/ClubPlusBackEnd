@@ -1,6 +1,7 @@
 package org.clubplus.clubplusbackend.dao;
 
 import org.clubplus.clubplusbackend.model.Adhesion;
+import org.springframework.data.domain.Limit;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -109,6 +110,13 @@ public interface AdhesionDao extends JpaRepository<Adhesion, Integer> {
      * @param clubId L'identifiant (Integer) du club pour lequel rechercher les adhésions.
      * @return La liste des 5 dernières adhésions pour ce club.
      */
-    List<Adhesion> findTop5ByClubIdOrderByDateAdhesionDesc(Integer clubId);
+//    List<Adhesion> findTop5ByClubIdOrderByDateAdhesionDesc(Integer clubId);
+
+    // Requête JPQL qui récupère les adhésions pour un clubId donné,
+    // avec des membres actifs, triées par date descendante.
+    // JOIN FETCH charge les membres associés en même temps (optimisation).
+    // Le paramètre Limit permet de restreindre le nombre de résultats.
+    @Query("SELECT a FROM Adhesion a JOIN FETCH a.membre m WHERE a.club.id = :clubId AND m.actif = true ORDER BY a.dateAdhesion DESC")
+    List<Adhesion> findLatestActiveMembersAdhesionsWithLimit(@Param("clubId") Integer clubId, Limit limit); // <-- Utiliser a.club.id et ajouter Limit
 
 }
