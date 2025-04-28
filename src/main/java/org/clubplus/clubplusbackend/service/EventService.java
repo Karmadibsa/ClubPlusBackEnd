@@ -9,6 +9,10 @@ import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.SecurityService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -308,32 +312,30 @@ public class EventService {
         eventRepository.save(eventToDeactivate);    // Sauvegarde (UPDATE)
     }
 
+
     public List<Event> findAllEventsForMemberClubs(String status) {
-        // 1. Récupérer l'utilisateur courant
         Membre currentUser = securityService.getCurrentMembreOrThrow();
 
-        // 2. Récupérer les IDs des clubs dont l'utilisateur est membre actif
-        // (Attention: assurez-vous que l'adhésion et le club sont actifs si nécessaire)
         Set<Integer> memberClubIds = currentUser.getAdhesions().stream()
-                .filter(adhesion -> adhesion.getClub() != null && adhesion.getClub().getActif()) // Filtre optionnel sur club actif
+                .filter(adhesion -> adhesion.getClub() != null && adhesion.getClub().getActif())
                 .map(adhesion -> adhesion.getClub().getId())
                 .collect(Collectors.toSet());
 
         if (memberClubIds.isEmpty()) {
-            return Collections.emptyList(); // L'utilisateur n'est membre d'aucun club actif
+            return Collections.emptyList();
         }
 
-        // 3. Appeler le Repository pour trouver les événements de ces clubs
-        //    en fonction du statut demandé (actif, inactif, all)
+        LocalDateTime now = LocalDateTime.now();
+
         if ("all".equalsIgnoreCase(status)) {
-            return eventRepository.findByOrganisateurIdIn(memberClubIds); // Méthode à créer dans EventRepository
+            return eventRepository.findByOrganisateurIdInAndStartAfter(memberClubIds, now);
         } else if ("inactive".equalsIgnoreCase(status)) {
-            return eventRepository.findByOrganisateurIdInAndActifIsFalse(memberClubIds); // Méthode à créer
+            return eventRepository.findByOrganisateurIdInAndActifIsFalseAndStartAfter(memberClubIds, now);
         } else { // "active" ou par défaut
-            return eventRepository.findByOrganisateurIdInAndActifIsTrue(memberClubIds); // Méthode à créer
+            return eventRepository.findByOrganisateurIdInAndActifIsTrueAndStartAfter(memberClubIds, now);
         }
-        // Ajoutez la logique de tri si nécessaire (par date par exemple)
     }
+
 
     /**
      * Récupère les 5 prochains événements actifs du club géré par l’utilisateur connecté.
@@ -519,5 +521,38 @@ public class EventService {
                 }
             }
         }
+    }
+
+    public Page<Event> getAllEvents(int page,
+                                    int size,
+                                    String sortBy,
+                                    String sortOrder) {
+        var sort = sortOrder.equalsIgnoreCase("desc") ?
+                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+
+        var pageable = PageRequest.of(page, size, sort);
+        return eventRepository.findAll(pageable);
+
+    }
+
+    public Page<Event> findByOrganisateurIdAndDate(
+            Integer organisateurId,
+            LocalDateTime dateStart,
+            LocalDateTime dateEnd,
+            int page,
+            int size,
+            String sortBy,
+            String sortOrder
+    ) {
+        var sort = sortOrder.equalsIgnoreCase("desc") ?
+                Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+
+        var pageable = PageRequest.of(page, size, sort);
+
+        return eventRepository.findByOrganisateurIdAndDate(
+                organisateurId,
+                dateStart,
+                dateEnd,
+                (Pageable) pageable);
     }
 }

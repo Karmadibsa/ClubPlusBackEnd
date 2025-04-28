@@ -24,20 +24,56 @@ public class EventController {
 
     private final EventService eventService;
 
-    /**
-     * GET /api/events
-     * Récupère tous les événements (pas de filtre sécurité ici, peut être ajusté).
-     * Sécurité: Authentifié.
-     */
+    //    /**
+//     * GET /api/events
+//     * Récupère tous les événements (pas de filtre sécurité ici, peut être ajusté).
+//     * Sécurité: Authentifié.
+//     */
     @GetMapping
     @IsConnected // Garder: on a besoin de savoir QUI est connecté
     @JsonView(GlobalView.EventView.class)
     public List<Event> getAllEventsForMyClubs( // Renommer la méthode pour la clarté est une bonne idée
-                                               @RequestParam(required = false) String status
+                                               @RequestParam(required = false) String status,
+                                               @RequestParam(required = false) boolean filtre
     ) {
-        // Le service doit maintenant récupérer l'utilisateur courant
-        return eventService.findAllEventsForMemberClubs(status); // Appeler une nouvelle méthode de service ou une version modifiée
+        System.out.println("Filtre Axel  :" + filtre);
+        if (filtre) {
+            // Le service doit maintenant récupérer l'utilisateur courant
+            return eventService.findAllEventsForMemberClubs(status); // Appeler une nouvelle méthode de service ou une version modifiée
+        } else {
+            return eventService.findAllEventsForMemberClubs(status); // Appeler une nouvelle méthode de service ou une version modifiée
+        }
     }
+//
+//    /**
+//     * GET /api/events
+//     * Récupère tous les événements (pas de filtre sécurité ici, peut être ajusté).
+//     * Sécurité: Authentifié.
+//     */
+//    @GetMapping
+//    @IsConnected // Garder: on a besoin de savoir QUI est connecté
+//    @JsonView(GlobalView.EventView.class)
+//    public ResponseEntity<Page<Event>> getAllEventsForMyClubs( // Renommer la méthode pour la clarté est une bonne idée
+//                                                               @RequestParam(defaultValue = "0") int page,
+//                                                               @RequestParam(defaultValue = "10") int size,
+//                                                               @RequestParam(defaultValue = "name") String sortBy,
+//                                                               @RequestParam(defaultValue = "asc") String sortOrder) {
+//        return ResponseEntity.ok(eventService.getAllEvents(page, size, sortBy, sortOrder));
+//    }
+//
+//    @GetMapping("/filter")
+//    @IsConnected // Garder: on a besoin de savoir QUI est connecté
+//    @JsonView(GlobalView.EventView.class)
+//    public ResponseEntity<Page<Event>> getAllEventsForMyClubsWithFiltre( // Renommer la méthode pour la clarté est une bonne idée
+//                                                                         @RequestParam Integer organisateurId,
+//                                                                         @RequestParam LocalDateTime dateStart,
+//                                                                         @RequestParam LocalDateTime dateEnd,
+//                                                                         @RequestParam(defaultValue = "0") int page,
+//                                                                         @RequestParam(defaultValue = "10") int size,
+//                                                                         @RequestParam(defaultValue = "name") String sortBy,
+//                                                                         @RequestParam(defaultValue = "asc") String sortOrder) {
+//        return ResponseEntity.ok(eventService.findByOrganisateurIdAndDate(organisateurId, dateStart, dateEnd, page, size, sortBy, sortOrder));
+//    }
 
     /**
      * GET /api/events/{id}

@@ -328,7 +328,7 @@ public class MembreService {
         Integer managedClubId = securityService.getCurrentUserManagedClubIdOrThrow();
 
         // 1. Créer un objet Limit pour demander les 5 premiers résultats
-        Limit topFive = Limit.of(5add ); // <-- Spécifier la limite ici
+        Limit topFive = Limit.of(5); // <-- Spécifier la limite ici
 
         // 2. Appeler la méthode du repository mise à jour avec le clubId et l'objet Limit
         List<Adhesion> latestAdhesions = adhesionRepository.findLatestActiveMembersAdhesionsWithLimit(managedClubId, topFive);

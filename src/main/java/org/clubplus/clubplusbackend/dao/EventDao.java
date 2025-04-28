@@ -2,6 +2,8 @@ package org.clubplus.clubplusbackend.dao;
 
 import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.security.ReservationStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -132,4 +134,20 @@ public interface EventDao extends JpaRepository<Event, Integer> {
     List<Event> findByOrganisateurIdInAndActifIsFalse(Set<Integer> memberClubIds);
 
     List<Event> findByOrganisateurIdInAndActifIsTrue(Set<Integer> memberClubIds);
+
+    Page<Event> findByOrganisateurId(Integer clubId, Pageable pageable);
+
+    @Query("""
+            SELECT e FROM Event e
+            WHERE e.organisateur.id = :clubId
+            AND (e.start BETWEEN :dateStart AND :dateEnd)
+            """)
+    Page<Event> findByOrganisateurIdAndDate(@Param("clubId") Integer clubId,
+                                            @Param("dateStart") LocalDateTime dateStart,
+                                            @Param("dateSEnd") LocalDateTime dateEnd,
+                                            Pageable pageable);
+
+    List<Event> findByOrganisateurIdInAndActifIsFalseAndStartAfter(Set<Integer> memberClubIds, LocalDateTime now);
+
+    List<Event> findByOrganisateurIdInAndActifIsTrueAndStartAfter(Set<Integer> memberClubIds, LocalDateTime now);
 }
