@@ -184,7 +184,6 @@ VALUES -- Interactions entre MEMBREs uniquement
 -- 8. NOTATIONS (Inchangé pour l'instant - Supposant que tous peuvent noter les events auxquels ils ont participé)
 INSERT INTO notations (event_id, membre_id, ambiance, proprete, organisation, fair_play, niveau_joueurs, date_notation)
 VALUES (1, 1, 5, 4, 5, 5, 4, '2025-02-16 10:00:00'),   -- Alice (ADMIN) note Event 1
-       (1, 3, 4, 3, 4, 4, 3, '2025-02-16 11:00:00'),   -- Bob (MEMBRE) note Event 1
        (2, 1, 5, 5, 4, 5, 3, '2025-03-21 10:00:00'),   -- Alice (ADMIN) note Event 2
        (2, 3, 4, 4, 3, 4, 3, '2025-03-21 11:00:00'),   -- Bob (MEMBRE) note Event 2
        (7, 5, 5, 4, 4, 5, 4, '2025-03-02 09:00:00'),   -- Eva (MEMBRE) note Event 7

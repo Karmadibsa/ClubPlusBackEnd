@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 @Repository
 public interface NotationDao extends JpaRepository<Notation, Integer> {
@@ -16,6 +17,9 @@ public interface NotationDao extends JpaRepository<Notation, Integer> {
      * Trouve toutes les notations pour un événement (pour affichage anonyme).
      */
     List<Notation> findByEventId(Integer eventId);
+
+    @Query("SELECT n.event.id FROM Notation n WHERE n.membre.id = :membreId")
+    Set<Integer> findRatedEventIdsByMembreId(@Param("membreId") Integer membreId); // Gardons celle-ci
 
     /**
      * Vérifie si un membre a déjà noté un événement (pour la logique de création).

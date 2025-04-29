@@ -35,6 +35,7 @@ public interface ReservationDao extends JpaRepository<Reservation, Integer> {
      * Compte les réservations pour une catégorie (vérification capacité).
      */
     long countByCategorieId(Integer categorieId);
+    
 
     /**
      * Compte les réservations d'un membre pour un événement (vérification limite).
