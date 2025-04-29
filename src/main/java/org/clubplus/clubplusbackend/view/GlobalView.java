@@ -32,5 +32,8 @@ public class GlobalView {
     // Vue pour le club
     public interface NotationView extends Base {
     }
+
+    public interface ProfilView extends Base {
+    }
 }
 

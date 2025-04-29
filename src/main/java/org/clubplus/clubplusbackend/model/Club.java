@@ -90,6 +90,7 @@ public class Club {
     @JsonView({GlobalView.ClubView.class, GlobalView.ReservationView.class})
     private String email;
 
+
     // --- Code Club ---
     // Généré après persistance. unique=true est essentiel.
     @Column(unique = true, length = 9, updatable = false) // Ex: "CLUB-0001", non modifiable

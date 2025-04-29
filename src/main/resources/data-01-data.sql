@@ -10,40 +10,54 @@
 -- Rappel: Alice(1, ADMIN C1), Charlie(2, RESA C1), Bob(3, MEMBRE C1), David(4, MEMBRE C1), Eva(5, MEMBRE C1&C2), Franck(6, ADMIN C2), Ancien(7, Inactif), Gerard(8, ADMIN C4), Helene(9, MEMBRE C4), Testeur(10, MEMBRE C1)
 -- Hash pour 'password': $2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG
 INSERT INTO membre (id, nom, prenom, date_naissance, date_inscription, numero_voie, rue, codepostal, ville, telephone,
-                    email, password, role, actif, anonymize_date)
+                    email, password, role, code_ami, actif, anonymize_date) -- Ajout de code_ami ici
 VALUES (1, 'AdminClub', 'Alice', '1988-03-10', '2024-01-10', '10', 'Rue Principale', '75001', 'Paris', '0601010101',
-        'alice.admin@club.fr', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'ADMIN', 1, NULL),
+        'alice.admin@club.fr', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'ADMIN', 'AMIS-000001',
+        1, NULL),                          -- Ajout valeur
        (2, 'ResaClub', 'Charlie', '1992-07-01', '2024-08-15', '3', 'Boulevard Central', '75006', 'Paris', '0603030303',
-        'charlie.resa@club.fr', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'RESERVATION', 1, NULL),
+        'charlie.resa@club.fr', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'RESERVATION',
+        'AMIS-000002', 1, NULL),           -- Ajout valeur
        (3, 'MembreSimple', 'Bob', '1995-11-25', '2024-05-20', '25', 'Avenue Secondaire', '75008', 'Paris', '0602020202',
-        'bob.membre@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 1, NULL),
+        'bob.membre@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 'AMIS-000003',
+        1, NULL),                          -- Ajout valeur
        (4, 'AutreMembre', 'David', '1980-01-05', '2025-02-01', '44', 'Rue du Quartier', '75010', 'Paris', '0604040404',
-        'david.autre@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 1, NULL),
+        'david.autre@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE',
+        'AMIS-000004', 1, NULL),           -- Ajout valeur
        (5, 'MembreMultiClub', 'Eva', '2000-09-30', '2025-04-05', '5', 'Quai Est', '75010', 'Paris', '0605050505',
-        'eva.multi@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 1, NULL),
+        'eva.multi@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 'AMIS-000005',
+        1, NULL),                          -- Ajout valeur
        (6, 'AdminClub2', 'Franck', '1990-04-15', '2025-01-01', '100', 'Grand Rue', '69001', 'Lyon', '0606060606',
-        'franck.admin@club2.fr', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'ADMIN', 1, NULL),
+        'franck.admin@club2.fr', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'ADMIN', 'AMIS-000006',
+        1, NULL),                          -- Ajout valeur
        (7, 'Membre Inactif', 'Ancien', '1975-01-01', '2023-01-15', '99', 'Rue Perdue', '99999', 'Inconnu', '0123456789',
-        'deleted+id7@example.com', 'invalid_hash', 'MEMBRE', 0, '2025-01-10 15:30:00'),
+        'deleted+id7@example.com', 'invalid_hash', 'MEMBRE', 'AMIS-000007', 0,
+        '2025-01-10 15:30:00'),            -- Ajout valeur (même si inactif)
        (8, 'AdminClub3', 'Gerard', '1985-06-20', '2025-03-01', '7', 'Place Ouest', '33000', 'Bordeaux', '0608080808',
-        'gerard.admin@club3.fr', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'ADMIN', 1, NULL),
+        'gerard.admin@club3.fr', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'ADMIN', 'AMIS-000008',
+        1, NULL),                          -- Ajout valeur
        (9, 'MembreClub3', 'Helene', '1998-12-12', '2025-03-05', '8', 'Cours Sud', '33000', 'Bordeaux', '0609090909',
-        'helene.membre@club3.fr', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 1, NULL),
+        'helene.membre@club3.fr', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE',
+        'AMIS-000009', 1, NULL),           -- Ajout valeur
        (10, 'MembrePourDelete', 'Testeur', '2001-01-01', '2025-04-01', '111', 'Rue Delete', '75011', 'Paris',
         '0610101010', 'testeur.delete@mail.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG',
-        'MEMBRE', 1, NULL),
+        'MEMBRE', 'AMIS-000010', 1, NULL), -- Ajout valeur
        (11, 'Nouveau', 'Gaston', '1998-05-12', '2025-04-10', '15', 'Rue des Lilas', '75019', 'Paris', '0611111111',
-        'gaston.nouveau@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 1, NULL),
+        'gaston.nouveau@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE',
+        'AMIS-000011', 1, NULL),           -- Ajout valeur
        (12, 'Martin', 'Hélène', '2001-02-20', '2025-04-11', '22', 'Avenue Gambetta', '75020', 'Paris', '0612121212',
-        'helene.martin@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 1, NULL),
+        'helene.martin@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE',
+        'AMIS-000012', 1, NULL),           -- Ajout valeur
        (13, 'Dupont', 'Isabelle', '1985-10-03', '2025-04-15', '8', 'Boulevard Voltaire', '75011', 'Paris', '0613131313',
-        'isabelle.dupont@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 1, NULL),
+        'isabelle.dupont@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE',
+        'AMIS-000013', 1, NULL),           -- Ajout valeur
        (14, 'Petit', 'Jean', '1993-07-18', '2025-04-20', '1', 'Rue de la Paix', '75002', 'Paris', '0614141414',
-        'jean.petit@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 0,
-        '2025-04-25 10:00:00'), -- Membre inactif avec date
+        'jean.petit@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'MEMBRE', 'AMIS-000014',
+        0,
+        '2025-04-25 10:00:00'),            -- Ajout valeur (même si inactif)
        (15, 'Moreau', 'Karim', '1999-12-01', '2025-04-22', '55', 'Rue du Faubourg Saint-Honoré', '75008', 'Paris',
         '0615151515', 'karim.moreau@email.com', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG',
-        'MEMBRE', 1, NULL);
+        'MEMBRE', 'AMIS-000015', 1, NULL);
+-- Ajout valeur
 
 -- 2. CLUBS (Inchangé)
 INSERT INTO club (id, nom, date_creation, date_inscription, numero_voie, rue, codepostal, ville, telephone, email,
@@ -162,6 +176,7 @@ VALUES -- Interactions entre MEMBREs uniquement
        (3, 11, 'ATTENTE', '2025-04-23 10:00:00'),  -- Bob (3) demande Gaston (11) (Club 1)
        (12, 4, 'ATTENTE', '2025-04-24 11:00:00'),  -- Hélène (12) demande David (4) (Club 1)
        (13, 15, 'ACCEPTE', '2025-04-25 12:00:00'), -- Isabelle (13) et Karim (15) sont amis (Club 1)
+       (15, 3, 'ATTENTE', '2025-04-25 12:00:00'),  -- Isabelle (13) et Karim (15) sont amis (Club 1)
        (5, 13, 'ATTENTE', '2025-04-26 09:00:00');
 -- Eva (5) demande Isabelle (13) (Club 1 ou 2, ici Club 1 commun)
 -- Helene (9) a demandé Testeur (10)

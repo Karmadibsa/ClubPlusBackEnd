@@ -26,30 +26,38 @@ public class DemandeAmiService {
     private final SecurityService securityService; // Injecter pour accès utilisateur courant
 
     /**
-     * Envoie une demande d'ami.
-     * Vérifications : auto-demande, existence membres, relation déjà existante (ATTENTE ou ACCEPTE).
+     * Envoie une demande d'ami en utilisant le codeAmi du récepteur.
+     * Vérifications : existence membres, auto-demande, relation déjà existante.
+     * La contrainte de club commun est supprimée.
      */
-    public DemandeAmi sendFriendRequest(Integer envoyeurId, Integer recepteurId) {
+    public DemandeAmi sendFriendRequestByCode(String recepteurCodeAmi) { // Prend le code en paramètre
+        Integer envoyeurId = securityService.getCurrentUserIdOrThrow(); // Récupère l'envoyeur courant
+
+        // Trouve le récepteur par son codeAmi
+        Membre recepteur = membreRepository.findByCodeAmi(recepteurCodeAmi)
+                .orElseThrow(() -> new EntityNotFoundException("Aucun membre trouvé avec le code ami : " + recepteurCodeAmi)); // -> 404
+
+        Integer recepteurId = recepteur.getId();
+
+        // --- Mêmes vérifications qu'avant (sauf club commun) ---
         if (envoyeurId.equals(recepteurId)) {
             throw new IllegalArgumentException("Impossible d'envoyer une demande à soi-même."); // -> 400
         }
 
         Membre envoyeur = membreRepository.findById(envoyeurId)
-                .orElseThrow(() -> new EntityNotFoundException("Membre envoyeur non trouvé : " + envoyeurId)); // -> 404
-        Membre recepteur = membreRepository.findById(recepteurId)
-                .orElseThrow(() -> new EntityNotFoundException("Membre récepteur non trouvé : " + recepteurId)); // -> 404
+                .orElseThrow(() -> new EntityNotFoundException("Membre envoyeur non trouvé : " + envoyeurId)); // Devrait pas arriver si authentifié
 
+        // Vérifier si le récepteur est un MEMBRE (si cette règle métier existe toujours)
         if (recepteur.getRole() != Role.MEMBRE) {
             throw new AccessDeniedException("Les demandes d'ami ne peuvent être envoyées qu'à des membres."); // -> 403
         }
+
         // Vérifier s'il existe déjà une demande en attente ou une amitié acceptée
         if (demandeAmiRepository.existsPendingOrAcceptedRequestBetween(envoyeurId, recepteurId, Statut.ATTENTE, Statut.ACCEPTE)) {
             throw new IllegalStateException("Une demande en attente ou une relation d'amitié existe déjà."); // -> 409
         }
 
-        // Note: On pourrait aussi vérifier une demande REFUSEE et éventuellement la remplacer/réactiver.
-
-        DemandeAmi nouvelleDemande = new DemandeAmi(envoyeur, recepteur); // Utilise le constructeur (statut=ATTENTE, date=now)
+        DemandeAmi nouvelleDemande = new DemandeAmi(envoyeur, recepteur);
         return demandeAmiRepository.save(nouvelleDemande);
     }
 
@@ -202,10 +210,11 @@ public class DemandeAmiService {
         }
 
         // Étape 2: Récupérer les entités Membre correspondantes
-        
+
         // Utilise la vue Base pour éviter de charger trop d'infos non nécessaires ici
         // Note: findAllById ne garantit pas l'ordre et peut nécessiter une JsonView sur le controller
         return membreRepository.findAllById(friendIds);
     }
+
 
 }

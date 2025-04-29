@@ -50,4 +50,7 @@ public interface MembreDao extends JpaRepository<Membre, Integer> {
     List<Object[]> findMonthlyRegistrationsSince(@Param("startDate") LocalDate startDate);
 
     List<Membre> findByAdhesionsClubId(Integer clubId);
+
+    Optional<Membre> findByCodeAmi(String codeAmi);
+
 }

@@ -38,7 +38,7 @@ public class MembreController {
      */
     @GetMapping("/profile")
     @IsConnected
-    @JsonView(GlobalView.MembreView.class)
+    @JsonView(GlobalView.ProfilView.class)
     public Membre getMyProfile() {
         Integer currentUserId = securityService.getCurrentUserIdOrThrow(); // Nécessite SecurityService injecté ou via MembreService
         return membreService.getMembreByIdWithSecurityCheck(currentUserId); // Vérif owner implicite

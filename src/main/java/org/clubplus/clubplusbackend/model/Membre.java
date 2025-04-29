@@ -45,50 +45,55 @@ public class Membre {
     @NotNull(message = "La date de naissance est obligatoire.") // Utiliser @NotNull pour les dates/objets
     @Past(message = "La date de naissance doit être dans le passé.") // Validation logique
     @Column(nullable = false)
-    @JsonView(GlobalView.MembreView.class) // Visible dans la vue détaillée
+    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class}) // Visible dans la vue détaillée
     private LocalDate date_naissance;
 
     // Date d'inscription gérée par le système, pas d'annotation de validation d'entrée nécessaire
     @Column(nullable = false)
-    @JsonView(GlobalView.MembreView.class)
+    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
     private LocalDate date_inscription;
 
     @NotBlank(message = "Le numéro de voie est obligatoire.")
     @Size(max = 10, message = "Le numéro de voie ne doit pas dépasser 10 caractères.")
     @Column(nullable = false, length = 10)
-    @JsonView(GlobalView.MembreView.class)
+    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
     private String numero_voie;
 
     @NotBlank(message = "La rue est obligatoire.")
     @Size(max = 100, message = "La rue ne doit pas dépasser 100 caractères.")
     @Column(nullable = false, length = 100)
-    @JsonView(GlobalView.MembreView.class)
+    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
     private String rue;
 
     @NotBlank(message = "Le code postal est obligatoire.")
     @Size(min = 3, max = 10, message = "Le code postal doit contenir entre 3 et 10 caractères.")
     @Column(nullable = false, length = 10)
-    @JsonView(GlobalView.MembreView.class)
+    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
     private String codepostal;
 
     @NotBlank(message = "La ville est obligatoire.")
     @Size(max = 100, message = "La ville ne doit pas dépasser 100 caractères.")
     @Column(nullable = false, length = 100)
-    @JsonView(GlobalView.MembreView.class)
+    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
     private String ville;
 
     @NotBlank(message = "Le numéro de téléphone est obligatoire.")
     @Size(max = 20, message = "Le numéro de téléphone ne doit pas dépasser 20 caractères.")
     @Column(nullable = false, length = 20)
-    @JsonView({GlobalView.MembreView.class, GlobalView.ReservationView.class})
+    @JsonView({GlobalView.MembreView.class, GlobalView.ReservationView.class, GlobalView.ProfilView.class})
     private String telephone;
 
     @NotBlank(message = "L'email est obligatoire.") // Assure non-vide
     @Email(message = "Le format de l'email est invalide.") // Valide le format standard
     @Size(max = 254, message = "L'email ne doit pas dépasser 254 caractères.") // Limite standard
     @Column(nullable = false, unique = true, length = 254) // Contrainte DB (unicité + taille)
-    @JsonView({GlobalView.MembreView.class, GlobalView.ReservationView.class})
+    @JsonView({GlobalView.MembreView.class, GlobalView.ReservationView.class, GlobalView.ProfilView.class})
     private String email;
+
+    @Column(unique = true, length = 11, updatable = false) // Ex: "USER-000001", non modifiable
+    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
+    // Visible dans la vue détaillée (pour son propre profil)
+    private String codeAmi;
 
     @NotBlank(message = "Le mot de passe est obligatoire.")
     @Size(min = 8, message = "Le mot de passe doit contenir au moins 8 caractères.")
@@ -100,7 +105,7 @@ public class Membre {
 
     @Enumerated(EnumType.STRING) // Stocke "ADMIN", "MEMBRE", etc.
     @Column(nullable = false)
-    @JsonView(GlobalView.MembreView.class) // Visible dans la vue détaillée
+    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class}) // Visible dans la vue détaillée
     private Role role;
 
     @NotNull
@@ -147,6 +152,15 @@ public class Membre {
     @OneToMany(mappedBy = "membre", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Notation> notations = new ArrayList<>();
+
+    @PostPersist
+    public void generateCodeAmi() {
+        // Vérifie que l'ID a été généré et que codeAmi n'est pas déjà défini
+        if (this.id != null && this.codeAmi == null) {
+            // Format similaire à codeClub, mais avec préfixe différent et plus de chiffres
+            this.codeAmi = String.format("AMIS-%06d", this.id);
+        }
+    }
 
     // --- equals & hashCode basés sur l'ID (bonne pratique) ---
     @Override

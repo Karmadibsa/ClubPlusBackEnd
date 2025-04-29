@@ -29,22 +29,20 @@ public class DemandeAmiController {
 
 
     /**
-     * POST /api/amis/demandes/envoyer/{recepteurId}
-     * Envoie une demande d'ami à un autre utilisateur.
+     * POST /api/amis/demandes/envoyer-par-code?code={codeAmi}
+     * Envoie une demande d'ami en utilisant le codeAmi du récepteur.
      * Sécurité: Utilisateur authentifié.
-     * Exceptions (gérées globalement): 404 (Récepteur non trouvé), 400 (Auto-demande),
-     * 409 (Demande/Amitié existante), 401 (Non authentifié).
+     * Exceptions gérées globalement.
      */
-    @PostMapping("/demandes/envoyer/{recepteurId}")
+    @PostMapping("/demandes/envoyer-par-code") // Nouvelle URL
     @IsMembre
-    @ResponseStatus(HttpStatus.CREATED) // Statut 201
-    @JsonView(GlobalView.DemandeView.class) // Retourne la demande créée
-    public DemandeAmi sendFriendRequest(@PathVariable Integer recepteurId) {
-
+    @ResponseStatus(HttpStatus.CREATED)
+    @JsonView(GlobalView.DemandeView.class)
+    // Prend le code en @RequestParam
+    public DemandeAmi sendFriendRequestByCode(@RequestParam("code") String recepteurCodeAmi) {
         // Le service utilise SecurityService pour obtenir l'envoyeurId
-        return demandeAmiService.sendFriendRequest(securityService.getCurrentUserIdOrThrow(), recepteurId); // Passer l'ID courant explicitement
-        // Ou si le service est modifié pour récupérer l'ID lui-même:
-        // return demandeAmiService.sendFriendRequest(recepteurId);
+        // La méthode du service ne prend plus que le code du récepteur
+        return demandeAmiService.sendFriendRequestByCode(recepteurCodeAmi);
     }
 
     /**
