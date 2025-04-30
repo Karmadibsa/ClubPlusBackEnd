@@ -150,4 +150,35 @@ public interface EventDao extends JpaRepository<Event, Integer> {
     List<Event> findByOrganisateurIdInAndActifIsFalseAndStartAfter(Set<Integer> memberClubIds, LocalDateTime now);
 
     List<Event> findByOrganisateurIdInAndActifIsTrueAndStartAfter(Set<Integer> memberClubIds, LocalDateTime now);
+
+    /**
+     * AVEC filtre ami - AJOUTER JOIN FETCH
+     */
+    @Query("SELECT DISTINCT e FROM Event e " +
+            "LEFT JOIN FETCH e.categories cat " +     // <-- Charger les catégories
+            "LEFT JOIN FETCH e.organisateur org " +   // <-- Charger l'organisateur
+            "LEFT JOIN cat.reservations r LEFT JOIN r.membre m " + // Jointures pour le filtre ami
+            "WHERE e.organisateur.id IN :clubIds " +
+            "AND e.start > :after " +
+            "AND (:actifStatus IS NULL OR e.actif = :actifStatus) " +
+            "AND m.id IN :friendIds")
+    List<Event> findUpcomingEventsInClubsWithStatusAndFriends(
+            @Param("clubIds") Collection<Integer> clubIds,
+            @Param("after") LocalDateTime after,
+            @Param("actifStatus") Boolean actifStatus,
+            @Param("friendIds") Collection<Integer> friendIds);
+
+    /**
+     * SANS filtre ami - AJOUTER JOIN FETCH
+     */
+    @Query("SELECT DISTINCT e FROM Event e " +
+            "LEFT JOIN FETCH e.categories cat " +     // <-- Charger les catégories
+            "LEFT JOIN FETCH e.organisateur org " +   // <-- Charger l'organisateur
+            "WHERE e.organisateur.id IN :clubIds " +
+            "AND e.start > :after " +
+            "AND (:actifStatus IS NULL OR e.actif = :actifStatus)")
+    List<Event> findUpcomingEventsInClubsWithStatus(
+            @Param("clubIds") Collection<Integer> clubIds,
+            @Param("after") LocalDateTime after,
+            @Param("actifStatus") Boolean actifStatus);
 }

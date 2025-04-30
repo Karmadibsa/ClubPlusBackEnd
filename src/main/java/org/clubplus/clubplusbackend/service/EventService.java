@@ -4,11 +4,10 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.dao.*;
 import org.clubplus.clubplusbackend.dto.*;
-import org.clubplus.clubplusbackend.model.Categorie;
-import org.clubplus.clubplusbackend.model.Club;
-import org.clubplus.clubplusbackend.model.Event;
-import org.clubplus.clubplusbackend.model.Membre;
+import org.clubplus.clubplusbackend.model.*;
+import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.clubplus.clubplusbackend.security.SecurityService;
+import org.clubplus.clubplusbackend.security.Statut;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -27,11 +26,14 @@ import java.util.stream.Collectors;
 public class EventService {
 
     private final EventDao eventRepository;
+    private final ReservationDao reservationRepository;
     private final CategorieDao categorieRepository;
+    private final DemandeAmiDao demandeAmiRepository;
     private final AdhesionDao adhesionRepository;
     private final MembreDao membreRepository;
     private final ClubDao clubRepository;
     private final SecurityService securityService; // Injecter
+    private final DemandeAmiDao demandeAmiDao;
 
     // --- Méthodes de Lecture Publiques (Certaines avec Sécurité) ---
 
@@ -336,6 +338,132 @@ public class EventService {
         }
     }
 
+    /**
+     * Récupère les événements futurs pour les clubs du membre, avec filtres optionnels.
+     * Retourne une liste de DTOs incluant les noms des amis participants.
+     *
+     * @param statusFilter      "active", "inactive", ou null/"all".
+     * @param filterWithFriends true pour ne retourner que les événements avec au moins un ami participant.
+     * @return List<EventWithFriendsDto>
+     */
+    @Transactional(readOnly = true)
+    // Renommé et ajout du paramètre filterWithFriends, changement type de retour
+    public List<EventWithFriendsDto> findMemberEventsFiltered(String statusFilter, boolean filterWithFriends) {
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+
+        // 1. Récupérer les IDs des clubs du membre (Utilise AdhesionDao)
+        List<Integer> memberClubIds = findClubIdsForMember(currentUserId);
+        if (memberClubIds.isEmpty()) {
+            System.out.println("Aucun club trouvé pour le membre " + currentUserId);
+            return Collections.emptyList();
+        }
+        System.out.println("Membre " + currentUserId + " appartient aux clubs: " + memberClubIds);
+
+
+        // 2. Déterminer le statut de filtre pour la requête DAO
+        LocalDateTime now = LocalDateTime.now(); // Pour le filtre "futur"
+        Boolean actifStatus = null;
+        if ("active".equalsIgnoreCase(statusFilter)) {
+            actifStatus = true;
+        } else if ("inactive".equalsIgnoreCase(statusFilter)) {
+            actifStatus = false;
+        }
+        System.out.println("Filtre statut appliqué: " + (actifStatus == null ? "aucun" : actifStatus));
+
+
+        // 3. Récupérer les IDs des amis (sera utilisé pour le filtre OU pour peupler le DTO)
+        List<Integer> friendIds = demandeAmiRepository.findFriendIdsOfUser(currentUserId, Statut.ACCEPTE);
+        System.out.println("Amis trouvés pour membre " + currentUserId + ": " + friendIds.size());
+
+
+        // 4. Appeler la méthode DAO appropriée (CELLES AVEC @Query)
+        List<Event> events;
+        if (filterWithFriends) {
+            System.out.println("Application du filtre 'avec amis'.");
+            if (friendIds.isEmpty()) {
+                System.out.println("Filtre 'avec amis' actif mais aucun ami trouvé, retour liste vide.");
+                return Collections.emptyList(); // Si on filtre par amis et qu'il n'y en a pas...
+            }
+            // Utilise la méthode DAO avec @Query qui inclut le filtre ami
+            events = eventRepository.findUpcomingEventsInClubsWithStatusAndFriends(
+                    memberClubIds, now, actifStatus, friendIds);
+            System.out.println("DAO (avec amis) a retourné " + events.size() + " événements.");
+        } else {
+            System.out.println("Filtre 'avec amis' inactif.");
+            // Utilise la méthode DAO avec @Query SANS le filtre ami
+            events = eventRepository.findUpcomingEventsInClubsWithStatus(
+                    memberClubIds, now, actifStatus);
+            System.out.println("DAO (sans amis) a retourné " + events.size() + " événements.");
+        }
+
+        // 5. Si aucun événement trouvé, retourner une liste vide de DTOs
+        if (events.isEmpty()) {
+            return Collections.emptyList();
+        }
+
+        // 6. Préparer la liste des noms d'amis participants pour les événements trouvés
+        List<Integer> eventIds = events.stream().map(Event::getId).collect(Collectors.toList());
+        Map<Integer, List<String>> friendsInEventsMap = findParticipatingFriendNamesForEvents(eventIds, friendIds);
+        System.out.println("Map des amis participants créée pour " + friendsInEventsMap.size() + " événements.");
+
+
+        // 7. Mapper les Entités Event vers les DTOs EventWithFriendsDto
+        List<EventWithFriendsDto> dtos = events.stream().map(event -> {
+            EventWithFriendsDto dto = new EventWithFriendsDto();
+            // --- Copie des champs ---
+            dto.setId(event.getId());
+            dto.setNom(event.getNom());
+            dto.setStart(event.getStart());
+            dto.setEnd(event.getEnd()); // Assurez-vous que End est dans la vue si besoin
+            dto.setDescription(event.getDescription()); // Assurez-vous que Desc est dans la vue si besoin
+            dto.setLocation(event.getLocation());
+            dto.setActif(event.getActif());
+            // --- Copie/Calcul des places ---
+            // Ces méthodes @Transient sur l'entité seront appelées ici
+            dto.setPlaceTotal(event.getPlaceTotal());
+            dto.setPlaceReserve(event.getPlaceReserve());
+            dto.setPlaceDisponible(event.getPlaceDisponible());
+            // --- Ajout des noms d'amis ---
+            dto.setAmiParticipants(friendsInEventsMap.getOrDefault(event.getId(), Collections.emptyList()));
+            dto.setOrganisateur(event.getOrganisateur());
+            dto.setCategories(event.getCategories());
+
+
+            return dto;
+        }).collect(Collectors.toList());
+
+        System.out.println("Mappage vers DTO terminé. Retour de " + dtos.size() + " DTOs.");
+        return dtos;
+    }
+
+
+    /**
+     * Méthode privée optimisée pour trouver les noms des amis participant aux événements donnés.
+     * Utilise ReservationDao.
+     */
+    private Map<Integer, List<String>> findParticipatingFriendNamesForEvents(List<Integer> eventIds, List<Integer> friendIds) {
+        // Vérification initiale
+        if (eventIds == null || eventIds.isEmpty() || friendIds == null || friendIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        // Appelle la méthode DAO spécifique (qui doit utiliser JOIN FETCH)
+        List<Reservation> friendReservations = reservationRepository.findConfirmedReservationsByEventIdsAndMemberIdsFetchingMember(
+                eventIds,
+                friendIds,
+                ReservationStatus.CONFIRME); // Utiliser le bon statut de réservation
+
+        // Grouper par ID d'événement et mapper vers "Prénom Nom"
+        return friendReservations.stream()
+                .filter(r -> r.getEvent() != null && r.getMembre() != null && r.getMembre().getPrenom() != null && r.getMembre().getNom() != null) // Vérifications robustes
+                .collect(Collectors.groupingBy(
+                        r -> r.getEvent().getId(),
+                        Collectors.mapping(
+                                r -> r.getMembre().getPrenom() + " " + r.getMembre().getNom(),
+                                Collectors.toList()
+                        )
+                ));
+    }
 
     /**
      * Récupère les 5 prochains événements actifs du club géré par l’utilisateur connecté.
