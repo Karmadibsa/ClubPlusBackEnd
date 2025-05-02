@@ -3,11 +3,13 @@ package org.clubplus.clubplusbackend.controller;
 import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.clubplus.clubplusbackend.dto.HomepageStatsDTO;
 import org.clubplus.clubplusbackend.dto.LoginRequestDto;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.AppUserDetails;
 import org.clubplus.clubplusbackend.security.SecurityUtils;
 import org.clubplus.clubplusbackend.service.MembreService;
+import org.clubplus.clubplusbackend.service.StatsService;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     private final MembreService membreService;
+    private final StatsService statsService;
     private final AuthenticationProvider authenticationProvider; // Pour gérer l'authentification
     private final SecurityUtils jwtUtils; // Pour générer le token
 
@@ -80,6 +83,11 @@ public class AuthController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.TEXT_PLAIN); // Indiquer que c'est du texte brut
         return new ResponseEntity<>(jwtToken, headers, HttpStatus.OK);
+    }
+
+    @GetMapping("/stats")
+    public HomepageStatsDTO getStats() {
+        return statsService.getHomepageStats();
     }
 
 }

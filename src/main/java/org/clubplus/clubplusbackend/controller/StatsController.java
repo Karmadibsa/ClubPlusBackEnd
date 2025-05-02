@@ -100,4 +100,6 @@ public class StatsController {
         return statsService.getDashboardSummary(clubId);
     }
     // Pas de @ExceptionHandler ici, doit être dans GlobalExceptionHandler.
+
+
 }

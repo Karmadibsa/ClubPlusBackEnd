@@ -96,8 +96,8 @@ public class Membre {
     private String codeAmi;
 
     @NotBlank(message = "Le mot de passe est obligatoire.")
-    @Size(min = 8, message = "Le mot de passe doit contenir au moins 8 caractères.")
-    @Size(max = 100, message = "Le mot de passe ne doit pas dépasser 100 caractères.")
+    @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#&()\\-\\[{}\\]:;',?/*~$^+=<>]).{8,100}$",
+            message = "Le mot de passe doit faire entre 8 et 100 caractères et contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial (!@#&()...)")
     @Column(nullable = false) // Le hash sera stocké, taille dépend du hash (BCrypt ~60 chars)
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     // N'autoriser que l'écriture (désérialisation), pas la lecture (sérialisation)

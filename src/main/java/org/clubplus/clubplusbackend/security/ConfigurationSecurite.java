@@ -72,6 +72,7 @@ public class ConfigurationSecurite {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/inscription/**").permitAll()
                         .requestMatchers("/api/auth/connexion").permitAll()
+                        .requestMatchers("/api/auth/stats").permitAll()
                         .requestMatchers("/api/clubs/inscription").permitAll()
                         .requestMatchers("/api/**").authenticated()
                         .anyRequest().denyAll()

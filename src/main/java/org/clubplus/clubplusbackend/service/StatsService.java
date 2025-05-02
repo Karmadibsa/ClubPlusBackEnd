@@ -4,6 +4,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.dao.*;
 import org.clubplus.clubplusbackend.dto.DashboardSummaryDto;
+import org.clubplus.clubplusbackend.dto.HomepageStatsDTO;
 import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.slf4j.Logger;
@@ -26,6 +27,7 @@ public class StatsService {
 
     private final EventDao eventRepository;
     private final ReservationDao reservationRepository;
+    private final MembreDao membreRepository;
     private final NotationDao notationRepository;
     private final ClubDao clubRepository;
     private final AdhesionDao adhesionRepository;
@@ -336,5 +338,15 @@ public class StatsService {
                 .monthlyRegistrations(registrations) // Ajouté
                 .averageEventRatings(ratings)
                 .build();
+    }
+
+    public HomepageStatsDTO getHomepageStats() {
+        // Remplacez .count() par la logique appropriée si nécessaire
+        // (ex: compter seulement les clubs actifs, les événements réussis, les membres actifs)
+        long clubs = clubRepository.count();
+        long events = eventRepository.count(); // Adaptez pour compter les "succès" si besoin
+        long members = membreRepository.count(); // Adaptez pour compter les "actifs" si besoin
+
+        return new HomepageStatsDTO(clubs, events, members);
     }
 }
