@@ -107,9 +107,7 @@ VALUES (1, 'AdminClub', 'Alice', '1988-03-10', '2024-01-10', '10', 'Rue Principa
 INSERT INTO club (id, nom, date_creation, date_inscription, numero_voie, rue, codepostal, ville, telephone, email,
                   actif, desactivation_date, code_club)
 VALUES (1, 'Club Omnisports Paris Centre', '2010-01-15', '2024-01-10', '1', 'Place du Sport', '75001', 'Paris',
-        '0102030405', 'contact@csc-paris.fr', 1, NULL, 'CLUB-0001'),
-       (2, 'Lyon Padel Club', '2018-06-01', '2025-01-01', '200', 'Avenue Padel', '69007', 'Lyon', '0477889900',
-        'contact@lyonpadel.fr', 1, NULL, 'CLUB-0002');
+        '0102030405', 'contact@csc-paris.fr', 1, NULL, 'CLUB-0001');
 
 -- 3. ADHESIONS (Inchangé - Associe utilisateurs aux clubs, rôles définis dans membre)
 INSERT INTO adhesion (membre_id, club_id, date_adhesion)
@@ -326,8 +324,6 @@ VALUES -- Réservations pour MEMBREs uniquement
        (18, 17, 26, '2025-04-20 15:00:00', UUID(), 'CONFIRME'), -- Membre 18 @ Event 17 (Futur) / Cat 26
        (19, 19, 28, '2025-05-05 16:00:00', UUID(), 'ANNULE'),   -- Membre 19 @ Event 19 (Futur, inactif) / Cat 28 - Annulé
        (20, 20, 30, '2025-03-01 17:00:00', UUID(), 'UTILISE'),  -- Membre 20 @ Event 20 (Passé) / Cat 30
-       (21, 21, 31, '2025-06-01 09:00:00', UUID(), 'CONFIRME'), -- Membre 21 @ Event 21 (Futur) / Cat 31
-       (22, 22, 32, '2025-07-10 10:00:00', UUID(), 'CONFIRME'), -- Membre 22 @ Event 22 (Futur) / Cat 32
        (23, 23, 34, '2025-08-15 11:00:00', UUID(), 'CONFIRME'), -- Membre 23 @ Event 23 (Futur) / Cat 34
        (24, 24, 35, '2025-09-05 12:00:00', UUID(), 'CONFIRME'), -- Membre 24 @ Event 24 (Futur) / Cat 35
        (25, 25, 36, '2025-10-01 13:00:00', UUID(), 'CONFIRME'), -- Membre 25 @ Event 25 (Futur) / Cat 36

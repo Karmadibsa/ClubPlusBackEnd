@@ -134,7 +134,7 @@ public class Club {
      * Non modifiable.
      * Visible dans les vues de base et détaillée du club.
      */
-    @Column(unique = true, length = 9, updatable = false)
+    @Column(unique = true, length = 9)
     @JsonView({GlobalView.Base.class, GlobalView.ClubView.class})
     private String codeClub;
 
@@ -185,17 +185,6 @@ public class Club {
     private List<Event> evenements = new ArrayList<>();
 
     // --- Méthodes métier ---
-
-    /**
-     * Génère automatiquement le code unique du club après sa première persistance.
-     * Le code est formaté "CLUB-XXXX" où XXXX est l'ID du club sur 4 chiffres.
-     */
-    @PostPersist
-    public void generateCode() {
-        if (this.id != null && this.codeClub == null) {
-            this.codeClub = String.format("CLUB-%04d", this.id);
-        }
-    }
 
     /**
      * Prépare le club pour une désactivation (soft delete).

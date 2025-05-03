@@ -148,15 +148,33 @@ public class ClubService {
 
         // 4. Création et Sauvegarde du Club
         Club clubToSave = mapDtoToClub(dto); // Utilisation d'une méthode helper
-        Club savedClub = clubRepository.save(clubToSave);
+        Club savedClubWithId = clubRepository.save(clubToSave);
         // Note: Le codeClub sera généré par @PostPersist après cette sauvegarde.
+        try {
+            // Récupère l'ID généré
+            Integer clubId = savedClubWithId.getId();
+            if (clubId == null) {
+                // Sécurité : si l'ID n'est pas généré comme attendu
+                throw new IllegalStateException("Impossible de générer le code club : l'ID du club est null après sauvegarde.");
+            }
+            // Formate le code en utilisant l'ID (ex: CLUB-0001)
+            // %04d signifie : pad avec des 0, largeur minimale de 4, pour un entier décimal (d)
+            String formattedCode = String.format("CLUB-%04d", clubId); // [2][3][4]
+            System.out.println(formattedCode);
+            savedClubWithId.setCodeClub(formattedCode); // Assigne le code à l'entité *en mémoire*
 
+        } catch (Exception e) {
+            // Loguez l'erreur et décidez si vous devez annuler la transaction
+            // Par exemple, lever une RuntimeException pour forcer le rollback
+            // Logger.error("Erreur critique lors de la génération/assignation du codeClub pour ID={}", savedClubWithId.getId(), e);
+            throw new RuntimeException("Erreur lors de la finalisation de la création du club (codeClub).", e);
+        }
         // 5. Création et Sauvegarde de l'Adhesion liant l'admin au club
-        Adhesion adminAdhesion = new Adhesion(savedAdmin, savedClub);
+        Adhesion adminAdhesion = new Adhesion(savedAdmin, savedClubWithId);
         adhesionRepository.save(adminAdhesion);
 
         // 6. Retourner le club créé (avec son ID et potentiellement son codeClub généré)
-        return savedClub;
+        return savedClubWithId;
     }
 
     /**
@@ -196,7 +214,6 @@ public class ClubService {
         club.setActif(true); // Actif par défaut
         club.setAdhesions(new HashSet<>()); // Initialiser les collections
         club.setEvenements(new ArrayList<>());
-        // codeClub est généré par @PostPersist
         return club;
     }
 
