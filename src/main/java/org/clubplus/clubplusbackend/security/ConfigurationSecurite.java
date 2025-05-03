@@ -159,13 +159,13 @@ public class ConfigurationSecurite {
                 // Configure les autorisations pour les requêtes HTTP
                 .authorizeHttpRequests(auth -> auth
                         // Autorise l'accès public aux endpoints d'authentification/inscription
-                        .requestMatchers("/api/auth/inscription/**").permitAll()
-                        .requestMatchers("/api/auth/connexion").permitAll()
-                        .requestMatchers("/api/auth/stats").permitAll()
+                        .requestMatchers("/auth/inscription/**").permitAll()
+                        .requestMatchers("/auth/connexion").permitAll()
+                        .requestMatchers("/auth/stats").permitAll()
                         // Autorise l'accès public à l'inscription de club
-                        .requestMatchers("/api/clubs/inscription").permitAll()
+                        .requestMatchers("/clubs/inscription").permitAll()
                         // Exige une authentification pour toutes les autres requêtes API
-                        .requestMatchers("/api/**").authenticated()
+                        .requestMatchers("/**").authenticated()
                         // Refuse toutes les autres requêtes non explicitement autorisées (principe de sécurité par défaut)
                         .anyRequest().denyAll()
                 )

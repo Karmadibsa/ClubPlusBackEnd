@@ -9,6 +9,7 @@ import org.clubplus.clubplusbackend.model.ReservationStatus;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,9 +21,15 @@ import java.util.stream.Collectors;
 
 import static org.clubplus.clubplusbackend.model.ReservationStatus.UTILISE;
 
+/**
+ * Service dédié au calcul et à la récupération de statistiques diverses
+ * concernant l'activité des clubs et de la plateforme globale.
+ * Les méthodes nécessitant un contexte de club sont sécurisées pour s'assurer
+ * que seul un gestionnaire (ADMIN ou RESERVATION) du club concerné peut y accéder.
+ */
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true) // La plupart des méthodes sont en lecture seule
+@Transactional(readOnly = true) // La plupart des méthodes sont en lecture seule par défaut
 public class StatsService {
 
     private final EventDao eventRepository;
@@ -33,92 +40,117 @@ public class StatsService {
     private final AdhesionDao adhesionRepository;
     private final SecurityService securityService; // Pour les vérifications de droits
 
+    private static final Logger log = LoggerFactory.getLogger(StatsService.class); // Logger pour le service
+
     /**
-     * STAT 1: Nouvelles adhésions mensuelles pour un club (12 derniers mois).
-     * Sécurité: Vérifie que l'appelant est MANAGER du club.
-     * Lance 404 (Club non trouvé), 403 (Non manager).
+     * Calcule le nombre de nouvelles adhésions mensuelles pour un club spécifique sur les 12 derniers mois glissants.
+     * Inclut les mois avec zéro adhésion dans la période.
+     * <p>
+     * Sécurité : Nécessite que l'utilisateur appelant soit gestionnaire (ADMIN ou RESERVATION) du club spécifié.
+     * </p>
+     *
+     * @param clubId L'identifiant unique du club pour lequel calculer les statistiques d'adhésion.
+     * @return Une liste de Map, chaque Map représentant un mois avec les clés "monthYear" (String au format "yyyy-MM")
+     * et "count" (Long représentant le nombre d'adhésions ce mois-là). La liste couvre les 12 derniers mois.
+     * @throws EntityNotFoundException si le club avec l'ID spécifié n'est pas trouvé (-> HTTP 404).
+     * @throws AccessDeniedException   (ou similaire via {@code SecurityService}) si l'utilisateur n'est pas gestionnaire du club (-> HTTP 403).
+     * @throws SecurityException       (ou similaire via {@code SecurityService}) si l'utilisateur courant ne peut être identifié.
      */
     public List<Map<String, Object>> getClubMonthlyRegistrations(Integer clubId) {
-        // 1. Sécurité d'abord
-        securityService.checkManagerOfClubOrThrow(clubId); // Lance 403 si pas manager
+        // 1. Sécurité d'abord : Vérifie si l'utilisateur est manager du club
+        securityService.checkManagerOfClubOrThrow(clubId); // Lance une exception si non autorisé (-> 403)
 
-        // 2. Vérifier existence club (pour 404 clair)
+        // 2. Vérifier l'existence du club pour retourner un 404 clair si nécessaire
         if (!clubRepository.existsById(clubId)) {
             throw new EntityNotFoundException("Club non trouvé avec l'ID : " + clubId); // -> 404
         }
+        log.debug("Calcul des adhésions mensuelles pour clubId: {}", clubId);
 
-        // 3. Calculer la période et appeler le DAO
+        // 3. Calculer la période de 12 mois (les 11 mois précédents + le mois courant) et appeler le DAO
         LocalDateTime today = LocalDateTime.now();
+        // Commence au premier jour du mois, 11 mois avant aujourd'hui
         LocalDateTime startDate = today.minusMonths(11).withDayOfMonth(1).toLocalDate().atStartOfDay();
+        log.debug("Période de calcul des adhésions: de {} à {}", startDate, today);
+        // Récupère les agrégats bruts [année, mois, compte] depuis le DAO
         List<Object[]> results = adhesionRepository.findMonthlyAdhesionsToClubSince(clubId, startDate);
+        log.debug("Résultats bruts des adhésions reçus ({} mois avec données): {}", results.size(), results);
 
-        // 4. Formater les résultats
-        return formatMonthlyResults(results, startDate, today);
+        // 4. Formater les résultats pour inclure les mois à zéro et structurer la sortie
+        List<Map<String, Object>> formattedResults = formatMonthlyResults(results, startDate, today);
+        log.debug("Résultats formatés des adhésions pour clubId {}: {}", clubId, formattedResults);
+        return formattedResults;
     }
 
     /**
-     * STAT 2: Moyennes des notes des événements passés du club.
-     * Sécurité: Vérifie que l'appelant est MANAGER du club.
-     * Lance 404 (Club non trouvé), 403 (Non manager).
+     * Calcule les moyennes des différentes notes attribuées aux événements *passés* d'un club spécifique.
+     * Inclut une moyenne générale calculée à partir des moyennes des critères individuels ayant reçu des notes (> 0).
+     * Les moyennes sont arrondies à une décimale.
+     * <p>
+     * Sécurité : Nécessite que l'utilisateur appelant soit gestionnaire (ADMIN ou RESERVATION) du club spécifié.
+     * </p>
+     *
+     * @param clubId L'identifiant unique du club pour lequel calculer les moyennes de notation.
+     * @return Une Map où les clés sont les noms des critères de notation ("ambiance", "proprete", "organisation", "fairPlay", "niveauJoueurs")
+     * et "moyenneGenerale", et les valeurs sont les moyennes (Double) arrondies à une décimale. Retourne 0.0 si aucun événement passé
+     * n'a été noté pour un critère donné ou globalement. Utilise un {@link LinkedHashMap} pour préserver l'ordre d'insertion.
+     * @throws EntityNotFoundException si le club avec l'ID spécifié n'est pas trouvé (-> HTTP 404).
+     * @throws AccessDeniedException   (ou similaire via {@code SecurityService}) si l'utilisateur n'est pas gestionnaire du club (-> HTTP 403).
+     * @throws SecurityException       (ou similaire via {@code SecurityService}) si l'utilisateur courant ne peut être identifié.
      */
-    private static final Logger log = LoggerFactory.getLogger(StatsService.class); // Ajouter logger
-
-
     public Map<String, Double> getClubAverageEventRatings(Integer clubId) {
+        // Sécurité et vérification d'existence
         securityService.checkManagerOfClubOrThrow(clubId); // -> 403
         if (!clubRepository.existsById(clubId)) {
             throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
         }
         log.debug("Calcul des moyennes de notation pour clubId: {}", clubId);
 
-        // On ne cherche les moyennes que pour les événements passés ET notés.
-        // Plutôt que de chercher les events puis les notes, on peut directement chercher les moyennes
-        // sur les notations liées aux events du club qui sont passés.
-
-        // Récupérer les IDs des événements passés du club (cette partie reste utile)
-        List<Integer> pastEventIds = eventRepository.findPastEventIdsByOrganisateurId(clubId, LocalDateTime.now());
+        // 1. Identifier les événements passés du club
+        LocalDateTime now = LocalDateTime.now();
+        List<Integer> pastEventIds = eventRepository.findPastEventIdsByOrganisateurId(clubId, now);
         log.debug("IDs des événements passés trouvés pour clubId {}: {}", clubId, pastEventIds);
 
+        // Si aucun événement passé n'existe pour ce club, retourner des moyennes par défaut (0.0)
         if (pastEventIds.isEmpty()) {
             log.debug("Aucun événement passé trouvé pour clubId {}, retour des moyennes par défaut.", clubId);
-            return defaultRatingMap(); // Pas d'événements passés = pas de notes
+            return defaultRatingMap();
         }
 
-        // --- Utilisation des requêtes AVG individuelles sur les events passés ---
-        // Note: Ces requêtes calculent la moyenne sur TOUTES les notations des events passés combinés.
-        // C'est ce que faisait la requête findAverageRatingsForEventIds.
+        // 2. Calculer la moyenne pour chaque critère sur l'ensemble des notations de ces événements passés
         log.debug("Calcul des moyennes individuelles pour les eventIds: {}", pastEventIds);
-
+        // Les méthodes findAverage... retournent Optional<Double>, orElse(0.0) gère le cas où AVG est NULL (aucune note)
         double avgAmbiance = notationRepository.findAverageAmbianceForEventIds(pastEventIds).orElse(0.0);
         double avgProprete = notationRepository.findAveragePropreteForEventIds(pastEventIds).orElse(0.0);
         double avgOrganisation = notationRepository.findAverageOrganisationForEventIds(pastEventIds).orElse(0.0);
         double avgFairPlay = notationRepository.findAverageFairPlayForEventIds(pastEventIds).orElse(0.0);
         double avgNiveauJoueurs = notationRepository.findAverageNiveauJoueursForEventIds(pastEventIds).orElse(0.0);
+        log.debug("Moyennes brutes calculées: Ambiance={}, Proprete={}, Organisation={}, FairPlay={}, NiveauJoueurs={}", avgAmbiance, avgProprete, avgOrganisation, avgFairPlay, avgNiveauJoueurs);
 
-        // --- FIN Utilisation des requêtes AVG individuelles ---
-
-        Map<String, Double> averagesMap = new LinkedHashMap<>();
+        // 3. Préparer la map de résultats et calculer la moyenne générale
+        Map<String, Double> averagesMap = new LinkedHashMap<>(); // Préserve l'ordre
         double sum = 0;
         int count = 0;
         double[] notes = {avgAmbiance, avgProprete, avgOrganisation, avgFairPlay, avgNiveauJoueurs};
 
+        // Calcule la moyenne générale en ne considérant que les critères ayant reçu des notes (moyenne > 0)
         for (double note : notes) {
-            // On ne compte que les moyennes > 0 pour la moyenne générale
-            // car Optional.orElse(0.0) retourne 0 si AVG était NULL.
             if (note > 0.0) {
                 sum += note;
                 count++;
             }
         }
+        double moyenneGenerale = (count > 0) ? (sum / count) : 0.0;
+        log.debug("Calcul moyenne générale: somme={}, nombre critères notés={}, moyenne brute={}", sum, count, moyenneGenerale);
 
+        // Remplir la map avec les moyennes
         averagesMap.put("ambiance", notes[0]);
         averagesMap.put("proprete", notes[1]);
         averagesMap.put("organisation", notes[2]);
         averagesMap.put("fairPlay", notes[3]);
         averagesMap.put("niveauJoueurs", notes[4]);
-        averagesMap.put("moyenneGenerale", (count > 0) ? (sum / count) : 0.0);
+        averagesMap.put("moyenneGenerale", moyenneGenerale);
 
-        // Arrondir à une décimale
+        // 4. Arrondir toutes les valeurs à une décimale
         averagesMap.replaceAll((key, value) -> Math.round(value * 10.0) / 10.0);
 
         log.debug("Moyennes calculées et arrondies pour clubId {}: {}", clubId, averagesMap);
@@ -127,74 +159,104 @@ public class StatsService {
 
 
     /**
-     * STAT 3: Nombre total d'événements pour un club.
-     * Sécurité: Vérifie que l'appelant est MANAGER du club.
-     * Lance 404 (Club non trouvé), 403 (Non manager).
+     * Compte le nombre total d'événements *actifs* organisés par un club spécifique.
+     * <p>
+     * Sécurité : Nécessite que l'utilisateur appelant soit gestionnaire (ADMIN ou RESERVATION) du club spécifié.
+     * </p>
+     *
+     * @param clubId L'identifiant unique du club.
+     * @return Le nombre total (long) d'événements actifs pour ce club.
+     * @throws EntityNotFoundException si le club avec l'ID spécifié n'est pas trouvé (-> HTTP 404).
+     * @throws AccessDeniedException   (ou similaire via {@code SecurityService}) si l'utilisateur n'est pas gestionnaire du club (-> HTTP 403).
+     * @throws SecurityException       (ou similaire via {@code SecurityService}) si l'utilisateur courant ne peut être identifié.
      */
     public long getTotalEventsForClub(Integer clubId) {
+        // Sécurité et vérification d'existence
         securityService.checkManagerOfClubOrThrow(clubId); // -> 403
         if (!clubRepository.existsById(clubId)) {
             throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
         }
-        return eventRepository.countByOrganisateurIdAndActif(clubId, true); // Méthode DAO simple
+        log.debug("Comptage du nombre total d'événements actifs pour clubId: {}", clubId);
+        // Appelle une méthode DAO simple qui compte les événements actifs du club
+        long count = eventRepository.countByOrganisateurIdAndActif(clubId, true);
+        log.debug("Nombre total d'événements actifs trouvés pour clubId {}: {}", clubId, count);
+        return count;
     }
 
     /**
-     * STAT 4: Taux d'occupation moyen des événements du club (capacité > 0).
-     * Sécurité: Vérifie que l'appelant est MANAGER du club.
-     * Lance 404 (Club non trouvé), 403 (Non manager).
+     * Calcule le taux d'occupation moyen (en pourcentage) pour les événements *actifs* d'un club,
+     * en ne considérant que les événements ayant une capacité totale supérieure à zéro.
+     * Le taux d'occupation est calculé comme (nombre de réservations 'CONFIRME' + 'UTILISE') / (capacité totale de l'événement).
+     * Le résultat final est la moyenne de ces taux individuels, arrondie à une décimale.
+     * <p>
+     * Sécurité : Nécessite que l'utilisateur appelant soit gestionnaire (ADMIN ou RESERVATION) du club spécifié.
+     * </p>
+     *
+     * @param clubId L'identifiant unique du club.
+     * @return Le taux d'occupation moyen (double) en pourcentage (0.0 à 100.0), arrondi à une décimale.
+     * Retourne 0.0 si aucun événement actif avec capacité > 0 n'existe pour ce club.
+     * @throws EntityNotFoundException si le club avec l'ID spécifié n'est pas trouvé (-> HTTP 404).
+     * @throws AccessDeniedException   (ou similaire via {@code SecurityService}) si l'utilisateur n'est pas gestionnaire du club (-> HTTP 403).
+     * @throws SecurityException       (ou similaire via {@code SecurityService}) si l'utilisateur courant ne peut être identifié.
      */
     public double getClubAverageEventOccupancy(Integer clubId) {
-        securityService.checkManagerOfClubOrThrow(clubId);
+        // Sécurité et vérification d'existence
+        securityService.checkManagerOfClubOrThrow(clubId); // -> 403
         if (!clubRepository.existsById(clubId)) {
-            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")");
+            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
         }
         log.debug("Calcul du taux d'occupation moyen pour clubId: {}", clubId);
 
-        // Définir les statuts de réservation à compter pour l'occupation
+        // Définir les statuts de réservation qui comptent pour l'occupation
         List<ReservationStatus> statusesToCount = List.of(ReservationStatus.CONFIRME, UTILISE);
         log.debug("Statuts considérés pour l'occupation: {}", statusesToCount);
 
-        // Appeler la méthode DAO mise à jour
+        // 1. Récupérer les statistiques nécessaires (réservations confirmées/utilisées et capacité totale)
+        //    pour chaque événement actif du club ayant une capacité > 0.
         List<Object[]> eventStatsList = eventRepository.findEventStatsForOccupancy(clubId, statusesToCount);
-        log.debug("Statistiques brutes reçues pour l'occupation ({} événements): {}", eventStatsList.size(), eventStatsList);
+        log.debug("Statistiques brutes reçues pour l'occupation ({} événements pertinents): {}", eventStatsList.size(), eventStatsList);
 
-
+        // Si aucun événement ne correspond aux critères (actif, capacité > 0)
         if (eventStatsList.isEmpty()) {
             log.debug("Aucun événement actif avec capacité > 0 trouvé pour clubId {}", clubId);
             return 0.0;
         }
 
+        // 2. Calculer le taux d'occupation pour chaque événement et faire la moyenne
         double totalOccupancyPercentageSum = 0;
-        int numberOfEventsConsidered = eventStatsList.size(); // Initialisé avec le nombre d'events retournés
+        int numberOfEventsConsidered = 0; // Compteur pour la moyenne
 
         for (Object[] stats : eventStatsList) {
-            // stats[0] = eventId (inutilisé ici)
-            // Utilisation de extractDouble pour la robustesse (même si SUM devrait retourner Long/BigDecimal)
-            long reservedCount = (long) extractDouble(stats, 1); // Nombre de CONFIRME + UTILISE
-            long totalCapacity = (long) extractDouble(stats, 2); // Capacité totale
+            // stats[0] = eventId
+            // stats[1] = count(reservations CONFIRME ou UTILISE) -> Long ou BigDecimal selon le SGBD
+            // stats[2] = sum(categories.capacite) pour cet event -> Long ou BigDecimal
+            long reservedCount = ((Number) stats[1]).longValue(); // Supposons Long retourné par SUM/COUNT
+            long totalCapacity = ((Number) stats[2]).longValue();
 
             log.debug("Stats pour Event ID {}: reserved={}, capacity={}", stats[0], reservedCount, totalCapacity);
 
-            // La clause HAVING assure totalCapacity > 0, mais une vérification reste prudente
+            // La requête DAO filtre déjà capacity > 0, mais une vérification reste saine
             if (totalCapacity > 0) {
+                // Calcul du taux pour cet événement en pourcentage
                 double eventOccupancy = ((double) reservedCount / totalCapacity) * 100.0;
                 log.debug(" Taux d'occupation pour cet événement: {}%", eventOccupancy);
                 totalOccupancyPercentageSum += eventOccupancy;
+                numberOfEventsConsidered++; // Incrémenter le compteur pour la moyenne
             } else {
-                // Ne devrait pas arriver à cause du HAVING, mais sécurité
-                log.warn("Événement ID {} retourné avec capacité <= 0 malgré HAVING clause.", stats[0]);
-                numberOfEventsConsidered--; // Décrémenter si l'événement ne doit pas être compté
+                // Log si un événement avec capacité 0 est retourné malgré le filtre (ne devrait pas arriver)
+                log.warn("Événement ID {} retourné avec capacité <= 0 malgré le filtre DAO.", stats[0]);
             }
         }
 
+        // Éviter division par zéro si aucun événement n'a pu être traité
         if (numberOfEventsConsidered == 0) {
-            log.debug("Aucun événement avec capacité > 0 n'a pu être traité.");
+            log.debug("Aucun événement avec capacité > 0 n'a pu être traité pour la moyenne.");
             return 0.0;
         }
 
+        // Calcul de la moyenne des taux
         double averageRate = totalOccupancyPercentageSum / numberOfEventsConsidered;
-        log.debug("Somme des pourcentages: {}, Nombre d'événements: {}, Taux moyen brut: {}", totalOccupancyPercentageSum, numberOfEventsConsidered, averageRate);
+        log.debug("Somme des pourcentages: {}, Nombre d'événements considérés: {}, Taux moyen brut: {}", totalOccupancyPercentageSum, numberOfEventsConsidered, averageRate);
 
         // Arrondir à 1 décimale
         double roundedAverageRate = Math.round(averageRate * 10.0) / 10.0;
@@ -204,75 +266,132 @@ public class StatsService {
 
 
     /**
-     * STAT 5: Nombre d'événements à venir (30j) pour un club.
-     * Sécurité: Vérifie que l'appelant est MANAGER du club.
-     * Lance 404 (Club non trouvé), 403 (Non manager).
+     * Compte le nombre d'événements *actifs* organisés par un club spécifique et
+     * dont la date de début est prévue dans les 30 prochains jours (à partir de maintenant).
+     * <p>
+     * Sécurité : Nécessite que l'utilisateur appelant soit gestionnaire (ADMIN ou RESERVATION) du club spécifié.
+     * </p>
+     *
+     * @param clubId L'identifiant unique du club.
+     * @return Le nombre (long) d'événements actifs prévus dans les 30 prochains jours.
+     * @throws EntityNotFoundException si le club avec l'ID spécifié n'est pas trouvé (-> HTTP 404).
+     * @throws AccessDeniedException   (ou similaire via {@code SecurityService}) si l'utilisateur n'est pas gestionnaire du club (-> HTTP 403).
+     * @throws SecurityException       (ou similaire via {@code SecurityService}) si l'utilisateur courant ne peut être identifié.
      */
     public long getClubUpcomingEventCount30d(Integer clubId) {
+        // Sécurité et vérification d'existence
         securityService.checkManagerOfClubOrThrow(clubId); // -> 403
         if (!clubRepository.existsById(clubId)) {
             throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
         }
+        log.debug("Comptage des événements à venir (30j) pour clubId: {}", clubId);
+
+        // Définir la période : de maintenant à dans 30 jours
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime futureDate = now.plusDays(30);
-        return eventRepository.countByOrganisateurIdAndActifAndStartBetween(clubId, true, now, futureDate); // Méthode DAO
+        log.debug("Période de recherche des événements à venir: de {} à {}", now, futureDate);
+
+        // Appelle une méthode DAO qui compte les événements actifs dans la période donnée
+        long count = eventRepository.countByOrganisateurIdAndActifAndStartBetween(clubId, true, now, futureDate);
+        log.debug("Nombre d'événements actifs à venir (30j) trouvés pour clubId {}: {}", clubId, count);
+        return count;
     }
 
 
     // --- Méthodes Helper Privées ---
 
+    /**
+     * Formate les résultats bruts d'agrégation mensuelle (année, mois, compte) en une liste
+     * de maps pour l'API, en s'assurant que tous les mois de la période demandée sont présents
+     * (avec une valeur de 0 si aucune donnée n'a été retournée par la BDD pour ce mois).
+     *
+     * @param results   Liste de {@code Object[]} contenant [année (Number), mois (Number), compte (Number)] issue du DAO.
+     * @param startDate La date de début de la période (utilisée pour déterminer le premier mois).
+     * @param today     La date de fin de la période (utilisée pour déterminer le dernier mois).
+     * @return Une liste de {@code Map<String, Object>} triée chronologiquement, chaque map contenant "monthYear" et "count".
+     */
     private List<Map<String, Object>> formatMonthlyResults(List<Object[]> results, LocalDateTime startDate, LocalDateTime today) {
-        Map<YearMonth, Long> monthlyCounts = new TreeMap<>(); // TreeMap pour trier par clé (YearMonth)
+        // Utilise TreeMap pour garantir l'ordre chronologique des mois
+        Map<YearMonth, Long> monthlyCounts = new TreeMap<>();
         YearMonth startMonth = YearMonth.from(startDate);
         YearMonth endMonth = YearMonth.from(today);
 
-        // Initialiser les 12 derniers mois (ou moins si l'app est plus récente)
+        // 1. Initialiser la map avec 0 pour tous les mois de la période
         YearMonth current = startMonth;
         while (!current.isAfter(endMonth)) {
             monthlyCounts.put(current, 0L);
             current = current.plusMonths(1);
         }
+        log.trace("Map des mois initialisée ({} mois): {}", monthlyCounts.size(), monthlyCounts.keySet());
 
-        // Remplir avec les résultats de la BDD
+        // 2. Remplir la map avec les comptes réels issus de la base de données
         for (Object[] result : results) {
             try {
-                if (result[0] != null && result[1] != null && result[2] != null) {
+                // Vérification de nullité pour robustesse
+                if (result != null && result.length >= 3 && result[0] != null && result[1] != null && result[2] != null) {
                     int year = ((Number) result[0]).intValue();
                     int month = ((Number) result[1]).intValue();
                     long count = ((Number) result[2]).longValue();
                     YearMonth ym = YearMonth.of(year, month);
-                    if (monthlyCounts.containsKey(ym)) { // Mettre à jour seulement les mois pré-initialisés
+                    // Mettre à jour la valeur si le mois est bien dans notre période initialisée
+                    if (monthlyCounts.containsKey(ym)) {
                         monthlyCounts.put(ym, count);
+                        log.trace("Mise à jour pour {}: {}", ym, count);
+                    } else {
+                        log.warn("Résultat reçu pour un mois hors période initialisée: {}", ym);
                     }
+                } else {
+                    log.warn("Résultat brut invalide ou incomplet ignoré: {}", Arrays.toString(result));
                 }
             } catch (Exception e) {
-                System.err.println("Erreur formatage adhésions mensuelles: " + Arrays.toString(result) + " - " + e.getMessage()); // -> Logger
+                // Log l'erreur mais continue le traitement des autres résultats
+                log.error("Erreur lors du formatage d'un résultat d'adhésion mensuelle: {} - {}", Arrays.toString(result), e.getMessage(), e);
             }
         }
 
-        // Formater pour la sortie API
+        // 3. Formater la map en liste de maps pour la sortie JSON
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
         return monthlyCounts.entrySet().stream()
-                .map(entry -> Map.<String, Object>of("monthYear", entry.getKey().format(formatter), "count", entry.getValue()))
+                .map(entry -> Map.<String, Object>of(
+                        "monthYear", entry.getKey().format(formatter),
+                        "count", entry.getValue()
+                ))
                 .collect(Collectors.toList());
     }
 
-    // Helper method to safely extract Double from Object array (handles null and different number types)
+    /**
+     * Méthode utilitaire pour extraire en toute sécurité une valeur de type double
+     * d'un tableau d'objets, en gérant les cas null et les différents types numériques.
+     *
+     * @param array Le tableau d'objets.
+     * @param index L'index de l'élément à extraire.
+     * @return La valeur double extraite, ou 0.0 si la valeur est null, l'index invalide,
+     * ou si le type n'est pas un {@link Number}.
+     */
     private double extractDouble(Object[] array, int index) {
+        // Vérifications de base pour éviter les erreurs
         if (array == null || index < 0 || index >= array.length || array[index] == null) {
-            log.debug("extractDouble: Valeur nulle ou index invalide à l'index {}", index);
-            return 0.0; // AVG retourne NULL si aucune ligne, on représente ça par 0.0
+            log.debug("extractDouble: Valeur nulle ou index invalide ({}) dans le tableau.", index);
+            return 0.0; // Convention : une absence de valeur (AVG=NULL) est représentée par 0.0
         }
         Object value = array[index];
+        // Vérifie si la valeur est un type numérique standard (Long, Integer, Double, BigDecimal...)
         if (value instanceof Number) {
-            // Convertit n'importe quel Number (Double, BigDecimal, Long etc.) en double
+            // Convertit en double
             return ((Number) value).doubleValue();
         } else {
-            log.warn("extractDouble: Type inattendu {} à l'index {}", value.getClass().getName(), index);
-            return 0.0; // Retourne 0.0 si le type est inattendu
+            // Log un avertissement si un type inattendu est rencontré
+            log.warn("extractDouble: Type inattendu {} trouvé à l'index {}. Retourne 0.0.", value.getClass().getName(), index);
+            return 0.0;
         }
     }
 
+    /**
+     * Retourne une map pré-remplie avec toutes les clés de notation et une valeur de 0.0.
+     * Utilisé comme valeur par défaut lorsque aucune notation n'est disponible.
+     *
+     * @return Une {@link LinkedHashMap} avec les clés de notation initialisées à 0.0.
+     */
     private Map<String, Double> defaultRatingMap() {
         Map<String, Double> map = new LinkedHashMap<>();
         map.put("ambiance", 0.0);
@@ -284,41 +403,91 @@ public class StatsService {
         return map;
     }
 
-    // Méthode pour récupérer une moyenne optionnelle et retourner 0.0 si absente
+    /**
+     * Méthode utilitaire (non utilisée dans le code fourni mais potentiellement utile)
+     * pour obtenir la valeur d'un {@code Optional<Double>} ou 0.0 si l'Optional est vide.
+     *
+     * @param avgOpt L'Optional contenant potentiellement une moyenne.
+     * @return La valeur double de l'Optional, ou 0.0 si vide.
+     */
     private double getAverageOrDefault(Optional<Double> avgOpt) {
         return avgOpt.orElse(0.0);
     }
 
     /**
-     * Récupère le nombre de membres considérés comme actifs pour un club.
-     * La définition d'"actif" dépend de tes règles métier (ex: statut, date dernière activité...).
+     * Compte le nombre total de membres actifs associés à un club spécifique.
+     * L'activité est déterminée par l'existence d'une adhésion valide dans la table `Adhesion`.
+     * <p>
+     * Sécurité : Nécessite que l'utilisateur appelant soit gestionnaire (ADMIN ou RESERVATION) du club spécifié.
+     * </p>
+     *
+     * @param clubId L'identifiant unique du club.
+     * @return Le nombre (long) de membres ayant une adhésion active pour ce club.
+     * @throws EntityNotFoundException si le club avec l'ID spécifié n'est pas trouvé (-> HTTP 404).
+     * @throws AccessDeniedException   (ou similaire via {@code SecurityService}) si l'utilisateur n'est pas gestionnaire du club (-> HTTP 403).
+     * @throws SecurityException       (ou similaire via {@code SecurityService}) si l'utilisateur courant ne peut être identifié.
      */
     public long getTotalActiveMembersForClub(Integer clubId) {
-        // Vérifications sécurité/existence club...
-        // Exemple simple : Compter les utilisateurs liés au club avec un statut "ACTIF"
-        // return userRepository.countByClubIdAndStatus(clubId, UserStatus.ACTIVE);
-        // Adapte cette logique à ta structure de données (Membership, User, etc.)
-        long count = adhesionRepository.countActiveMembersByClubId(clubId); // Supposons un champ 'actif'
-        System.out.println("Membres actifs pour Club " + clubId + ": " + count); // Log pour debug
+        // Sécurité et vérification d'existence ajoutées pour cohérence
+        securityService.checkManagerOfClubOrThrow(clubId); // -> 403
+        if (!clubRepository.existsById(clubId)) {
+            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
+        }
+        log.debug("Comptage des membres actifs pour clubId: {}", clubId);
+        // Appelle une méthode DAO qui compte les adhésions (supposées représenter les membres actifs du club)
+        long count = adhesionRepository.countActiveMembersByClubId(clubId); // Nom de méthode supposé
+        log.debug("Nombre de membres actifs trouvés pour Club {}: {}", clubId, count);
         return count;
     }
 
     /**
-     * Récupère le nombre total de participations enregistrées à tous les événements passés du club.
+     * Compte le nombre total de participations confirmées (réservations avec statut {@link ReservationStatus#UTILISE})
+     * à tous les événements organisés par un club spécifique.
+     * <p>
+     * Sécurité : Nécessite que l'utilisateur appelant soit gestionnaire (ADMIN ou RESERVATION) du club spécifié.
+     * </p>
+     *
+     * @param clubId L'identifiant unique du club organisateur.
+     * @return Le nombre total (long) de réservations marquées comme 'UTILISE' pour les événements de ce club.
+     * @throws EntityNotFoundException si le club avec l'ID spécifié n'est pas trouvé (-> HTTP 404).
+     * @throws AccessDeniedException   (ou similaire via {@code SecurityService}) si l'utilisateur n'est pas gestionnaire du club (-> HTTP 403).
+     * @throws SecurityException       (ou similaire via {@code SecurityService}) si l'utilisateur courant ne peut être identifié.
      */
     public long getTotalEventParticipationsForClub(Integer clubId) {
-        long totalParticipations = reservationRepository.countByStatusAndEventOrganisateurId(UTILISE, clubId); // Supposons une entité Inscription
-        System.out.println("Participations totales pour Club " + clubId + ": " + totalParticipations); // Log pour debug
+        // Sécurité et vérification d'existence ajoutées pour cohérence
+        securityService.checkManagerOfClubOrThrow(clubId); // -> 403
+        if (!clubRepository.existsById(clubId)) {
+            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
+        }
+        log.debug("Comptage des participations totales (statut UTILISE) pour clubId: {}", clubId);
+        // Appelle une méthode DAO qui compte les réservations au statut UTILISE pour les événements du club
+        long totalParticipations = reservationRepository.countByStatusAndEventOrganisateurId(UTILISE, clubId);
+        log.debug("Nombre total de participations (UTILISE) trouvées pour Club {}: {}", clubId, totalParticipations);
         return totalParticipations;
     }
 
+    /**
+     * Récupère un résumé complet des statistiques clés pour le tableau de bord d'un club spécifique.
+     * Agrège les résultats de plusieurs autres méthodes de ce service.
+     * <p>
+     * Sécurité : Nécessite que l'utilisateur appelant soit gestionnaire (ADMIN ou RESERVATION) du club spécifié.
+     * </p>
+     *
+     * @param clubId L'identifiant unique du club.
+     * @return Un objet {@link DashboardSummaryDto} contenant diverses statistiques agrégées pour le club.
+     * @throws EntityNotFoundException si le club avec l'ID spécifié n'est pas trouvé (-> HTTP 404).
+     * @throws AccessDeniedException   (ou similaire via {@code SecurityService}) si l'utilisateur n'est pas gestionnaire du club (-> HTTP 403).
+     * @throws SecurityException       (ou similaire via {@code SecurityService}) si l'utilisateur courant ne peut être identifié.
+     */
     public DashboardSummaryDto getDashboardSummary(Integer clubId) {
-        securityService.checkManagerOfClubOrThrow(clubId);
+        // Sécurité et vérification d'existence (effectuées une seule fois ici)
+        securityService.checkManagerOfClubOrThrow(clubId); // -> 403
         if (!clubRepository.existsById(clubId)) {
-            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")");
+            throw new EntityNotFoundException("Club non trouvé (ID: " + clubId + ")"); // -> 404
         }
+        log.info("Génération du résumé du tableau de bord pour clubId: {}", clubId); // Log info pour cette action globale
 
-        // Appelle les méthodes existantes
+        // Appelle les différentes méthodes de calcul de statistiques (sécurité déjà vérifiée)
         long totalEvents = this.getTotalEventsForClub(clubId);
         long upcomingCount = this.getClubUpcomingEventCount30d(clubId);
         double avgOccupancy = this.getClubAverageEventOccupancy(clubId);
@@ -326,26 +495,40 @@ public class StatsService {
         long totalParticipations = this.getTotalEventParticipationsForClub(clubId);
         List<Map<String, Object>> registrations = this.getClubMonthlyRegistrations(clubId);
         Map<String, Double> ratings = this.getClubAverageEventRatings(clubId);
-        // Appelle les autres si tu les inclus dans le DTO...
 
-        // Construit et retourne le DTO
-        return DashboardSummaryDto.builder()
+        // Construit et retourne le DTO avec les résultats agrégés
+        DashboardSummaryDto summary = DashboardSummaryDto.builder()
                 .totalEvents(totalEvents)
                 .upcomingEventsCount30d(upcomingCount)
                 .averageEventOccupancyRate(avgOccupancy)
                 .totalActiveMembers(totalActiveMembers)
                 .totalParticipations(totalParticipations)
-                .monthlyRegistrations(registrations) // Ajouté
+                .monthlyRegistrations(registrations)
                 .averageEventRatings(ratings)
                 .build();
+
+        log.info("Résumé du tableau de bord généré avec succès pour clubId: {}", clubId);
+        return summary;
     }
 
+    /**
+     * Récupère des statistiques globales de la plateforme (nombre total de clubs, d'événements et de membres enregistrés).
+     * Ces statistiques sont destinées à une page d'accueil publique et n'appliquent pas de filtres spécifiques
+     * (comme "actif" ou "réussi") sauf si les méthodes DAO sous-jacentes (`.count()`) le font.
+     * <p>
+     * Sécurité : Aucune restriction d'accès spécifique, destiné à être public.
+     * </p>
+     *
+     * @return Un objet {@link HomepageStatsDTO} contenant les décomptes globaux.
+     */
     public HomepageStatsDTO getHomepageStats() {
-        // Remplacez .count() par la logique appropriée si nécessaire
-        // (ex: compter seulement les clubs actifs, les événements réussis, les membres actifs)
+        log.info("Récupération des statistiques globales pour la page d'accueil.");
+        // Compte simple des entités totales dans les tables respectives.
+        // Adaptez si des filtres globaux (ex: compter seulement clubs actifs) sont nécessaires.
         long clubs = clubRepository.count();
-        long events = eventRepository.count(); // Adaptez pour compter les "succès" si besoin
-        long members = membreRepository.count(); // Adaptez pour compter les "actifs" si besoin
+        long events = eventRepository.count();
+        long members = membreRepository.count();
+        log.info("Statistiques globales trouvées: Clubs={}, Events={}, Members={}", clubs, events, members);
 
         return new HomepageStatsDTO(clubs, events, members);
     }
