@@ -66,7 +66,7 @@ public class MembreController {
      */
     @PutMapping("/profile")
     @IsConnected
-    @JsonView(GlobalView.MembreView.class)
+    @JsonView(GlobalView.ProfilView.class)
     public Membre updateMyProfile(@Valid @RequestBody UpdateMembreDto updateMembreDto) {
         // Le service utilisera l'ID de l'utilisateur courant
         return membreService.updateMyProfile(updateMembreDto);

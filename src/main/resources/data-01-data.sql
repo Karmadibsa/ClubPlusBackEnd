@@ -308,7 +308,9 @@ INSERT INTO reservations (membre_id, event_id, categorie_id, date_reservation, r
 VALUES -- Réservations pour MEMBREs uniquement
        -- Insérez ces lignes après votre `INSERT INTO reservations (...) VALUES`
        (4, 1, 1, '2025-02-01 09:00:00', UUID(), 'UTILISE'),     -- Membre 4 @ Event 1 (Passé) / Cat 1
+       (3, 1, 1, '2025-02-01 09:00:00', UUID(), 'UTILISE'),     -- Membre 4 @ Event 1 (Passé) / Cat 1
        (5, 2, 4, '2025-03-10 10:30:00', UUID(), 'UTILISE'),     -- Membre 5 @ Event 2 (Passé) / Cat 4
+       (3, 2, 4, '2025-03-10 10:30:00', UUID(), 'UTILISE'),     -- Membre 5 @ Event 2 (Passé) / Cat 4
        (6, 3, 6, '2025-05-15 11:00:00', UUID(), 'CONFIRME'),    -- Membre 6 @ Event 3 (Futur) / Cat 6
        (7, 4, 8, '2025-04-18 14:00:00', UUID(), 'UTILISE'),     -- Membre 7 @ Event 4 (Passé récent) / Cat 8
        (8, 7, 13, '2025-02-20 15:00:00', UUID(), 'UTILISE'),    -- Membre 8 @ Event 7 (Passé) / Cat 13
@@ -398,14 +400,12 @@ VALUES -- Interactions entre MEMBREs uniquement
 INSERT INTO notations (event_id, membre_id, ambiance, proprete, organisation, fair_play, niveau_joueurs, date_notation)
 VALUES (1, 1, 5, 4, 5, 5, 4, '2025-02-16 10:00:00'),   -- Alice (ADMIN) note Event 1
        (2, 1, 5, 5, 4, 5, 3, '2025-03-21 10:00:00'),   -- Alice (ADMIN) note Event 2
-       (2, 3, 4, 4, 3, 4, 3, '2025-03-21 11:00:00'),   -- Bob (MEMBRE) note Event 2
        (7, 5, 5, 4, 4, 5, 4, '2025-03-02 09:00:00'),   -- Eva (MEMBRE) note Event 7
        (7, 6, 4, 5, 5, 4, 3, '2025-03-02 10:00:00'),
        -- Nouvelles notations par des MEMBRES pour des événements PASSÉS (1, 2, 10, 13)
        (1, 4, 5, 4, 5, 5, 4, '2025-02-17 09:00:00'),   -- David (MEMBRE) note Event 1 (Badminton)
        (10, 13, 3, 5, 4, 5, 2, '2025-04-13 10:00:00'), -- Isabelle (MEMBRE) note Event 10 (Nettoyage)
        (10, 15, 4, 5, 5, 5, 1, '2025-04-13 11:00:00'), -- Karim (MEMBRE) note Event 10 (Nettoyage)
-       (13, 3, 5, 4, 4, 5, 3, '2025-04-02 10:00:00'),  -- Bob (MEMBRE) note Event 13 (Apéro)
        (13, 12, 4, 3, 3, 4, 2, '2025-04-02 11:00:00'),
        -- Ajoutez ces lignes après vos `VALUES` existants pour la table `notations`
 
@@ -414,7 +414,6 @@ VALUES (1, 1, 5, 4, 5, 5, 4, '2025-02-16 10:00:00'),   -- Alice (ADMIN) note Eve
        (2, 4, 4, 3, 4, 5, 3, '2025-03-21 12:00:00'),   -- David (4) note aussi Event 2 (Soirée Mars passée)
        (1, 5, 5, 5, 4, 5, 4, '2025-02-16 11:00:00'),   -- Eva (5) note Event 1 (Badminton passé)
        (10, 12, 4, 5, 4, 5, 2, '2025-04-13 12:00:00'), -- Hélène (12) note aussi Event 10 (Nettoyage passé)
-       (7, 3, 5, 4, 4, 5, 3, '2025-03-02 11:00:00'),   -- Bob (3) note aussi Event 7 (Stage Padel Lyon passé)
        (1, 6, 4, 4, 5, 4, 4, '2025-02-17 10:00:00'),   -- Ethelda (6) note Event 1
        (13, 5, 5, 3, 4, 5, 3, '2025-04-02 12:00:00');
 -- Eva (5) note aussi Event 13 (Apéro passé)
