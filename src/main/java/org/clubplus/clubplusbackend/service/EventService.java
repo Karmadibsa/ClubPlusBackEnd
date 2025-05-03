@@ -197,43 +197,7 @@ public class EventService {
 
 
     // --- Méthodes d'Écriture (CRUD avec Sécurité) ---
-
-    /**
-     * Crée un nouvel événement pour un club.
-     * Sécurité: Vérifie que l'utilisateur est MANAGER du club organisateur.
-     * Lance 404 (Club non trouvé), 403 (Non manager), 400 (Données invalides).
-     */
-    public Event createEvent(Integer organisateurId, CreateEventDto eventDto) {
-        // 1. Sécurité: Vérifier si l'utilisateur courant est manager du club organisateur
-        securityService.checkManagerOfClubOrThrow(organisateurId);
-
-        // 2. Récupérer le club organisateur
-        Club organisateur = clubRepository.findById(organisateurId)
-                .orElseThrow(() -> new IllegalStateException("Probleme au niveau de la recuperation du club"));
-
-        // 3. Créer la nouvelle entité Event
-        Event newEvent = new Event();
-
-        // 4. Mapper les champs du DTO vers l'entité
-        newEvent.setNom(eventDto.getNom());
-        newEvent.setStart(eventDto.getStart());
-        newEvent.setEnd(eventDto.getEnd());
-        newEvent.setDescription(eventDto.getDescription());
-        newEvent.setLocation(eventDto.getLocation());
-
-        // 5. Définir l'organisateur et l'état initial
-        newEvent.setOrganisateur(organisateur); // <-- L'assignation clé !
-        newEvent.setActif(true); // Par défaut, un nouvel événement est actif
-
-        // 6. Validation métier supplémentaire (ex: start < end)
-        if (newEvent.getStart().isAfter(newEvent.getEnd())) {
-            throw new IllegalArgumentException("La date de début doit être avant la date de fin.");
-            // Ou une exception plus spécifique gérée par GlobalExceptionHandler -> 400
-        }
-
-        // 7. Sauvegarder
-        return eventRepository.save(newEvent);
-    }
+    
 
     /**
      * Met à jour un événement.

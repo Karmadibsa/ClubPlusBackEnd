@@ -1,85 +1,175 @@
-package org.clubplus.clubplusbackend.dto; // Créez un package dto si ce n'est pas fait
+package org.clubplus.clubplusbackend.dto;
 
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Data;
+import org.clubplus.clubplusbackend.model.Club;
+import org.clubplus.clubplusbackend.model.Membre;
 
 import java.time.LocalDate;
 
-@Data // Raccourci Lombok pour @Getter, @Setter, @ToString, @EqualsAndHashCode, @RequiredArgsConstructor
+/**
+ * DTO (Data Transfer Object) utilisé pour recevoir les informations nécessaires
+ * à la création simultanée d'un nouveau {@link Club} et de son {@link Membre} administrateur initial.
+ * Cette structure agrège les champs du club et les champs de l'administrateur (via une classe interne {@link AdminInfo}),
+ * permettant de tout créer en une seule requête API.
+ * Inclut des annotations de validation pour tous les champs requis.
+ *
+ * @see Club
+ * @see Membre
+ * @see org.clubplus.clubplusbackend.controller.ClubController#createClubAndAdmin(CreateClubRequestDto)
+ */
+@Data // Lombok: Raccourci pour @Getter, @Setter, @ToString, @EqualsAndHashCode, @RequiredArgsConstructor.
 public class CreateClubRequestDto {
 
-    // --- Champs Club ---
+    // --- Champs pour l'entité Club ---
+
+    /**
+     * Nom du nouveau club. Obligatoire, taille entre 2 et 100 caractères.
+     */
     @NotBlank(message = "Le nom du club ne peut pas être vide.")
-    @Size(min = 2, max = 100)
+    @Size(min = 2, max = 100, message = "Le nom du club doit avoir entre 2 et 100 caractères.")
     private String nom;
 
+    /**
+     * Date de création "réelle" du club (fournie par l'utilisateur). Obligatoire et doit être dans le passé ou aujourd'hui.
+     */
     @NotNull(message = "La date de création 'réelle' du club est obligatoire.")
     @PastOrPresent(message = "La date de création doit être dans le passé ou aujourd'hui.")
-    private LocalDate date_creation; // Date "réelle" fournie par l'utilisateur
+    private LocalDate date_creation; // La date d'inscription système sera gérée par l'entité/service.
 
-    @NotBlank
-    @Size(max = 10)
+    /**
+     * Numéro de voie de l'adresse du club. Obligatoire, max 10 caractères.
+     */
+    @NotBlank(message = "Le numéro de voie est obligatoire.")
+    @Size(max = 10, message = "Le numéro de voie ne doit pas dépasser 10 caractères.")
     private String numero_voie;
-    @NotBlank
-    @Size(max = 100)
+
+    /**
+     * Rue de l'adresse du club. Obligatoire, max 100 caractères.
+     */
+    @NotBlank(message = "La rue est obligatoire.")
+    @Size(max = 100, message = "La rue ne doit pas dépasser 100 caractères.")
     private String rue;
-    @NotBlank
-    @Size(min = 3, max = 10)
+
+    /**
+     * Code postal du club. Obligatoire, entre 3 et 10 caractères.
+     */
+    @NotBlank(message = "Le code postal est obligatoire.")
+    @Size(min = 3, max = 10, message = "Le code postal doit contenir entre 3 et 10 caractères.")
     private String codepostal;
-    @NotBlank
-    @Size(max = 100)
+
+    /**
+     * Ville du club. Obligatoire, max 100 caractères.
+     */
+    @NotBlank(message = "La ville est obligatoire.")
+    @Size(max = 100, message = "La ville ne doit pas dépasser 100 caractères.")
     private String ville;
-    @NotBlank
-    @Size(max = 20)
+
+    /**
+     * Numéro de téléphone principal du club. Obligatoire, max 20 caractères.
+     */
+    @NotBlank(message = "Le numéro de téléphone est obligatoire.")
+    @Size(max = 20, message = "Le numéro de téléphone ne doit pas dépasser 20 caractères.")
     private String telephone;
 
+    /**
+     * Adresse email principale du club. Obligatoire, format email valide, max 254 caractères. Doit être unique.
+     */
     @NotBlank(message = "L'email du club est obligatoire.")
-    @Email
-    @Size(max = 254)
+    @Email(message = "Le format de l'email du club est invalide.")
+    @Size(max = 254, message = "L'email du club ne doit pas dépasser 254 caractères.")
     private String email;
 
-    // --- Champs Admin Imbriqué ---
+    // --- Champs pour l'entité Membre (Admin) via Classe Interne ---
+
+    /**
+     * Informations détaillées de l'administrateur initial à créer pour ce club.
+     * Cet objet imbriqué est obligatoire et ses propres champs sont également validés
+     * grâce à l'annotation {@link Valid @Valid}.
+     */
     @NotNull(message = "Les informations de l'administrateur sont requises.")
-    @Valid // !!! TRÈS IMPORTANT: Valide les contraintes DANS AdminInfo !!!
+    @Valid // Annotation cruciale pour déclencher la validation des champs dans AdminInfo.
     private AdminInfo admin;
 
-    // Classe interne statique pour les détails de l'admin
+    /**
+     * Classe interne statique encapsulant les informations requises pour créer le
+     * membre administrateur initial du club.
+     * Utilise {@link Data @Data} de Lombok pour la concision.
+     */
     @Data // Lombok pour getters/setters etc. sur l'admin
     public static class AdminInfo {
-        @NotBlank
-        @Size(min = 2, max = 50)
+
+        /**
+         * Nom de famille de l'admin. Obligatoire, taille entre 2 et 50.
+         */
+        @NotBlank(message = "Le nom de l'admin est obligatoire.")
+        @Size(min = 2, max = 50, message = "Le nom de l'admin doit avoir entre 2 et 50 caractères.")
         private String nom;
-        @NotBlank
-        @Size(min = 2, max = 50)
+
+        /**
+         * Prénom de l'admin. Obligatoire, taille entre 2 et 50.
+         */
+        @NotBlank(message = "Le prénom de l'admin est obligatoire.")
+        @Size(min = 2, max = 50, message = "Le prénom de l'admin doit avoir entre 2 et 50 caractères.")
         private String prenom;
 
-        @NotNull
-        @Past // Validation date naissance
+        /**
+         * Date de naissance de l'admin. Obligatoire et doit être dans le passé.
+         */
+        @NotNull(message = "La date de naissance de l'admin est obligatoire.")
+        @Past(message = "La date de naissance de l'admin doit être dans le passé.")
         private LocalDate date_naissance;
 
-        @NotBlank
-        @Size(max = 10)
+        /**
+         * Numéro de voie de l'adresse de l'admin. Obligatoire, max 10.
+         */
+        @NotBlank(message = "Le numéro de voie de l'admin est obligatoire.")
+        @Size(max = 10, message = "Le numéro de voie de l'admin ne doit pas dépasser 10 caractères.")
         private String numero_voie;
-        @NotBlank
-        @Size(max = 100)
+
+        /**
+         * Rue de l'adresse de l'admin. Obligatoire, max 100.
+         */
+        @NotBlank(message = "La rue de l'admin est obligatoire.")
+        @Size(max = 100, message = "La rue de l'admin ne doit pas dépasser 100 caractères.")
         private String rue;
-        @NotBlank
-        @Size(min = 3, max = 10)
+
+        /**
+         * Code postal de l'admin. Obligatoire, entre 3 et 10.
+         */
+        @NotBlank(message = "Le code postal de l'admin est obligatoire.")
+        @Size(min = 3, max = 10, message = "Le code postal de l'admin doit contenir entre 3 et 10 caractères.")
         private String codepostal;
-        @NotBlank
-        @Size(max = 100)
+
+        /**
+         * Ville de l'admin. Obligatoire, max 100.
+         */
+        @NotBlank(message = "La ville de l'admin est obligatoire.")
+        @Size(max = 100, message = "La ville de l'admin ne doit pas dépasser 100 caractères.")
         private String ville;
-        @NotBlank
-        @Size(max = 20)
+
+        /**
+         * Numéro de téléphone de l'admin. Obligatoire, max 20.
+         */
+        @NotBlank(message = "Le numéro de téléphone de l'admin est obligatoire.")
+        @Size(max = 20, message = "Le numéro de téléphone de l'admin ne doit pas dépasser 20 caractères.")
         private String telephone;
 
-        @NotBlank
-        @Email
-        @Size(max = 254)
+        /**
+         * Adresse email de l'admin. Obligatoire, format email, max 254. Doit être unique parmi les membres.
+         */
+        @NotBlank(message = "L'email de l'admin est obligatoire.")
+        @Email(message = "Le format de l'email de l'admin est invalide.")
+        @Size(max = 254, message = "L'email de l'admin ne doit pas dépasser 254 caractères.")
         private String email;
 
+        /**
+         * Mot de passe choisi pour l'admin. Obligatoire, taille entre 8 et 100. Doit être haché avant persistance.
+         */
         @NotBlank(message = "Le mot de passe admin est obligatoire.")
+        @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#&()\\-\\[{}\\]:;',?/*~$^+=<>]).{8,100}$",
+                message = "Le mot de passe doit faire entre 8 et 100 caractères et contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial (!@#&()...)")
         @Size(min = 8, max = 100, message = "Le mot de passe doit avoir entre 8 et 100 caractères.")
         private String password;
     }
