@@ -1,7 +1,7 @@
 package org.clubplus.clubplusbackend.dao;
 
 import org.clubplus.clubplusbackend.model.Reservation;
-import org.clubplus.clubplusbackend.security.ReservationStatus;
+import org.clubplus.clubplusbackend.model.ReservationStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

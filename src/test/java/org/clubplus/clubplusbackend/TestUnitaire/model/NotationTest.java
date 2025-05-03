@@ -426,7 +426,7 @@ public class NotationTest {
         @DisplayName("equals: comparaison avec null => false")
         void equals_compareWithNull_shouldBeFalse() {
             Notation n1 = createNotation(event1, membre1, 1, 3, LocalDateTime.now());
-            assertFalse(n1.equals(null));
+            assertNotEquals(null, n1);
         }
 
         @Test
@@ -434,7 +434,7 @@ public class NotationTest {
         void equals_compareWithDifferentClass_shouldBeFalse() {
             Notation n1 = createNotation(event1, membre1, 1, 3, LocalDateTime.now());
             Object autre = new Object();
-            assertFalse(n1.equals(autre));
+            assertNotEquals(n1, autre);
         }
 
         @Test

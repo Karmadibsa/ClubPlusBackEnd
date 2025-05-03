@@ -6,7 +6,7 @@ import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import org.clubplus.clubplusbackend.model.DemandeAmi;
 import org.clubplus.clubplusbackend.model.Membre;
-import org.clubplus.clubplusbackend.security.Statut;
+import org.clubplus.clubplusbackend.model.Statut;
 import org.junit.jupiter.api.*;
 
 import java.time.LocalDateTime;
@@ -342,7 +342,7 @@ public class DemandeAmiTest {
         @DisplayName("equals: comparaison avec null => false")
         void equals_compareWithNull_shouldBeFalse() {
             DemandeAmi d1 = createDemande(envoyeur1, recepteur1, 100, Statut.ATTENTE);
-            assertFalse(d1.equals(null));
+            assertNotEquals(null, d1);
         }
 
         @Test
@@ -350,7 +350,7 @@ public class DemandeAmiTest {
         void equals_compareWithDifferentClass_shouldBeFalse() {
             DemandeAmi d1 = createDemande(envoyeur1, recepteur1, 100, Statut.ATTENTE);
             Object autre = new Object();
-            assertFalse(d1.equals(autre));
+            assertNotEquals(d1, autre);
         }
 
         @Test

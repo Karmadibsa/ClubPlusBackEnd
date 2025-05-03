@@ -22,166 +22,278 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
+/**
+ * Contrôleur REST gérant les opérations relatives aux entités {@link Club}.
+ * Fournit des endpoints pour la création, la lecture (individuelle, par code, liste),
+ * la mise à jour et la suppression (désactivation) des clubs.
+ * Gère également la récupération des membres, de l'administrateur et des événements
+ * associés à un club spécifique.
+ * La sécurité est appliquée via des annotations personnalisées et des vérifications
+ * contextuelles dans les services appelés.
+ * Le chemin de base pour ce contrôleur est "/api/clubs".
+ */
 @RestController
-@RequestMapping("/api/clubs")
-@RequiredArgsConstructor
-@CrossOrigin // Si nécessaire
+@RequestMapping("/api/clubs") // Chemin de base pour les opérations sur les clubs
+@RequiredArgsConstructor // Injection via constructeur pour les champs final (Lombok)
+@CrossOrigin // Activation de CORS si nécessaire au niveau du contrôleur (peut être géré globalement)
 public class ClubController {
 
+    /**
+     * Service pour la logique métier liée aux clubs.
+     */
     private final ClubService clubService;
-    private final EventService eventService; // Supposé exister pour les events
+    /**
+     * Service pour la logique métier liée aux événements (utilisé pour lister les événements d'un club).
+     */
+    private final EventService eventService;
 
     /**
-     * GET /api/clubs
-     * Récupère la liste de tous les clubs (infos de base).
-     * Sécurité: Tout utilisateur authentifié.
-     * Exceptions: Aucune attendue (sauf erreur serveur 500).
+     * Récupère une liste de tous les clubs avec des informations de base.
+     * Endpoint: GET /api/clubs
+     * Sécurité: Requiert une authentification avec au moins le rôle MEMBRE ({@code @IsMembre}).
+     *
+     * @return Une {@code List<Club>} contenant les informations de base de tous les clubs,
+     * sérialisée selon la vue {@link GlobalView.Base}.
+     * @see ClubService#findAllClubs()
+     * @see GlobalView.Base
+     * @see IsMembre
      */
     @GetMapping
-    @IsMembre
-    @JsonView(GlobalView.Base.class)
+    @IsMembre // Requiert au minimum le rôle MEMBRE
+    @JsonView(GlobalView.Base.class) // Vue JSON limitée aux infos de base
     public List<Club> getAllClubs() {
         return clubService.findAllClubs();
     }
 
     /**
-     * GET /api/clubs/{id}
-     * Récupère les détails d'un club par ID.
-     * Sécurité: Authentifié + Membre du club (vérifié dans le service).
-     * Exceptions (gérées globalement): 404 (Club non trouvé), 403 (Non membre).
+     * Récupère les détails complets d'un club spécifique par son identifiant numérique.
+     * Endpoint: GET /api/clubs/{id}
+     * Sécurité: Requiert un rôle suffisant (ex: RESERVATION via {@code @IsReservation}) ET
+     * que l'utilisateur soit membre du club concerné (vérification effectuée dans le service).
+     *
+     * @param id L'identifiant unique (Integer) du club à récupérer. Provient du chemin de l'URL.
+     * @return L'objet {@link Club} complet correspondant à l'ID fourni, sérialisé selon la vue {@link GlobalView.ClubView}.
+     * @throws org.clubplus.clubplusbackend.exception.ClubNotFoundException Si aucun club avec cet ID n'est trouvé (géré globalement -> 404 Not Found).
+     * @throws org.springframework.security.access.AccessDeniedException    Si l'utilisateur n'est pas membre du club
+     *                                                                      ou n'a pas le rôle requis (géré globalement -> 403 Forbidden).
+     * @see ClubService#getClubByIdWithSecurityCheck(Integer)
+     * @see GlobalView.ClubView
+     * @see IsReservation
      */
     @GetMapping("/{id}")
-    @IsReservation
-    @JsonView(GlobalView.ClubView.class)
+    @IsReservation // Requiert un rôle suffisant (RESERVATION ou ADMIN)
+    @JsonView(GlobalView.ClubView.class) // Vue JSON détaillée du club
     public Club getClubById(@PathVariable Integer id) {
-        // Le service gère existence + sécurité contextuelle (membre)
+        // Le service gère la recherche, l'existence et la vérification de l'appartenance au club.
         return clubService.getClubByIdWithSecurityCheck(id);
     }
 
     /**
-     * GET /api/clubs/code/{codeClub}
-     * Récupère les détails d'un club par son code unique.
-     * Sécurité: Tout utilisateur authentifié.
-     * Exceptions (gérées globalement): 404 (Code non trouvé).
+     * Récupère les détails d'un club par son code d'invitation unique (chaîne de caractères).
+     * Endpoint: GET /api/clubs/code/{codeClub}
+     * Sécurité: Requiert une authentification minimale (rôle MEMBRE via {@code @IsMembre}).
+     * Utile par exemple lors de l'inscription d'un membre pour vérifier le code club.
+     *
+     * @param codeClub Le code unique (String) du club à rechercher. Provient du chemin de l'URL.
+     * @return L'objet {@link Club} correspondant au code fourni, sérialisé selon la vue {@link GlobalView.ClubView}.
+     * @throws org.clubplus.clubplusbackend.exception.ClubNotFoundException Si aucun club ne correspond à ce code (géré globalement -> 404 Not Found).
+     * @see ClubService#getClubByCodeOrThrow(String)
+     * @see GlobalView.ClubView
+     * @see IsMembre
      */
     @GetMapping("/code/{codeClub}")
-    @IsMembre
-    @JsonView(GlobalView.ClubView.class)
+    @IsMembre // Requiert au minimum le rôle MEMBRE
+    @JsonView(GlobalView.ClubView.class) // Vue JSON détaillée
     public Club getClubByCode(@PathVariable String codeClub) {
-        // Le service lance 404 si non trouvé
+        // Le service gère la recherche par code et lève une exception si non trouvé.
         return clubService.getClubByCodeOrThrow(codeClub);
     }
 
     /**
-     * POST /api/clubs
-     * Crée un nouveau club et son admin initial à partir d'un payload JSON unique.
-     * Sécurité: Tout utilisateur authentifié.
-     * Validation: Le DTO est validé via @Valid.
-     * Exceptions (gérées globalement): 400 (Validation échouée), 409 (Emails déjà utilisés).
+     * Crée un nouveau club ainsi que son membre administrateur initial.
+     * Endpoint: POST /api/clubs/inscription
+     * Sécurité: Requiert que l'utilisateur soit authentifié (mécanisme à définir, potentiellement tout utilisateur connecté peut créer un club).
+     * Validation: Les données reçues dans le DTO sont validées via {@code @Valid}.
+     *
+     * @param creationDto Un DTO ({@link CreateClubRequestDto}) contenant les informations du club à créer
+     *                    et les informations de base de l'administrateur initial. Validé par {@code @Valid}.
+     * @return Le {@link Club} nouvellement créé, incluant potentiellement l'admin, sérialisé selon {@link GlobalView.ClubView}.
+     * Retourne un statut HTTP 201 (Created) en cas de succès.
+     * @throws org.springframework.web.bind.MethodArgumentNotValidException                Si les données dans {@code creationDto} sont invalides (géré globalement -> 400 Bad Request).
+     * @throws org.clubplus.clubplusbackend.security.exception.EmailAlreadyExistsException Si l'email fourni pour l'admin est déjà utilisé (géré globalement -> 409 Conflict).
+     * @see ClubService#createClubAndRegisterAdmin(CreateClubRequestDto)
+     * @see CreateClubRequestDto
+     * @see GlobalView.ClubView
+     * @see Valid
      */
-    @PostMapping("/inscription") // Pas besoin de 'consumes' car @RequestBody suppose application/json par défaut
-    @ResponseStatus(HttpStatus.CREATED)
-    @JsonView(GlobalView.ClubView.class)
+    @PostMapping("/inscription")
+    @ResponseStatus(HttpStatus.CREATED) // Réponse HTTP 201 en cas de succès
+    @JsonView(GlobalView.ClubView.class) // Vue JSON détaillée du club créé
     public Club createClubAndAdmin(
-            @Valid @RequestBody CreateClubRequestDto creationDto // Utilise @RequestBody avec le DTO
+            @Valid @RequestBody CreateClubRequestDto creationDto // Valide le DTO reçu
     ) {
-        // @Valid gère la validation Bean du DTO (y compris le AdminInfo imbriqué) -> 400 si échec
-        // Le service gère la logique et les conflits (-> 409)
-        return clubService.createClubAndRegisterAdmin(creationDto); // Passe le DTO au service
+        // @Valid gère la validation -> 400 si échec.
+        // Le service gère la logique de création et les conflits potentiels (ex: email admin) -> 409.
+        return clubService.createClubAndRegisterAdmin(creationDto);
     }
 
     /**
-     * PUT /api/clubs/{id}
-     * Met à jour les informations d'un club.
-     * Sécurité: Authentifié + ADMIN spécifique de ce club (vérifié dans le service).
-     * Exceptions (gérées globalement): 404 (Club non trouvé), 403 (Pas l'admin du club),
-     * 400 (Validation @Valid échouée), 409 (Email dupliqué).
+     * Met à jour les informations d'un club existant.
+     * Endpoint: PUT /api/clubs/{id}
+     * Sécurité: Requiert que l'utilisateur soit authentifié ET soit l'ADMINISTRATEUR ({@code @IsAdmin})
+     * spécifique du club ciblé (vérification effectuée dans le service).
+     * Validation: Les données reçues dans le DTO sont validées via {@code @Valid}.
+     *
+     * @param id        L'identifiant unique (Integer) du club à mettre à jour. Provient du chemin de l'URL.
+     * @param updateDto Un DTO ({@link UpdateClubDto}) contenant les nouvelles informations pour le club. Validé par {@code @Valid}.
+     * @return Le {@link Club} mis à jour, sérialisé selon la vue {@link GlobalView.ClubView}.
+     * Retourne un statut HTTP 200 (OK) par défaut en cas de succès.
+     * @throws org.springframework.web.bind.MethodArgumentNotValidException Si les données dans {@code updateDto} sont invalides (géré globalement -> 400 Bad Request).
+     * @throws org.clubplus.clubplusbackend.exception.ClubNotFoundException Si aucun club avec cet ID n'est trouvé (géré globalement -> 404 Not Found).
+     * @throws org.springframework.security.access.AccessDeniedException    Si l'utilisateur n'est pas l'administrateur de ce club (géré globalement -> 403 Forbidden).
+     * @throws org.springframework.dao.DataIntegrityViolationException      Potentiellement si une contrainte d'unicité est violée (ex: code club, géré globalement -> 409 Conflict).
+     * @see ClubService#updateClub(Integer, UpdateClubDto)
+     * @see UpdateClubDto
+     * @see GlobalView.ClubView
+     * @see IsAdmin
+     * @see Valid
      */
     @PutMapping("/{id}")
-    @IsAdmin
-    @JsonView(GlobalView.ClubView.class)
+    @IsAdmin // Requiert le rôle ADMIN (le service vérifiera que c'est l'admin DE CE club)
+    @JsonView(GlobalView.ClubView.class) // Vue JSON détaillée du club mis à jour
     public Club updateClub(@PathVariable Integer id, @Valid @RequestBody UpdateClubDto updateDto) {
-        // @Valid gère validation Bean -> 400
-        // Le service gère existence (-> 404), sécurité admin (-> 403), conflits (-> 409)
+        // @Valid gère la validation -> 400.
+        // Le service gère existence (-> 404), droits d'admin (-> 403), et conflits (-> 409).
         return clubService.updateClub(id, updateDto);
     }
 
     /**
-     * DELETE /api/clubs/{id}
-     * Supprime un club.
-     * Sécurité: Authentifié + ADMIN spécifique de ce club (vérifié dans le service).
-     * Exceptions (gérées globalement): 404 (Club non trouvé), 403 (Pas l'admin du club),
-     * 409 (Événements futurs empêchent suppression).
+     * Désactive (supprime logiquement) un club existant.
+     * Endpoint: DELETE /api/clubs/{id}
+     * Sécurité: Requiert que l'utilisateur soit authentifié ET soit l'ADMINISTRATEUR ({@code @IsAdmin})
+     * spécifique du club ciblé (vérification effectuée dans le service).
+     * La suppression peut être empêchée par des règles métier (ex: événements futurs actifs).
+     *
+     * @param id L'identifiant unique (Integer) du club à désactiver. Provient du chemin de l'URL.
+     * @return Rien (statut HTTP 204 No Content est retourné automatiquement en cas de succès sans corps de réponse).
+     * @throws org.clubplus.clubplusbackend.exception.ClubNotFoundException Si aucun club avec cet ID n'est trouvé (géré globalement -> 404 Not Found).
+     * @throws org.springframework.security.access.AccessDeniedException    Si l'utilisateur n'est pas l'administrateur de ce club (géré globalement -> 403 Forbidden).
+     * @throws org.clubplus.clubplusbackend.exception.ClubDeletionException Si la suppression est impossible en raison de contraintes métier
+     *                                                                      (ex: événements futurs, géré globalement -> 409 Conflict).
+     * @see ClubService#deactivateClub(Integer)
+     * @see IsAdmin
      */
     @DeleteMapping("/{id}")
-    @IsAdmin
-    @ResponseStatus(HttpStatus.NO_CONTENT) // Code 204 si succès
+    @IsAdmin // Requiert le rôle ADMIN (le service vérifiera que c'est l'admin DE CE club)
+    @ResponseStatus(HttpStatus.NO_CONTENT) // Réponse HTTP 204 en cas de succès
     public void deleteClub(@PathVariable Integer id) {
-        // Le service gère existence (-> 404), sécurité admin (-> 403), conflits (-> 409)
+        // Le service gère existence (-> 404), droits d'admin (-> 403), et règles métier (-> 409).
         clubService.deactivateClub(id);
     }
 
     /**
-     * GET /api/clubs/{id}/membres
-     * Récupère la liste des membres d'un club.
-     * Sécurité: Authentifié + Membre du club (vérifié dans le service).
-     * Exceptions (gérées globalement): 404 (Club non trouvé), 403 (Non membre).
+     * Récupère la liste des membres associés à un club spécifique.
+     * Endpoint: GET /api/clubs/{id}/membres
+     * Sécurité: Requiert un rôle suffisant (ex: RESERVATION via {@code @IsReservation}) ET
+     * que l'utilisateur soit membre du club concerné (vérification effectuée dans le service).
+     *
+     * @param id L'identifiant unique (Integer) du club dont les membres doivent être récupérés.
+     * @return Une {@code List<Membre>} contenant les informations des membres du club,
+     * sérialisée selon la vue {@link GlobalView.MembreView}. La liste est convertie depuis le Set retourné par le service.
+     * @throws org.clubplus.clubplusbackend.exception.ClubNotFoundException Si aucun club avec cet ID n'est trouvé (géré globalement -> 404 Not Found).
+     * @throws org.springframework.security.access.AccessDeniedException    Si l'utilisateur n'est pas membre du club
+     *                                                                      ou n'a pas le rôle requis (géré globalement -> 403 Forbidden).
+     * @see ClubService#findMembresForClub(Integer)
+     * @see GlobalView.MembreView
+     * @see IsReservation
      */
     @GetMapping("/{id}/membres")
-    @IsReservation
-    @JsonView(GlobalView.MembreView.class) // Vue de base pour les membres listés
+    @IsReservation // Requiert un rôle suffisant (RESERVATION ou ADMIN)
+    @JsonView(GlobalView.MembreView.class) // Vue JSON pour les membres listés
     public List<Membre> getClubMembres(@PathVariable Integer id) {
-        // Le service gère existence (-> 404), sécurité membre (-> 403)
+        // Le service gère existence (-> 404) et sécurité d'accès (-> 403).
         Set<Membre> membresSet = clubService.findMembresForClub(id);
-        return new ArrayList<>(membresSet); // Convertir Set en List pour JSON
+        return new ArrayList<>(membresSet); // Conversion Set vers List pour la réponse JSON
     }
 
     /**
-     * GET /api/clubs/{id}/admin
-     * Récupère l'administrateur d'un club.
-     * Sécurité: Authentifié + Membre du club (vérifié dans le service).
-     * Exceptions (gérées globalement): 404 (Club ou Admin non trouvé), 403 (Non membre).
+     * Récupère les informations de l'administrateur d'un club spécifique.
+     * Endpoint: GET /api/clubs/{id}/admin
+     * Sécurité: Requiert que l'utilisateur soit connecté ({@code @IsConnected}) ET
+     * membre du club concerné (vérification effectuée dans le service).
+     *
+     * @param id L'identifiant unique (Integer) du club dont l'administrateur doit être récupéré.
+     * @return L'objet {@link Membre} représentant l'administrateur du club, sérialisé selon {@link GlobalView.MembreView}.
+     * @throws org.clubplus.clubplusbackend.exception.ClubNotFoundException  Si le club n'existe pas (géré globalement -> 404 Not Found).
+     * @throws org.clubplus.clubplusbackend.exception.AdminNotFoundException Si le club n'a pas d'administrateur défini (géré globalement -> 404 Not Found).
+     * @throws org.springframework.security.access.AccessDeniedException     Si l'utilisateur n'est pas membre du club (géré globalement -> 403 Forbidden).
+     * @see ClubService#getAdminForClubOrThrow(Integer)
+     * @see GlobalView.MembreView
+     * @see IsConnected
      */
     @GetMapping("/{id}/admin")
-    @IsConnected
-    @JsonView(GlobalView.MembreView.class) // Vue détaillée de l'admin
+    @IsConnected // Requiert que l'utilisateur soit connecté
+    @JsonView(GlobalView.MembreView.class) // Vue JSON détaillée de l'administrateur
     public Membre getClubAdmin(@PathVariable Integer id) {
-        // Le service gère existence (-> 404), sécurité membre (-> 403)
+        // Le service gère existence club/admin (-> 404) et sécurité d'accès (-> 403).
         return clubService.getAdminForClubOrThrow(id);
     }
 
-
-    // --- Endpoints liés aux événements (simplifiés, dépendent d'EventService) ---
-    // NOTE: La sécurité contextuelle (être membre du club) DOIT être dans EventService
+    // --- Endpoints liés aux événements (Délégation à EventService) ---
+    // Note: La vérification de l'appartenance de l'utilisateur au club pour voir ses événements
+    // est supposée être gérée DANS les méthodes appelées de EventService.
 
     /**
-     * GET /api/clubs/{id}/events
-     * Récupère les événements d'un club.
-     * Sécurité: Gérée par EventService (doit être membre du club).
-     * Exceptions (gérées globalement): 403 (Non membre), 500 (Erreur EventService).
+     * Récupère la liste des événements organisés par un club spécifique, avec un filtre optionnel par statut.
+     * Endpoint: GET /api/clubs/{id}/events
+     * Sécurité: Requiert que l'utilisateur soit connecté ({@code @IsConnected}).
+     * La vérification de l'appartenance au club est déléguée à {@link EventService}.
+     *
+     * @param id     L'identifiant unique (Integer) du club organisateur.
+     * @param status (Optionnel) Un filtre (String) sur le statut des événements à retourner (ex: 'PASSED', 'UPCOMING', 'ACTIVE').
+     *               La logique de filtrage est gérée par le {@code EventService}.
+     * @return Une {@code List<Event>} contenant les événements correspondants, sérialisée selon {@link GlobalView.Base}.
+     * @throws org.springframework.security.access.AccessDeniedException Si l'utilisateur connecté n'est pas membre du club
+     *                                                                   (géré par {@code EventService} -> 403 Forbidden).
+     * @throws Exception                                                 Autres exceptions potentielles levées par {@code EventService}.
+     * @see EventService#findEventsByOrganisateurWithSecurityCheck(Integer, String)
+     * @see GlobalView.Base
+     * @see IsConnected
      */
     @GetMapping("/{id}/events")
-    @IsConnected
-    @JsonView(GlobalView.Base.class)
+    @IsConnected // Requiert que l'utilisateur soit connecté
+    @JsonView(GlobalView.Base.class) // Vue JSON de base pour les événements listés
     public List<Event> getClubEvents(@PathVariable Integer id, @RequestParam(required = false) String status) {
-        // Supposons qu'EventService existe et a la sécurité intégrée
+        // Délégation à EventService qui doit gérer la sécurité contextuelle (membre du club 'id').
         return eventService.findEventsByOrganisateurWithSecurityCheck(id, status);
     }
 
     /**
-     * GET /api/clubs/{id}/events/upcoming
-     * Récupère les événements futurs d'un club.
-     * Sécurité: Gérée par EventService (doit être membre du club).
-     * Exceptions (gérées globalement): 403 (Non membre), 500 (Erreur EventService).
+     * Récupère la liste des événements futurs organisés par un club spécifique.
+     * Endpoint: GET /api/clubs/{id}/events/upcoming
+     * Sécurité: Requiert que l'utilisateur soit connecté ({@code @IsConnected}).
+     * La vérification de l'appartenance au club est déléguée à {@link EventService}.
+     *
+     * @param id     L'identifiant unique (Integer) du club organisateur.
+     * @param status (Optionnel) Un filtre additionnel (String) sur le statut (peut être redondant ou pour affiner, ex: 'PUBLISHED').
+     *               La logique exacte est gérée par {@code EventService}.
+     * @return Une {@code List<Event>} contenant les événements futurs correspondants, sérialisée selon {@link GlobalView.Base}.
+     * @throws org.springframework.security.access.AccessDeniedException Si l'utilisateur connecté n'est pas membre du club
+     *                                                                   (géré par {@code EventService} -> 403 Forbidden).
+     * @throws Exception                                                 Autres exceptions potentielles levées par {@code EventService}.
+     * @see EventService#findUpcomingEventsByOrganisateurWithSecurityCheck(Integer, String) // Nom de méthode supposé
+     * @see GlobalView.Base
+     * @see IsConnected
      */
     @GetMapping("/{id}/events/upcoming")
-    @IsConnected
-    @JsonView(GlobalView.Base.class)
+    @IsConnected // Requiert que l'utilisateur soit connecté
+    @JsonView(GlobalView.Base.class) // Vue JSON de base pour les événements listés
     public List<Event> getClubUpcomingEvents(@PathVariable Integer id, @RequestParam(required = false) String status) {
-        // Supposons qu'EventService existe et a la sécurité intégrée
+        // Délégation à EventService qui doit gérer la sécurité et la logique "upcoming".
+        // Le nom de la méthode appelée dans EventService peut varier.
         return eventService.findUpcomingEventsByOrganisateurWithSecurityCheck(id, status);
     }
 
-    // Le @ExceptionHandler(MethodArgumentNotValidException.class) a été retiré
-    // et doit être dans GlobalExceptionHandler.
+    // Rappel : La gestion centralisée des exceptions (ex: MethodArgumentNotValidException, NotFoundException, etc.)
+    // via une classe annotée @ControllerAdvice est la pratique recommandée.
 }

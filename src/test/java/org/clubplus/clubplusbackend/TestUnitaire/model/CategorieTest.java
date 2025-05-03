@@ -369,7 +369,7 @@ public class CategorieTest {
             Categorie c1 = createValidBaseCategorie();
             c1.setId(1);
             assertNotEquals(null, c1);
-            assertFalse(c1.equals(null));
+            assertNotEquals(null, c1);
         }
 
         @Test
@@ -379,7 +379,7 @@ public class CategorieTest {
             c1.setId(1);
             Object autre = new Object();
             assertNotEquals(c1, autre);
-            assertFalse(c1.equals(autre));
+            assertNotEquals(c1, autre);
         }
 
         @Test

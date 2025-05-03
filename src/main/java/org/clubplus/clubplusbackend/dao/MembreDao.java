@@ -32,7 +32,7 @@ public interface MembreDao extends JpaRepository<Membre, Integer> {
     /**
      * Trouve l'unique ADMIN d'un club.
      */
-    @Query("SELECT m FROM Membre m JOIN m.adhesions a WHERE a.club.id = :clubId AND m.role = org.clubplus.clubplusbackend.security.Role.ADMIN")
+    @Query("SELECT m FROM Membre m JOIN m.adhesions a WHERE a.club.id = :clubId AND m.role = org.clubplus.clubplusbackend.model.Role.ADMIN")
     Optional<Membre> findAdminByClubId(@Param("clubId") Integer clubId);
 
     /**

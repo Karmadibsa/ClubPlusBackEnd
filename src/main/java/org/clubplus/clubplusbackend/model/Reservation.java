@@ -9,8 +9,9 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.clubplus.clubplusbackend.view.GlobalView;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -19,150 +20,297 @@ import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.UUID;
 
-@Getter
-@Setter
-@NoArgsConstructor // JPA requis
-@AllArgsConstructor // Pratique
-@Entity
-@Table(name = "reservations")
+/**
+ * Entité JPA représentant une réservation effectuée par un {@link Membre} pour une
+ * {@link Categorie} spécifique d'un {@link Event}.
+ *
+ * <p>Chaque réservation possède un identifiant unique interne ({@code id}) et un UUID
+ * universellement unique ({@code reservationUuid}) généré lors de la création, utile
+ * pour les références externes (ex: QR codes, API). Elle enregistre également la date
+ * de réservation et son statut actuel (ex: CONFIRME, UTILISE, ANNULE).</p>
+ *
+ * <p>Des relations obligatoires et chargées paresseusement la lient au membre, à l'événement
+ * et à la catégorie concernés.</p>
+ *
+ * <p>L'égalité ({@code equals}) et le hachage ({@code hashCode}) sont basés sur le champ
+ * {@code reservationUuid}, ce qui garantit une identification unique et stable même
+ * avant la persistance de l'entité.</p>
+ *
+ * @see Membre
+ * @see Event
+ * @see Categorie
+ * @see ReservationStatus
+ * @see GlobalView
+ */
+@Getter // Lombok: Génère les getters.
+@Setter // Lombok: Génère les setters.
+@NoArgsConstructor // Lombok: Constructeur sans argument (requis par JPA).
+@AllArgsConstructor // Lombok: Constructeur avec tous les arguments (pratique pour tests/fixtures).
+@Entity // Marque comme entité JPA.
+@Table(name = "reservations") // Nom explicite de la table.
 public class Reservation {
 
+    // Logger pour tracer les avertissements/erreurs, notamment dans la génération QR code.
+    private static final Logger log = LoggerFactory.getLogger(Reservation.class);
+
+    /**
+     * Identifiant unique interne de la réservation, généré automatiquement par la BDD.
+     * Visible dans la vue JSON de base.
+     */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonView(GlobalView.Base.class) // OK
+    @JsonView(GlobalView.Base.class)
     private Integer id;
 
-    // UUID unique pour identifier la réservation (pour QR code, API externe, etc.)
+    /**
+     * Identifiant Universellement Unique (UUID) de la réservation.
+     * Généré lors de la création de l'objet (via le constructeur).
+     * Il est unique, non modifiable et obligatoire. Utilisé pour identifier
+     * la réservation de manière externe et stable (ex: dans un QR Code).
+     * Visible dans la vue détaillée de la réservation.
+     */
     @NotNull(message = "L'UUID de réservation est obligatoire.")
-    @Size(min = 36, max = 36, message = "L'UUID doit faire 36 caractères.") // Validation taille UUID
-    @Column(unique = true, nullable = false, updatable = false, length = 36) // Parfait: unique, non null/modifiable
-    @JsonView(GlobalView.ReservationView.class) // Visible dans la vue détaillée
+    @Size(min = 36, max = 36, message = "L'UUID doit faire 36 caractères.")
+    // UUID format standard xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+    @Column(unique = true, nullable = false, updatable = false, length = 36) // Contraintes BDD fortes.
+    @JsonView(GlobalView.ReservationView.class)
     private String reservationUuid;
 
-    // Relation vers le Membre qui réserve
+    /**
+     * Le membre qui a effectué la réservation.
+     * Relation Many-to-One obligatoire, chargée paresseusement.
+     * Visible dans la vue détaillée de la réservation.
+     */
     @NotNull(message = "La réservation doit appartenir à un membre.")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) // LAZY, non optionnel
-    @JoinColumn(name = "membre_id", nullable = false) // FK non nulle
-    // JsonView: Base est un bon choix ici pour ne pas surcharger.
-    @JsonView(GlobalView.ReservationView.class)
+    @ManyToOne(fetch = FetchType.LAZY, // Chargement paresseux.
+            optional = false)       // Relation obligatoire pour JPA.
+    @JoinColumn(name = "membre_id",  // Nom de la colonne FK.
+            nullable = false,      // Contrainte NOT NULL BDD.
+            foreignKey = @ForeignKey(name = "fk_reservation_membre")) // Nom explicite de la contrainte FK.
+    @JsonView(GlobalView.ReservationView.class) // Vue détaillée inclut le membre.
     private Membre membre;
 
-    // Relation vers l'Événement concerné
-    // Bien que redondant car accessible via Categorie, cela peut simplifier certaines requêtes
-    // ou affichages spécifiques à la réservation. C'est un choix de modélisation acceptable.
+    /**
+     * L'événement concerné par la réservation.
+     * Bien que l'événement soit accessible via la catégorie, cette relation directe
+     * peut simplifier les requêtes et l'affichage.
+     * Relation Many-to-One obligatoire, chargée paresseusement.
+     * Visible dans la vue Membre (liste des réservations) et la vue Réservation détaillée.
+     */
     @NotNull(message = "La réservation doit être liée à un événement.")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) // LAZY, non optionnel
-    @JoinColumn(name = "event_id", nullable = false) // FK non nulle
-    // JsonView: Base est un bon choix.
+    @ManyToOne(fetch = FetchType.LAZY, // Chargement paresseux.
+            optional = false)       // Relation obligatoire pour JPA.
+    @JoinColumn(name = "event_id",   // Nom de la colonne FK.
+            nullable = false,      // Contrainte NOT NULL BDD.
+            foreignKey = @ForeignKey(name = "fk_reservation_event")) // Nom explicite de la contrainte FK.
     @JsonView({GlobalView.MembreView.class, GlobalView.ReservationView.class})
+    // Vue Base de l'Event est probablement suffisante.
     private Event event;
 
-    // Relation vers la Catégorie spécifique réservée
+    /**
+     * La catégorie spécifique de l'événement pour laquelle cette réservation est faite.
+     * Relation Many-to-One obligatoire, chargée paresseusement.
+     * Visible dans la vue détaillée de la réservation.
+     */
     @NotNull(message = "La réservation doit concerner une catégorie.")
-    @ManyToOne(fetch = FetchType.LAZY, optional = false) // LAZY, non optionnel
-    @JoinColumn(name = "categorie_id", nullable = false) // FK non nulle
-    // JsonView: Base est un bon choix.
-    @JsonView(GlobalView.ReservationView.class)
+    @ManyToOne(fetch = FetchType.LAZY, // Chargement paresseux.
+            optional = false)       // Relation obligatoire pour JPA.
+    @JoinColumn(name = "categorie_id", // Nom de la colonne FK.
+            nullable = false,      // Contrainte NOT NULL BDD.
+            foreignKey = @ForeignKey(name = "fk_reservation_categorie")) // Nom explicite de la contrainte FK.
+    @JsonView(GlobalView.ReservationView.class) // Vue Base de la Catégorie est probablement suffisante.
     private Categorie categorie;
 
-    // Timestamp de la réservation
+    /**
+     * Date et heure exactes auxquelles la réservation a été effectuée.
+     * Doit être non nulle et dans le passé ou le présent. Non modifiable après création.
+     * Initialisée lors de la création de l'objet (via le constructeur).
+     * Visible dans la vue détaillée de la réservation.
+     */
     @NotNull(message = "La date de réservation est obligatoire.")
-    @PastOrPresent(message = "La date de réservation doit être dans le passé ou aujourd'hui.") // Validation ajoutée
-    @Column(nullable = false, updatable = false) // Parfait: non null, non modifiable
-    @JsonView(GlobalView.ReservationView.class) // Date pertinente dans vue détaillée
+    @PastOrPresent(message = "La date de réservation doit être dans le passé ou aujourd'hui.") // Validation logique.
+    @Column(nullable = false, updatable = false) // Contrainte BDD: non null, non modifiable.
+    @JsonView(GlobalView.ReservationView.class)
     private LocalDateTime dateReservation;
 
+    /**
+     * Statut actuel de la réservation (ex: CONFIRME, UTILISE, ANNULE).
+     * Représenté par l'énumération {@link ReservationStatus}.
+     * Le statut est obligatoire et stocké comme une chaîne en BDD.
+     * Initialisé à {@code ReservationStatus.CONFIRME} par défaut (via le constructeur).
+     * Visible dans la vue JSON de base.
+     *
+     * @see ReservationStatus
+     */
     @NotNull(message = "Le statut de la réservation est obligatoire.")
-    @Enumerated(EnumType.STRING) // Stocke "CONFIRMED", "USED", "CANCELLED" en BDD (lisible)
-    @Column(nullable = false, length = 20) // Ajuster length si besoin
-    @JsonView(GlobalView.Base.class) // Statut utile dans les listes
+    @Enumerated(EnumType.STRING) // Stocke le nom de l'enum (ex: "CONFIRME") en BDD.
+    @Column(nullable = false, length = 20) // Taille pour les noms de statut.
+    @JsonView(GlobalView.Base.class) // Visible dans la vue de base.
     private ReservationStatus status;
 
-    // --- QR Code ---
-    // Donnée calculée, non persistée
-    @Transient
-    @JsonView(GlobalView.ReservationView.class) // Inclure dans la vue détaillée
+    // --- Donnée pour QR Code (Calculée, Non Persistée) ---
+
+    /**
+     * Chaîne de caractères formatée contenant les informations essentielles de la réservation,
+     * destinée à être encodée dans un QR Code pour une identification/validation rapide.
+     * Cette donnée est générée à la demande via le getter {@link #getQrcodeData()} et n'est pas
+     * stockée en base de données.
+     * Visible dans la vue détaillée de la réservation.
+     *
+     * @see #getQrcodeData()
+     * @see #generateQrCodeDataString()
+     */
+    @Transient // Non persisté en BDD.
+    @JsonView(GlobalView.ReservationView.class)
     private String qrcodeData;
 
-    // Constructeur principal: EXCELLENT
+    /**
+     * Constructeur métier principal pour créer une nouvelle réservation.
+     * Valide les entrées (membre, événement, catégorie non nulls), vérifie que la catégorie
+     * appartient bien à l'événement et que l'événement est actif.
+     * Initialise la date de réservation à l'heure actuelle, génère un UUID unique,
+     * et définit le statut initial à {@code CONFIRME}.
+     *
+     * @param membre    Le {@link Membre} effectuant la réservation. Ne doit pas être null.
+     * @param event     L'{@link Event} concerné. Ne doit pas être null.
+     * @param categorie La {@link Categorie} spécifique réservée. Ne doit pas être null.
+     * @throws IllegalArgumentException si l'un des paramètres est null, ou si la catégorie
+     *                                  n'appartient pas à l'événement spécifié.
+     * @throws IllegalStateException    si l'événement spécifié n'est pas actif ({@code actif = false}).
+     */
     public Reservation(Membre membre, Event event, Categorie categorie) {
-        if (membre == null || event == null || categorie == null) {
-            throw new IllegalArgumentException("Membre, Event et Categorie sont requis.");
-        }
-        if (!categorie.getEvent().getId().equals(event.getId())) {
-            throw new IllegalArgumentException("La catégorie ID " + categorie.getId() + " n'appartient pas à l'événement ID " + event.getId());
-        }
-        // Vérifier si l'événement est actif au moment de la création de la réservation
-        if (!event.getActif()) { // Utilise le getter généré par Lombok
-            throw new IllegalStateException("Impossible de créer une réservation pour un événement annulé (ID: " + event.getId() + ").");
+        // Validation des arguments essentiels.
+        this.membre = Objects.requireNonNull(membre, "Le Membre ne peut pas être null pour créer une réservation.");
+        this.event = Objects.requireNonNull(event, "L'Event ne peut pas être null pour créer une réservation.");
+        this.categorie = Objects.requireNonNull(categorie, "La Categorie ne peut pas être null pour créer une réservation.");
+
+        // Vérification de cohérence : la catégorie doit appartenir à l'événement.
+        // Suppose que Event et Categorie ont des IDs et que event est chargé ou a un ID accessible.
+        if (categorie.getEvent() == null || !Objects.equals(categorie.getEvent().getId(), event.getId())) {
+            throw new IllegalArgumentException(
+                    String.format("Incohérence : La catégorie ID %d n'appartient pas à l'événement ID %d.",
+                            categorie.getId(), event.getId())
+            );
         }
 
+        // Vérification métier : on ne peut réserver que pour un événement actif.
+        if (!event.getActif()) { // Utilise le getter Lombok.
+            throw new IllegalStateException(
+                    String.format("Impossible de créer une réservation pour un événement non actif/annulé (ID: %d).",
+                            event.getId())
+            );
+        }
 
-        this.membre = membre;
-        this.event = event;
-        this.categorie = categorie;
+        // Initialisation des champs par défaut.
         this.dateReservation = LocalDateTime.now();
-        this.reservationUuid = UUID.randomUUID().toString();
-        this.status = ReservationStatus.CONFIRME; // Statut par défaut à la création
+        this.reservationUuid = UUID.randomUUID().toString(); // Génération de l'UUID unique.
+        this.status = ReservationStatus.CONFIRME; // Statut par défaut.
     }
 
-
-    // Getter pour QR Code (avec génération paresseuse): TRÈS BIEN
+    /**
+     * Retourne la chaîne de données formatée pour le QR Code, en la générant
+     * uniquement lors du premier appel (génération paresseuse/lazy).
+     * Les appels suivants retournent la valeur déjà calculée et stockée dans le champ {@code qrcodeData}.
+     *
+     * @return La chaîne de caractères contenant les données de réservation formatées pour un QR Code,
+     * ou une chaîne d'erreur si la génération échoue.
+     * @see #generateQrCodeDataString()
+     */
     public String getQrcodeData() {
-        // Génère la donnée seulement si elle n'a pas déjà été calculée
+        // Génération paresseuse : calcule si pas déjà fait.
         if (this.qrcodeData == null) {
             this.qrcodeData = generateQrCodeDataString();
         }
         return this.qrcodeData;
     }
 
-    // Génération de la chaîne pour QR Code: Logique semble correcte et robuste
+    /**
+     * Méthode privée utilitaire pour générer la chaîne de caractères destinée au QR Code.
+     * Formate les informations clés (UUID, IDs, date, nom) dans une chaîne structurée,
+     * en encodant les parties variables (nom, date) pour une meilleure compatibilité URL/QR Code.
+     * Inclut des vérifications de robustesse et logue les avertissements/erreurs.
+     *
+     * @return La chaîne de données formatée, ou une chaîne d'erreur en cas de problème.
+     */
     private String generateQrCodeDataString() {
         try {
-            // Vérifications robustes des données nécessaires
+            // Vérification des prérequis pour générer une chaîne QR code valide.
             if (reservationUuid == null || event == null || membre == null || categorie == null || dateReservation == null) {
-                System.err.println("WARN: Données manquantes pour génération QR code (Réservation UUID: " + reservationUuid + ")");
-                return "error:missing-data"; // Format simple pour l'erreur
+                log.warn("Données manquantes pour génération QR code (Réservation UUID: {})", reservationUuid);
+                return "error:missing-data";
             }
             Integer eventId = event.getId();
             Integer membreId = membre.getId();
             Integer categorieId = categorie.getId();
             if (eventId == null || membreId == null || categorieId == null) {
-                System.err.println("WARN: ID(s) manquant(s) pour génération QR code (Réservation UUID: " + reservationUuid + ")");
+                log.warn("ID(s) manquant(s) pour génération QR code (Réservation UUID: {})", reservationUuid);
                 return "error:missing-ids";
             }
-            String nomComplet = membre.getPrenom() + " " + membre.getNom(); // Espace plus lisible que _ ?
-            String dateFormatted = dateReservation.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
 
-            // Encodage URL pour nom et date (bonne précaution)
-            String encodedNom = URLEncoder.encode(nomComplet, StandardCharsets.UTF_8.toString());
-            String encodedDate = URLEncoder.encode(dateFormatted, StandardCharsets.UTF_8.toString());
+            // Construction des informations à inclure.
+            String nomComplet = membre.getPrenom() + " " + membre.getNom();
+            String dateFormatted = dateReservation.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME); // Format standard ISO.
 
-            // Format de la chaîne de données (personnalisable)
+            // Encodage URL des parties variables pour éviter les caractères problématiques.
+            String encodedNom = URLEncoder.encode(nomComplet, StandardCharsets.UTF_8);
+            String encodedDate = URLEncoder.encode(dateFormatted, StandardCharsets.UTF_8);
+
+            // Format structuré de la chaîne (exemple, peut être adapté).
+            // Utilisation de clés courtes (uuid, evt, cat, user, date, name) pour une chaîne plus courte.
             return String.format("uuid:%s|evt:%d|cat:%d|user:%d|date:%s|name:%s",
                     this.reservationUuid, eventId, categorieId, membreId, encodedDate, encodedNom);
 
         } catch (Exception e) {
-            System.err.println("ERREUR génération QR code pour Réservation UUID " + reservationUuid + ": " + e.getMessage());
-            // Logger.error(...) serait mieux ici qu'un System.err
-            return "error:generation-failed";
+            // Loguer l'erreur réelle pour le débogage.
+            log.error("Erreur lors de la génération de la chaîne QR code pour Réservation UUID {}", reservationUuid, e);
+            return "error:generation-failed"; // Chaîne d'erreur générique.
         }
     }
 
-    // equals() et hashCode() basés sur reservationUuid: EXCELLENT CHOIX
-    // Stable, unique et disponible avant la persistance.
+    // --- equals() et hashCode() ---
+
+    /**
+     * Détermine si cet objet Reservation est égal à un autre objet.
+     * L'égalité est basée **uniquement** sur l'identifiant {@code reservationUuid}.
+     * C'est une stratégie robuste car l'UUID est unique, non nul et défini dès la création
+     * de l'objet, même avant sa persistance en base de données.
+     *
+     * @param o L'objet à comparer.
+     * @return {@code true} si les objets sont des Réservations avec le même {@code reservationUuid}, {@code false} sinon.
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Reservation that = (Reservation) o;
-        // Utiliser reservationUuid qui est défini à la création de l'objet
+        // Vérifie si 'o' est une instance de Reservation et non null.
+        if (!(o instanceof Reservation that)) return false;
+        // Compare les reservationUuid (qui devraient toujours être non nuls après construction).
         return Objects.equals(reservationUuid, that.reservationUuid);
     }
 
+    /**
+     * Retourne un code de hachage pour cet objet Reservation.
+     * Le code de hachage est calculé **uniquement** à partir de l'identifiant {@code reservationUuid},
+     * en cohérence avec la méthode {@code equals}.
+     *
+     * @return Le code de hachage basé sur {@code reservationUuid}.
+     */
     @Override
     public int hashCode() {
-        // Cohérent avec equals
+        // Cohérent avec equals : utilise reservationUuid.
         return Objects.hash(reservationUuid);
+    }
+
+    // Optionnel: toString() pour le débogage
+    @Override
+    public String toString() {
+        return "Reservation{" +
+                "id=" + id +
+                ", reservationUuid='" + reservationUuid + '\'' +
+                ", membreId=" + (membre != null ? membre.getId() : "null") +
+                ", eventId=" + (event != null ? event.getId() : "null") +
+                ", categorieId=" + (categorie != null ? categorie.getId() : "null") +
+                ", dateReservation=" + dateReservation +
+                ", status=" + status +
+                '}';
     }
 }

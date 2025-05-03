@@ -494,7 +494,7 @@ public class EventTest {
         void equals_compareWithNull_shouldBeFalse() {
             Event e1 = createValidBaseEvent();
             e1.setId(1);
-            assertFalse(e1.equals(null));
+            assertNotEquals(null, e1);
         }
 
         @Test
@@ -503,7 +503,7 @@ public class EventTest {
             Event e1 = createValidBaseEvent();
             e1.setId(1);
             Object autre = new Object();
-            assertFalse(e1.equals(autre));
+            assertNotEquals(e1, autre);
         }
 
         @Test

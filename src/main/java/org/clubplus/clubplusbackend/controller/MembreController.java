@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.dto.UpdateMembreDto;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
-import org.clubplus.clubplusbackend.security.Role;
+import org.clubplus.clubplusbackend.model.Role;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.clubplus.clubplusbackend.security.annotation.IsAdmin;
 import org.clubplus.clubplusbackend.security.annotation.IsConnected;

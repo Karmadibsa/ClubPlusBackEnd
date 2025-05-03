@@ -316,7 +316,7 @@ public class AdhesionTest {
         void equals_compareWithNull_shouldBeFalse() {
             Adhesion adhesion1 = new Adhesion(membre1, club1);
             assertNotEquals(null, adhesion1);
-            assertFalse(adhesion1.equals(null)); // Appel direct
+            assertNotEquals(null, adhesion1); // Appel direct
         }
 
         @Test
@@ -325,7 +325,7 @@ public class AdhesionTest {
             Adhesion adhesion1 = new Adhesion(membre1, club1);
             Object autre = new Object();
             assertNotEquals(adhesion1, autre);
-            assertFalse(adhesion1.equals(autre)); // Appel direct
+            assertNotEquals(adhesion1, autre); // Appel direct
         }
 
         @Test

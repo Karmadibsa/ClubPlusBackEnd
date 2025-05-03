@@ -4,129 +4,221 @@ import lombok.Getter;
 import org.clubplus.clubplusbackend.model.Adhesion;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
+import org.clubplus.clubplusbackend.model.Role;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.*;
 
-@Getter
-// Cette classe implémente l'interface UserDetails de Spring Security [4]
+/**
+ * Implémentation personnalisée de l'interface {@link UserDetails} de Spring Security.
+ * Cette classe encapsule l'entité {@link Membre} de l'application pour l'adapter
+ * au contexte de sécurité de Spring. Elle fournit les informations nécessaires
+ * à Spring Security pour l'authentification et l'autorisation, telles que
+ * le nom d'utilisateur (email), le mot de passe encodé, les autorités (rôles),
+ * et le statut du compte.
+ * Inclut également des méthodes utilitaires pour accéder facilement à l'ID du membre
+ * et à l'ID du club potentiellement géré par l'utilisateur.
+ *
+ * @see UserDetails
+ * @see Membre
+ * @see GrantedAuthority
+ */
+@Getter // Lombok génère les getters pour les champs (ici, principalement pour 'membre')
 public class AppUserDetails implements UserDetails {
 
-    // Référence à l'entité Membre [7][8]
-    // protected Membre membre; // 'protected' est inhabituel, 'private final' est plus courant
-    private final Membre membre; // Utiliser private final pour l'immutabilité après construction
+    /**
+     * L'entité {@link Membre} sous-jacente représentant l'utilisateur dans le domaine de l'application.
+     * Cette instance contient toutes les informations de l'utilisateur (ID, email, mot de passe, rôle, etc.).
+     * Elle est définie comme 'final' pour garantir son immutabilité après la construction de l'objet AppUserDetails.
+     */
+    private final Membre membre;
 
-    // Constructeur qui initialise avec Membre [3][5]
+    /**
+     * Construit une nouvelle instance de {@code AppUserDetails} basée sur une entité {@link Membre}.
+     * Vérifie que le membre fourni n'est pas null.
+     *
+     * @param membre L'entité {@link Membre} à encapsuler. Ne doit pas être null.
+     * @throws NullPointerException si l'objet {@code membre} fourni est null.
+     */
     public AppUserDetails(Membre membre) {
-        // BONNE PRATIQUE: Ajouter un null check
-        Objects.requireNonNull(membre, "Membre ne peut pas être null pour AppUserDetails");
+        // Vérification essentielle pour garantir l'intégrité de l'objet UserDetails.
+        Objects.requireNonNull(membre, "L'entité Membre ne peut pas être null pour créer AppUserDetails.");
         this.membre = membre;
     }
 
-    // Retourne les autorisations/rôles [2][4]
+    /**
+     * Retourne les autorités (rôles) accordées à l'utilisateur.
+     * Basé sur le champ {@code role} de l'entité {@link Membre}.
+     * L'autorité est formatée avec le préfixe "ROLE_" conformément aux conventions de Spring Security.
+     *
+     * @return Une collection contenant une seule {@link GrantedAuthority} représentant le rôle global
+     * de l'utilisateur (ex: "ROLE_ADMIN", "ROLE_MEMBRE"), ou une collection vide si
+     * l'entité Membre ou son rôle est null.
+     * @see SimpleGrantedAuthority
+     * @see Role
+     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        // Vérification si rôle est null
+        // Gestion du cas où le membre ou son rôle serait invalide.
         if (this.membre == null || this.membre.getRole() == null) {
-            return Collections.emptyList(); // Pas d'autorités si pas de rôle
+            return Collections.emptyList(); // Pas d'autorités si pas de rôle défini.
         }
-        // Utilise le rôle global du Membre, préfixé par "ROLE_" (Convention Spring Security)
-        String roleName = "ROLE_" + this.membre.getRole().name(); // .name() donne "ADMIN", "MEMBRE", etc.
-        return Collections.singletonList(new SimpleGrantedAuthority(roleName)); // CORRECT
-    }
-
-    // Retourne le mot de passe encodé [4][5]
-    @Override
-    public String getPassword() {
-        // Vérification nullité membre
-        if (this.membre == null) {
-            return null;
-        }
-        return membre.getPassword(); // CORRECT
-    }
-
-    // Retourne l'identifiant (email ici) [4][5]
-    @Override
-    public String getUsername() {
-        // Vérification nullité membre
-        if (this.membre == null) {
-            return null;
-        }
-        return membre.getEmail(); // CORRECT
-    }
-
-    // Méthode ajoutée pour obtenir l'ID interne du Membre (pour nos services)
-    public Integer getId() {
-        // Vérification nullité membre
-        if (this.membre == null) {
-            // Lever une exception est probablement mieux ici car getId ne devrait pas être appelé
-            // sur un UserDetails invalide créé à partir d'un membre null.
-            throw new IllegalStateException("Membre associé à AppUserDetails est null lors de l'appel à getId().");
-        }
-        return membre.getId(); // CORRECT
+        // Construction de l'autorité avec le préfixe standard "ROLE_".
+        String roleName = "ROLE_" + this.membre.getRole().name(); // Ex: "ROLE_ADMIN"
+        // Retourne une liste immuable contenant cette unique autorité.
+        return Collections.singletonList(new SimpleGrantedAuthority(roleName));
     }
 
     /**
-     * Récupère l'ID de l'unique club géré par cet utilisateur, si son rôle
-     * est ADMIN ou RESERVATION, en utilisant le Set d'adhésions.
+     * Retourne le mot de passe utilisé pour authentifier l'utilisateur.
+     * Le mot de passe retourné doit être celui stocké en base de données (généralement encodé).
      *
-     * @return L'ID du club géré, ou null si non applicable ou non trouvé.
+     * @return Le mot de passe encodé de l'utilisateur tel que stocké dans l'entité {@link Membre}.
+     * Retourne {@code null} si l'instance {@code membre} est null (cas théorique vu le constructeur).
+     */
+    @Override
+    public String getPassword() {
+        // Accès direct au mot de passe stocké dans l'entité Membre.
+        return (this.membre != null) ? membre.getPassword() : null;
+    }
+
+    /**
+     * Retourne le nom d'utilisateur utilisé pour authentifier l'utilisateur.
+     * Dans cette implémentation, l'adresse email est utilisée comme nom d'utilisateur unique.
+     *
+     * @return L'adresse email de l'utilisateur telle que stockée dans l'entité {@link Membre}.
+     * Retourne {@code null} si l'instance {@code membre} est null (cas théorique).
+     */
+    @Override
+    public String getUsername() {
+        // Utilisation de l'email comme identifiant principal pour Spring Security.
+        return (this.membre != null) ? membre.getEmail() : null;
+    }
+
+    /**
+     * Méthode utilitaire spécifique à l'application pour récupérer facilement l'identifiant unique (ID)
+     * de l'entité {@link Membre} associée à cet {@code UserDetails}.
+     * Utile pour les opérations dans les couches service nécessitant l'ID de l'utilisateur connecté.
+     *
+     * @return L'ID (Integer) unique de l'utilisateur {@link Membre}.
+     * @throws IllegalStateException si l'instance {@code membre} interne est null (ce qui ne devrait
+     *                               pas arriver si l'objet a été correctement construit).
+     */
+    public Integer getId() {
+        // Bien que le constructeur vérifie la nullité, une vérification ici reste une bonne pratique défensive.
+        if (this.membre == null) {
+            throw new IllegalStateException("Impossible de récupérer l'ID : l'entité Membre associée est null.");
+        }
+        return membre.getId();
+    }
+
+    /**
+     * Méthode utilitaire spécifique à l'application pour récupérer l'identifiant (ID) de l'unique club
+     * que cet utilisateur gère, basé sur son rôle (ADMIN ou RESERVATION) et ses adhésions.
+     * <p>
+     * <b>Hypothèse:</b> Un utilisateur ayant un rôle de gestion (ADMIN/RESERVATION) est associé
+     * à un et un seul club via l'entité {@link Adhesion}. Cette méthode prend la première adhésion trouvée.
+     * </p>
+     * Si l'utilisateur a le bon rôle mais n'a pas d'adhésion, ou si l'adhésion n'a pas de club lié,
+     * un message d'anomalie est loggué sur {@code System.err} et la méthode retourne {@code null}.
+     *
+     * @return L'ID (Integer) du club géré par l'utilisateur si son rôle est ADMIN ou RESERVATION
+     * et qu'une adhésion valide est trouvée ; {@code null} dans tous les autres cas (rôle différent,
+     * pas d'adhésion, anomalie de données).
+     * @see Adhesion
+     * @see Club
+     * @see Role#ADMIN
+     * @see Role#RESERVATION
      */
     public Integer getManagedClubId() {
         if (this.membre == null || this.membre.getRole() == null) {
-            return null;
+            return null; // Cas invalide
         }
 
         Role userRole = this.membre.getRole();
 
+        // Vérifie si l'utilisateur a un rôle de gestionnaire.
         if (userRole == Role.ADMIN || userRole == Role.RESERVATION) {
-            // Assurez-vous que membre.getAdhesions() retourne Set<Adhesion>
-            Set<Adhesion> adhesions = this.membre.getAdhesions(); // <--- Vérifier type de retour
+            Set<Adhesion> adhesions = this.membre.getAdhesions(); // Récupère les adhésions du membre.
 
             if (adhesions != null && !adhesions.isEmpty()) {
-                // Utiliser Stream API pour trouver la première adhésion et extraire l'ID du club
+                // Utilisation de l'API Stream pour une extraction concise et sûre.
                 Optional<Integer> clubIdOptional = adhesions.stream()
-                        .findFirst() // Prend le premier élément du Set (ordre non garanti mais OK si un seul)
-                        .map(Adhesion::getClub) // Extrait le Club de l'Adhesion
-                        .map(Club::getId);      // Extrait l'ID du Club
+                        .filter(Objects::nonNull) // Ignore les adhésions nulles (sécurité)
+                        .map(Adhesion::getClub)   // Extrait l'objet Club de l'adhésion
+                        .filter(Objects::nonNull) // Ignore si le club lié est nul (sécurité)
+                        .map(Club::getId)         // Extrait l'ID de l'objet Club
+                        .findFirst();             // Prend l'ID du premier club trouvé
 
-                // Si l'ID a été trouvé, le retourner, sinon retourner null
                 if (clubIdOptional.isPresent()) {
-                    return clubIdOptional.get();
+                    return clubIdOptional.get(); // Retourne l'ID trouvé.
                 }
             }
-            // Si aucune adhésion valide n'est trouvée (log d'anomalie)
-            System.err.println("ANOMALIE: L'utilisateur " + getUsername() + " (" + userRole + ") n'a pas d'adhésion valide pour déterminer le club géré.");
-            return null;
+            // Loggue une anomalie si un manager n'a pas d'adhésion valide.
+            System.err.println("ANOMALIE: Utilisateur " + getUsername() + " (" + userRole + ") avec rôle de gestion mais sans adhésion valide pour déterminer le club géré.");
+            return null; // Aucune adhésion valide trouvée.
         }
-        return null; // Pas ADMIN ou RESA
+
+        return null; // L'utilisateur n'a pas un rôle de gestionnaire.
     }
 
-    // !!! MÉTHODES MANQUANTES DE L'INTERFACE UserDetails !!! [4]
-    // Ces méthodes DOIVENT être implémentées.
-    // Par défaut, si vous n'avez pas de logique spécifique, retournez 'true'.
+    // --- Implémentation des indicateurs de statut du compte UserDetails ---
 
+    /**
+     * Indique si le compte de l'utilisateur a expiré. Un compte expiré ne peut pas être authentifié.
+     *
+     * @return {@code true} si le compte est valide (non expiré), {@code false} s'il n'est plus valide.
+     * Actuellement, retourne toujours {@code true} (pas de gestion d'expiration implémentée).
+     */
     @Override
     public boolean isAccountNonExpired() {
-        return true; // Mettre 'false' si vous gérez l'expiration des comptes
+        // À personnaliser si la logique d'expiration de compte est nécessaire.
+        return true;
     }
 
+    /**
+     * Indique si l'utilisateur est verrouillé ou déverrouillé. Un compte verrouillé ne peut pas être authentifié.
+     *
+     * @return {@code true} si l'utilisateur n'est pas verrouillé, {@code false} sinon.
+     * Actuellement, retourne toujours {@code true} (pas de gestion de verrouillage implémentée).
+     */
     @Override
     public boolean isAccountNonLocked() {
-        return true; // Mettre 'false' si vous gérez le verrouillage des comptes (ex: trop d'échecs de login)
+        // À personnaliser si la logique de verrouillage de compte est nécessaire (ex: après trop d'échecs de connexion).
+        return true;
     }
 
+    /**
+     * Indique si les informations d'identification (mot de passe) de l'utilisateur ont expiré.
+     * Un mot de passe expiré empêche l'authentification.
+     *
+     * @return {@code true} si les informations d'identification sont valides (non expirées), {@code false} sinon.
+     * Actuellement, retourne toujours {@code true} (pas de gestion d'expiration de mot de passe implémentée).
+     */
     @Override
     public boolean isCredentialsNonExpired() {
-        return true; // Mettre 'false' si vous gérez l'expiration des mots de passe
+        // À personnaliser si la politique d'expiration de mot de passe est nécessaire.
+        return true;
     }
 
+    /**
+     * Indique si l'utilisateur est activé ou désactivé. Un utilisateur désactivé ne peut pas être authentifié.
+     *
+     * @return {@code true} si l'utilisateur est activé, {@code false} sinon.
+     * Actuellement, retourne toujours {@code true}. Pourrait être lié à un champ `actif`
+     * dans l'entité {@link Membre}.
+     */
     @Override
     public boolean isEnabled() {
-        // Vous pourriez lier ceci à un champ 'actif' ou 'enabled' dans votre entité Membre si nécessaire.
-        // if (this.membre != null) { return this.membre.isActif(); }
-        return true; // Par défaut, compte activé
+        // Exemple de personnalisation (à décommenter et adapter si 'isActif()' existe sur Membre):
+        // if (this.membre != null) {
+        //     return this.membre.isActif(); // Lie l'activation à l'état du Membre.
+        // }
+        // return false; // Ou retourner false si le membre est null.
+
+        // Comportement par défaut actuel : toujours activé.
+        return true;
     }
 }

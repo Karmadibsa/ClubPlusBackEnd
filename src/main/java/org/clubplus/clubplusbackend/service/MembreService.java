@@ -9,7 +9,7 @@ import org.clubplus.clubplusbackend.dto.UpdateMembreDto;
 import org.clubplus.clubplusbackend.model.Adhesion;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
-import org.clubplus.clubplusbackend.security.Role;
+import org.clubplus.clubplusbackend.model.Role;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.springframework.data.domain.Limit;
 import org.springframework.security.access.AccessDeniedException;

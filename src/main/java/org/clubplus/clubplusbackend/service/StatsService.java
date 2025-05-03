@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.dao.*;
 import org.clubplus.clubplusbackend.dto.DashboardSummaryDto;
 import org.clubplus.clubplusbackend.dto.HomepageStatsDTO;
-import org.clubplus.clubplusbackend.security.ReservationStatus;
+import org.clubplus.clubplusbackend.model.ReservationStatus;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,7 +18,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static org.clubplus.clubplusbackend.security.ReservationStatus.UTILISE;
+import static org.clubplus.clubplusbackend.model.ReservationStatus.UTILISE;
 
 @Service
 @RequiredArgsConstructor

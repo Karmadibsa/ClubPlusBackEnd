@@ -5,12 +5,9 @@ import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.dao.*;
 import org.clubplus.clubplusbackend.dto.*;
 import org.clubplus.clubplusbackend.model.*;
-import org.clubplus.clubplusbackend.security.ReservationStatus;
 import org.clubplus.clubplusbackend.security.SecurityService;
-import org.clubplus.clubplusbackend.security.Statut;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -681,6 +678,6 @@ public class EventService {
                 organisateurId,
                 dateStart,
                 dateEnd,
-                (Pageable) pageable);
+                pageable);
     }
 }

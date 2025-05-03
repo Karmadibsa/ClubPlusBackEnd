@@ -164,7 +164,7 @@ public class ReservationTest {
         @DisplayName("reservationUuid: trop long")
         void uuidTooLong() {
             Reservation res = createValidBaseReservationForValidation();
-            res.setReservationUuid(UUID.randomUUID().toString() + "extra");
+            res.setReservationUuid(UUID.randomUUID() + "extra");
             assertSingleViolation(validator.validate(res), "reservationUuid", "doit faire 36 caractères");
         }
 
@@ -347,8 +347,8 @@ public class ReservationTest {
             String expectedUuid = reservation.getReservationUuid();
             String nomComplet = "Prénom Test Nom Test";
             String dateFormatted = testDate.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-            String encodedNom = URLEncoder.encode(nomComplet, StandardCharsets.UTF_8.toString());
-            String encodedDate = URLEncoder.encode(dateFormatted, StandardCharsets.UTF_8.toString());
+            String encodedNom = URLEncoder.encode(nomComplet, StandardCharsets.UTF_8);
+            String encodedDate = URLEncoder.encode(dateFormatted, StandardCharsets.UTF_8);
 
             String expectedData = String.format("uuid:%s|evt:%d|cat:%d|user:%d|date:%s|name:%s",
                     expectedUuid, 456, 789, 123, encodedDate, encodedNom);
@@ -496,7 +496,7 @@ public class ReservationTest {
             Event ev = createMockEvent(1);
             Categorie cat = createMockCategorie(1, ev);
             Reservation r1 = createReservationWithUuid(uuid1, m, ev, cat);
-            assertFalse(r1.equals(null));
+            assertNotEquals(null, r1);
         }
 
         @Test
@@ -507,7 +507,7 @@ public class ReservationTest {
             Categorie cat = createMockCategorie(1, ev);
             Reservation r1 = createReservationWithUuid(uuid1, m, ev, cat);
             Object autre = new Object();
-            assertFalse(r1.equals(autre));
+            assertNotEquals(r1, autre);
         }
 
         @Test

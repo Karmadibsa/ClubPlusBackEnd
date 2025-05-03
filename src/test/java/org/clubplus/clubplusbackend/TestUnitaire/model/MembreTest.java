@@ -5,7 +5,7 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import org.clubplus.clubplusbackend.model.Membre;
-import org.clubplus.clubplusbackend.security.Role;
+import org.clubplus.clubplusbackend.model.Role;
 import org.junit.jupiter.api.*;
 
 import java.time.LocalDate;
@@ -459,7 +459,7 @@ public class MembreTest {
 
             // Act
             Set<ConstraintViolation<Membre>> violations = validator.validate(m);
-            
+
             violations.forEach(v -> System.out.println("  - Property: " + v.getPropertyPath() + ", Message: '" + v.getMessage() + "'"));
             // --- FIN DEBUGGING ---
 
@@ -594,7 +594,7 @@ public class MembreTest {
             Membre m1 = createValidBaseMembre();
             m1.setId(1);
             Assertions.assertNotEquals(null, m1);
-            Assertions.assertFalse(m1.equals(null)); // Appel direct pour être sûr
+            Assertions.assertNotEquals(null, m1); // Appel direct pour être sûr
         }
 
         @Test
@@ -604,7 +604,7 @@ public class MembreTest {
             m1.setId(1);
             Object autre = new Object();
             Assertions.assertNotEquals(m1, autre);
-            Assertions.assertFalse(m1.equals(autre)); // Appel direct
+            Assertions.assertNotEquals(m1, autre); // Appel direct
         }
 
         @Test
