@@ -110,7 +110,6 @@ public class ClubService {
      *     <li>L'email fourni pour l'administrateur doit être unique parmi tous les membres.</li>
      *     <li>L'email fourni pour le club doit être unique parmi tous les clubs.</li>
      * </ul>
-     * </p>
      * <p>
      * Sécurité : Aucune vérification de sécurité contextuelle n'est appliquée ici (par exemple,
      * on ne vérifie pas le rôle de l'utilisateur qui appelle cette méthode). La restriction d'accès
@@ -232,7 +231,6 @@ public class ClubService {
      *     <li>Le club doit exister et être actif.</li>
      *     <li>Si l'email est modifié, le nouvel email ne doit pas être déjà utilisé par un *autre* club.</li>
      * </ul>
-     * </p>
      *
      * @param id        L'identifiant du club à mettre à jour.
      * @param updateDto Le DTO {@link UpdateClubDto} contenant les nouvelles valeurs. Les champs non fournis
@@ -315,7 +313,6 @@ public class ClubService {
      *     <li>La désactivation est **empêchée** si le club a encore des événements futurs qui sont marqués comme actifs.
      *         Ces événements doivent être annulés ou supprimés au préalable.</li>
      * </ul>
-     * </p>
      *
      * @param id L'identifiant du club à désactiver.
      * @throws EntityNotFoundException si aucun club actif n'est trouvé pour l'ID fourni (Statut HTTP 404).

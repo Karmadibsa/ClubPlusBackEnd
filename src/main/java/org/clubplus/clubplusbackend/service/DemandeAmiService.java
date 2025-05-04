@@ -36,7 +36,6 @@ import java.util.Objects;
  * Ce service intègre des vérifications de sécurité via {@link SecurityService} et gère
  * les transactions de base de données. Les exceptions métier spécifiques sont levées
  * pour être traitées par le gestionnaire global d'exceptions.
- * </p>
  *
  * @see DemandeAmi
  * @see Membre
@@ -79,7 +78,6 @@ public class DemandeAmiService {
      *     <li>Aucune demande en attente ou amitié acceptée n'existe déjà entre les deux membres.</li>
      * </ul>
      * La vérification d'appartenance à un club commun a été retirée.
-     * </p>
      *
      * @param recepteurCodeAmi Le code ami unique (String) du membre destinataire.
      * @return L'entité {@link DemandeAmi} nouvellement créée avec le statut {@link Statut#ATTENTE}.

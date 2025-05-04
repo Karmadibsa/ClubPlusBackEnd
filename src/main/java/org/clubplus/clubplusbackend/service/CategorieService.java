@@ -123,7 +123,6 @@ public class CategorieService {
      *     <li>Le nom de la nouvelle catégorie doit être unique au sein de cet événement (insensible à la casse).</li>
      *     <li>La capacité fournie doit être positive ou nulle (selon la validation DTO/service).</li>
      * </ul>
-     * </p>
      *
      * @param eventId      L'identifiant de l'{@link Event} auquel ajouter la catégorie.
      * @param categorieDto Le DTO {@link CreateCategorieDto} contenant les informations de la catégorie à créer.
@@ -192,7 +191,6 @@ public class CategorieService {
      *     <li>Si le nom est modifié, il doit rester unique au sein de l'événement.</li>
      *     <li>Si la capacité est modifiée, elle ne peut pas être inférieure au nombre de réservations déjà confirmées.</li>
      * </ul>
-     * </p>
      *
      * @param eventId     L'identifiant de l'{@link Event} parent.
      * @param categorieId L'identifiant de la {@link Categorie} à mettre à jour.
@@ -289,7 +287,6 @@ public class CategorieService {
      *     <li>L'événement parent doit être actif et non terminé.</li>
      *     <li>La catégorie ne peut être supprimée si elle contient des réservations confirmées.</li>
      * </ul>
-     * </p>
      *
      * @param eventId     L'identifiant de l'{@link Event} parent.
      * @param categorieId L'identifiant de la {@link Categorie} à supprimer.

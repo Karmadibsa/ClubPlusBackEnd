@@ -159,11 +159,11 @@ public class ConfigurationSecurite {
                 // Configure les autorisations pour les requêtes HTTP
                 .authorizeHttpRequests(auth -> auth
                         // Autorise l'accès public aux endpoints d'authentification/inscription
-                        .requestMatchers("/auth/inscription/**").permitAll()
+                        .requestMatchers("/auth/membre/inscription/**").permitAll()
                         .requestMatchers("/auth/connexion").permitAll()
                         .requestMatchers("/auth/stats").permitAll()
                         // Autorise l'accès public à l'inscription de club
-                        .requestMatchers("/clubs/inscription").permitAll()
+                        .requestMatchers("/auth/club/inscription").permitAll()
                         // Exige une authentification pour toutes les autres requêtes API
                         .requestMatchers("/**").authenticated()
                         // Refuse toutes les autres requêtes non explicitement autorisées (principe de sécurité par défaut)
@@ -194,12 +194,11 @@ public class ConfigurationSecurite {
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         // Définit les en-têtes HTTP autorisés (ex: Authorization, Content-Type). "*" autorise tous les en-têtes.
         configuration.setAllowedHeaders(List.of("*"));
-        // Décommentez si vous devez envoyer des cookies ou des en-têtes d'autorisation via CORS
-        // configuration.setAllowCredentials(true);
+
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         // Applique cette configuration à toutes les requêtes commençant par "/api/"
-        source.registerCorsConfiguration("/api/**", configuration);
+        source.registerCorsConfiguration("/**", configuration);
         return source;
     }
 }

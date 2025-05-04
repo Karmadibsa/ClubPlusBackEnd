@@ -485,7 +485,7 @@ public class MembreService {
             return targetMember;
         }
 
-        // 6. Logique de changement de rôle (MEMBRE <-> RESERVATION)
+        // 6. Logique de changement de rôle (MEMBRE &lt;-> RESERVATION)
         if (newRole == Role.RESERVATION) { // Promotion MEMBRE -> RESERVATION
             if (currentRole != Role.MEMBRE) {
                 // Seuls les MEMBRES peuvent être promus RESERVATION

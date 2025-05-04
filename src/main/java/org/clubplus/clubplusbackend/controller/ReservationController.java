@@ -47,7 +47,7 @@ public class ReservationController {
     /**
      * Crée une nouvelle réservation pour l'utilisateur actuellement authentifié pour une catégorie spécifique d'un événement.
      * <p>
-     * <b>Requête:</b> POST /reservations?eventId={eventId}&categorieId={categorieId}
+     * <b>Requête:</b> POST /reservations?eventId={eventId}&amp;categorieId={categorieId}
      * </p>
      * <p>
      * <b>Sécurité:</b> Requiert que l'utilisateur soit au moins MEMBRE ({@link IsMembre @IsMembre}).

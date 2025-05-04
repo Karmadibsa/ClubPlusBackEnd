@@ -88,7 +88,7 @@ public class EventController {
      * sous forme de DTO incluant la liste des amis participants (si le filtre `withFriends` est activé).
      * Permet de filtrer par statut et par présence d'amis.
      * <p>
-     * <b>Requête:</b> GET /events/withfriend?status={status}&withFriends={withFriends}
+     * <b>Requête:</b> GET /events/withfriend?status={status}&amp;withFriends={withFriends}
      * </p>
      * <p>
      * <b>Sécurité:</b> Requiert le rôle MEMBRE (ou supérieur) ({@link IsMembre @IsMembre}).

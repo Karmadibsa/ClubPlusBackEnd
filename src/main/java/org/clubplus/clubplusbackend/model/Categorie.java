@@ -143,7 +143,7 @@ public class Categorie {
      * @return Le nombre entier de places disponibles pour cette catégorie.
      * @see Transient
      * @see JsonView
-     * @see #getCapacite()
+     * @see #capacite
      * @see #getPlaceReserve()
      */
     @Transient // Non persisté en BDD.

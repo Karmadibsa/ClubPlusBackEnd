@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonView;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.clubplus.clubplusbackend.dto.CreateClubRequestDto;
 import org.clubplus.clubplusbackend.dto.UpdateClubDto;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Event;
@@ -15,7 +14,6 @@ import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.ClubService;
 import org.clubplus.clubplusbackend.service.EventService;
 import org.clubplus.clubplusbackend.view.GlobalView;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -92,42 +90,6 @@ public class ClubController {
         return ResponseEntity.ok(club);
     }
 
-    /**
-     * Crée un nouveau club ainsi que son membre administrateur initial.
-     * <p>
-     * <b>Requête:</b> POST /clubs/inscription
-     * </p>
-     * <p>
-     * <b>Sécurité:</b> Aucune annotation de sécurité spécifique ici. L'accès est potentiellement
-     * public ou restreint par la configuration globale de Spring Security.
-     * </p>
-     * <p>
-     * <b>Validation:</b> Les données reçues dans le DTO ({@link CreateClubRequestDto}) sont validées via {@link Valid @Valid}.
-     * </p>
-     *
-     * @param creationDto Un DTO contenant les infos du club et de l'admin initial. Validé par {@code @Valid}.
-     * @return Une {@link ResponseEntity} contenant :
-     * <ul>
-     *     <li><b>Succès (201 Created):</b> Le {@link Club} nouvellement créé, sérialisé selon {@link GlobalView.ClubView}.</li>
-     *     <li><b>Erreur (400 Bad Request):</b> Si les données dans {@code creationDto} sont invalides (levé par {@link MethodArgumentNotValidException}).</li>
-     *     <li><b>Erreur (409 Conflict):</b> Si l'email fourni pour l'admin ou le club est déjà utilisé (levé par le service via {@link IllegalArgumentException}).</li>
-     * </ul>
-     * @see ClubService#createClubAndRegisterAdmin(CreateClubRequestDto)
-     * @see CreateClubRequestDto
-     * @see GlobalView.ClubView
-     * @see Valid
-     */
-    @PostMapping("/inscription")
-    // @ResponseStatus retiré, géré par ResponseEntity
-    @JsonView(GlobalView.ClubView.class) // Vue JSON détaillée du club créé
-    public ResponseEntity<Club> createClubAndAdmin(
-            @Valid @RequestBody CreateClubRequestDto creationDto // Valide le DTO reçu
-    ) {
-        // @Valid gère la validation -> 400 si échec.
-        // Le service gère la logique de création et les conflits potentiels (ex: email) -> 409.
-        Club newClub = clubService.createClubAndRegisterAdmin(creationDto);
-        return ResponseEntity.status(HttpStatus.CREATED).body(newClub);
-    }
 
     /**
      * Met à jour les informations d'un club existant.

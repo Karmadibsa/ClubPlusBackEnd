@@ -280,10 +280,10 @@ public class MembreController {
     // --- Endpoints pour Admin de Club (Gestion Rôles) ---
 
     /**
-     * Modifie le rôle (MEMBRE <-> RESERVATION) d'un membre spécifique au sein d'un club donné.
+     * Modifie le rôle (MEMBRE &lt;-> RESERVATION) d'un membre spécifique au sein d'un club donné.
      * Nécessite que l'appelant soit administrateur (ADMIN) du club concerné.
      * <p>
-     * <b>Requête:</b> PUT /membres/{membreId}/role?clubId={clubId}&newRole={newRole}
+     * <b>Requête:</b> PUT /membres/{membreId}/role?clubId={clubId}&amp;newRole={newRole}
      * </p>
      * <p>
      * <b>Sécurité:</b> Requiert le rôle ADMIN globalement ({@link IsAdmin @IsAdmin}).

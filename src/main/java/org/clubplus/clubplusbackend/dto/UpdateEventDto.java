@@ -15,7 +15,6 @@ import java.time.LocalDateTime;
  * les annotations de validation comme {@code @NotBlank}/{@code @NotNull} pourraient être retirées.
  *
  * @see Event
- * @see org.clubplus.clubplusbackend.controller.EventController#updateEvent(Integer, UpdateEventDto)
  */
 @Data // Lombok: Raccourci pour @Getter, @Setter, @ToString, @EqualsAndHashCode, @RequiredArgsConstructor.
 public class UpdateEventDto {

@@ -224,7 +224,7 @@ public class Event {
      * ou si les capacités des catégories sont nulles ou invalides.
      * @see Transient
      * @see JsonView
-     * @see Categorie#getCapacite()
+     * @see Categorie
      */
     @Transient // Non persisté en BDD.
     @JsonView({GlobalView.Base.class, GlobalView.EventView.class}) // Visible dans ces vues JSON.
