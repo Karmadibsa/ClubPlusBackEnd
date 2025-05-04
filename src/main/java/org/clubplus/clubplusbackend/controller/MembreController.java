@@ -12,6 +12,7 @@ import org.clubplus.clubplusbackend.model.Role;
 import org.clubplus.clubplusbackend.security.SecurityService;
 import org.clubplus.clubplusbackend.security.annotation.IsAdmin;
 import org.clubplus.clubplusbackend.security.annotation.IsConnected;
+import org.clubplus.clubplusbackend.security.annotation.IsMembre;
 import org.clubplus.clubplusbackend.security.annotation.IsReservation;
 import org.clubplus.clubplusbackend.service.MembreService;
 import org.clubplus.clubplusbackend.view.GlobalView;
@@ -204,16 +205,16 @@ public class MembreController {
      * @return Une {@link ResponseEntity} contenant :
      * <ul>
      *     <li><b>Succès (200 OK):</b> Un {@code Set<Club>} des clubs auxquels l'utilisateur adhère, sérialisé selon {@link GlobalView.Base}. Peut être vide.</li>
-     *     <li><b>Erreur (401 Unauthorized):</b> Si l'utilisateur n'est pas authentifié (géré par Spring Security / {@code @IsConnected}).</li>
+     *     <li><b>Erreur (401 Unauthorized):</b> Si l'utilisateur n'est pas authentifié (géré par Spring Security / {@code @IsMembre}).</li>
      *     <li><b>Erreur (404 Not Found):</b> Si l'utilisateur authentifié n'est pas trouvé en base (peu probable, levé par le service via {@link EntityNotFoundException}).</li>
      * </ul>
      * @see MembreService#findClubsForCurrentUser()
      * @see GlobalView.Base
-     * @see IsConnected
+     * @see IsMembre
      */
     @GetMapping("/profile/clubs")
-    @IsConnected
-    @JsonView(GlobalView.Base.class) // Vue de base pour la liste des clubs
+    @IsMembre
+    @JsonView(GlobalView.ClubMembreView.class) // Vue de base pour la liste des clubs
     public ResponseEntity<Set<Club>> getMyClubs() {
         Set<Club> clubs = membreService.findClubsForCurrentUser();
         return ResponseEntity.ok(clubs);

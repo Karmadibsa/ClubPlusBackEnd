@@ -123,6 +123,20 @@ public class GlobalView {
     public interface ProfilView extends Base {
     }
 
+    /**
+     * Vue détaillée spécifiquement pour le profil de l'utilisateur connecté ({@link Membre}).
+     * Inclut généralement plus d'informations que {@link MembreView}, comme l'email,
+     * l'adresse complète, le numéro de téléphone, etc., qui ne sont visibles que
+     * par l'utilisateur lui-même.
+     * Hérite de {@link Base}.
+     *
+     * @see Membre
+     * @see MembreController#getMyProfile()
+     * @see MembreController#updateMyProfile(UpdateMembreDto)
+     */
+    public interface ClubMembreView extends Base {
+    }
+
     // Constructeur privé pour empêcher l'instanciation de la classe conteneur
     private GlobalView() {
         throw new AssertionError("Classe conteneur de vues non instantiable");

@@ -107,7 +107,9 @@ VALUES (1, 'AdminClub', 'Alice', '1988-03-10', '2024-01-10', '10', 'Rue Principa
 INSERT INTO club (id, nom, date_creation, date_inscription, numero_voie, rue, codepostal, ville, telephone, email,
                   actif, desactivation_date, code_club)
 VALUES (1, 'Club Omnisports Paris Centre', '2010-01-15', '2024-01-10', '1', 'Place du Sport', '75001', 'Paris',
-        '0102030405', 'contact@csc-paris.fr', 1, NULL, 'CLUB-0001');
+        '0102030405', 'contact@csc-paris.fr', 1, NULL, 'CLUB-0001'),
+       (2, 'Club Omnisports Metz Centre', '2010-01-15', '2024-01-10', '1', 'Place du Sport', '75001', 'Metz',
+        '0102030405', 'contact@csc-metz.fr', 1, NULL, 'CLUB-0002');
 
 -- 3. ADHESIONS (Inchangé - Associe utilisateurs aux clubs, rôles définis dans membre)
 INSERT INTO adhesion (membre_id, club_id, date_adhesion)
