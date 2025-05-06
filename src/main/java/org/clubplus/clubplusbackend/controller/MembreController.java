@@ -346,7 +346,7 @@ public class MembreController {
      */
     @GetMapping("/managed-club/latest") // Chemin plus explicite
     @IsReservation // Requiert rôle RESERVATION ou ADMIN
-    @JsonView(GlobalView.MembreView.class) // Vue standard pour la liste des membres
+    @JsonView(GlobalView.ProfilView.class) // Vue standard pour la liste des membres
     public ResponseEntity<List<Membre>> getLatestMembersForMyClub() {
         // Le service identifie le club géré, vérifie les droits, et récupère les données.
         List<Membre> latestMembers = membreService.getLatestMembersForManagedClub();

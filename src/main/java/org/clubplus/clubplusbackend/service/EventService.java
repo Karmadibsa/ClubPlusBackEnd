@@ -233,6 +233,7 @@ public class EventService {
             return; // Aucune action requise
         }
 
+
         // 3. Vérification de Sécurité : l'utilisateur doit être manager du club
         securityService.checkManagerOfClubOrThrow(eventToDeactivate.getOrganisateur().getId());
 
