@@ -62,6 +62,7 @@ public class ReservationService {
      * @throws IllegalArgumentException si la catégorie spécifiée n'appartient pas à l'événement spécifié (-> HTTP 400 Bad Request).
      * @throws SecurityException        (ou similaire via {@code SecurityService}) si l'utilisateur courant ne peut être identifié.
      */
+    @Transactional
     public Reservation createMyReservation(Integer eventId, Integer categorieId) {
         // Récupère l'ID de l'utilisateur courant (lance une exception si non authentifié)
         Integer currentUserId = securityService.getCurrentUserIdOrThrow();
@@ -69,9 +70,6 @@ public class ReservationService {
         // Récupère le membre courant (lance 404 si non trouvé)
         Membre membre = membreRepository.findById(currentUserId)
                 .orElseThrow(() -> new EntityNotFoundException("Membre courant non trouvé (ID: " + currentUserId + ")"));
-        // Récupère la catégorie (lance 404 si non trouvée)
-        // Il est préférable de charger la catégorie avec son événement pour éviter des requêtes supplémentaires
-        // Assurez-vous que la relation Categorie -> Event est EAGER ou utilisez un JOIN FETCH dans le DAO si LAZY.
         Categorie categorie = categorieRepository.findById(categorieId)
                 .orElseThrow(() -> new EntityNotFoundException("Catégorie non trouvée (ID: " + categorieId + ")"));
 
@@ -81,11 +79,10 @@ public class ReservationService {
         // --- VALIDATIONS ---
 
         // 0. Sécurité : Vérifier que l'utilisateur est membre du club organisateur de l'événement
-        //    Note: l'appel à eventId est redondant si event est déjà chargé via catégorie, mais garde la cohérence avec l'ID fourni.
         securityService.checkMemberOfEventClubOrThrow(eventId); // -> 403 si non membre
 
         // 1. Événement existe (implicite via catégorie) et est ACTIF
-        if (event == null) { // Sécurité si la relation est rompue
+        if (event == null) {
             throw new EntityNotFoundException("Événement lié à la catégorie (ID: " + categorieId + ") non trouvé."); // -> 404 (ou 500 pour incohérence)
         }
         if (!event.getActif()) {
@@ -93,8 +90,7 @@ public class ReservationService {
         }
 
         // 2. Cohérence catégorie/événement
-        if (!Objects.equals(event.getId(), eventId)) { // Utilise Objects.equals pour la robustesse (null-safe)
-            // Cette vérification est importante si eventId est fourni séparément
+        if (!Objects.equals(event.getId(), eventId)) {
             throw new IllegalArgumentException("La catégorie (ID " + categorieId + ") n'appartient pas à l'événement (ID " + eventId + ")."); // -> 400
         }
 
@@ -105,25 +101,16 @@ public class ReservationService {
         }
 
         // 4. Limite de réservations par membre pour cet événement [1]
-        //    Compte uniquement les réservations déjà CONFIRMEES pour cet utilisateur et cet événement.
         long existingReservationsCount = reservationRepository.countByMembreIdAndEventIdAndStatus(currentUserId, eventId, ReservationStatus.CONFIRME);
         if (existingReservationsCount >= RESERVATION_MAX_PER_EVENT_PER_MEMBER) {
             throw new IllegalStateException("Limite de " + RESERVATION_MAX_PER_EVENT_PER_MEMBER + " réservations confirmées par membre atteinte pour cet événement (ID: " + eventId + ")."); // -> 409
         }
 
         // 5. Capacité de la catégorie (basée sur les places CONFIRMEES)
-        //    Utilise la méthode @Transient getPlaceDisponible() de l'entité Categorie qui doit calculer
-        //    CapaciteTotale - NombreReservationsConfirmees.
-        //    Assurez-vous que cette méthode est efficace (peut nécessiter une requête dédiée ou un chargement EAGER des réservations).
-        //    ATTENTION: S'assurer que getPlaceDisponible prend en compte UNIQUEMENT les réservations CONFIRMEES.
         if (categorie.getPlaceDisponible() <= 0) { // Vérifie s'il reste au moins une place disponible
             throw new IllegalStateException("Capacité maximale (confirmée) atteinte pour la catégorie '" + categorie.getNom() + "' (ID: " + categorieId + ")."); // -> 409
         }
 
-        // --- Création de la Réservation ---
-        // Le constructeur de Reservation gère l'initialisation du statut à CONFIRME,
-        // la génération de l'UUID (si applicable dans le constructeur ou via @PrePersist),
-        // et potentiellement d'autres vérifications si implémentées là.
         Reservation newReservation = new Reservation(membre, event, categorie);
 
         // Sauvegarde la nouvelle réservation en base de données

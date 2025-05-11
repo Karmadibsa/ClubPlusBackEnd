@@ -186,7 +186,7 @@ public class ClubController {
      */
     @GetMapping("/{id}/membres")
     @IsReservation // Requiert rôle RESERVATION ou ADMIN
-    @JsonView(GlobalView.MembreView.class) // Vue JSON pour les membres listés
+    @JsonView(GlobalView.ProfilView.class) // Vue JSON pour les membres listés
     public ResponseEntity<List<Membre>> getClubMembres(@PathVariable Integer id) {
         // Le service gère existence (-> 404) et sécurité d'accès (-> 403).
         Set<Membre> membresSet = clubService.findMembresForClub(id);
