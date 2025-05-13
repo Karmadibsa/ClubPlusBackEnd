@@ -184,10 +184,6 @@ public class ClubService {
         membre.setNom(adminInfo.getNom());
         membre.setPrenom(adminInfo.getPrenom());
         membre.setDate_naissance(adminInfo.getDate_naissance());
-        membre.setNumero_voie(adminInfo.getNumero_voie());
-        membre.setRue(adminInfo.getRue());
-        membre.setCodepostal(adminInfo.getCodepostal());
-        membre.setVille(adminInfo.getVille());
         membre.setTelephone(adminInfo.getTelephone());
         membre.setEmail(adminInfo.getEmail().toLowerCase().trim()); // Email normalisé
         membre.setDate_inscription(LocalDate.now()); // Date inscription système

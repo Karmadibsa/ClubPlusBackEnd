@@ -64,34 +64,4 @@ public class UpdateMembreDto {
     @NotBlank(message = "Le téléphone est requis")
     @Size(max = 20, message = "Le numéro de téléphone ne doit pas dépasser 20 caractères.") // Ajout taille
     private String telephone;
-
-    // --- Champs Adresse (Validation dépend si l'adresse complète est toujours requise à l'update) ---
-
-    /**
-     * Le nouveau numéro de voie. Validation à ajuster (NotBlank si requis, sinon juste @Size).
-     */
-    @NotBlank(message = "Le numéro de voie est requis") // Supposer requis ici
-    @Size(max = 10, message = "Le numéro de voie ne doit pas dépasser 10 caractères.")
-    private String numero_voie;
-
-    /**
-     * La nouvelle rue. Validation à ajuster.
-     */
-    @NotBlank(message = "La rue est requise") // Supposer requis ici
-    @Size(max = 100, message = "La rue ne doit pas dépasser 100 caractères.")
-    private String rue;
-
-    /**
-     * Le nouveau code postal. Validation à ajuster.
-     */
-    @NotBlank(message = "Le code postal est requis") // Supposer requis ici
-    @Size(min = 3, max = 10, message = "Le code postal doit contenir entre 3 et 10 caractères.")
-    private String codepostal;
-
-    /**
-     * La nouvelle ville. Validation à ajuster.
-     */
-    @NotBlank(message = "La ville est requise") // Supposer requis ici
-    @Size(max = 100, message = "La ville ne doit pas dépasser 100 caractères.")
-    private String ville;
 }

@@ -259,23 +259,6 @@ public class MembreService {
             existingMembre.setDate_naissance(updateMembreDto.getDate_naissance());
             updated = true;
         }
-        // Mise à jour de l'adresse
-        if (updateMembreDto.getNumero_voie() != null) { // Peut être null ou 0 selon la logique
-            existingMembre.setNumero_voie(updateMembreDto.getNumero_voie());
-            updated = true;
-        }
-        if (updateMembreDto.getRue() != null) { // Peut être null ou vide
-            existingMembre.setRue(updateMembreDto.getRue());
-            updated = true;
-        }
-        if (updateMembreDto.getCodepostal() != null && !updateMembreDto.getCodepostal().isBlank()) {
-            existingMembre.setCodepostal(updateMembreDto.getCodepostal().trim());
-            updated = true;
-        }
-        if (updateMembreDto.getVille() != null && !updateMembreDto.getVille().isBlank()) {
-            existingMembre.setVille(updateMembreDto.getVille().trim());
-            updated = true;
-        }
         // Mise à jour du téléphone
         if (updateMembreDto.getTelephone() != null) { // Peut être null ou vide
             // Ajouter validation de format si nécessaire

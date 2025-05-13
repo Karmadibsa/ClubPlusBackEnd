@@ -99,44 +99,6 @@ public class Membre {
     @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
     private LocalDate date_inscription = LocalDate.now(); // Initialisation par défaut, peut être surchargée.
 
-    // --- Adresse ---
-
-    /**
-     * Numéro dans la voie de l'adresse du membre.
-     */
-    @NotBlank(message = "Le numéro de voie est obligatoire.")
-    @Size(max = 10, message = "Le numéro de voie ne doit pas dépasser 10 caractères.")
-    @Column(nullable = false, length = 10)
-    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
-    private String numero_voie;
-
-    /**
-     * Nom de la rue de l'adresse du membre.
-     */
-    @NotBlank(message = "La rue est obligatoire.")
-    @Size(max = 100, message = "La rue ne doit pas dépasser 100 caractères.")
-    @Column(nullable = false, length = 100)
-    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
-    private String rue;
-
-    /**
-     * Code postal de l'adresse du membre.
-     */
-    @NotBlank(message = "Le code postal est obligatoire.")
-    @Size(min = 3, max = 10, message = "Le code postal doit contenir entre 3 et 10 caractères.")
-    @Column(nullable = false, length = 10)
-    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
-    private String codepostal;
-
-    /**
-     * Ville de l'adresse du membre.
-     */
-    @NotBlank(message = "La ville est obligatoire.")
-    @Size(max = 100, message = "La ville ne doit pas dépasser 100 caractères.")
-    @Column(nullable = false, length = 100)
-    @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
-    private String ville;
-
     // --- Contact ---
 
     /**
@@ -369,10 +331,6 @@ public class Membre {
         this.nom = "Utilisateur";
         this.prenom = "Anonyme" + anonymizedSuffix; // Rend unique pour éviter collisions potentielles
         this.date_naissance = LocalDate.of(1900, 1, 1); // Date générique (ou null si BDD permet)
-        this.numero_voie = "N/A";
-        this.rue = "N/A";
-        this.codepostal = "00000";
-        this.ville = "N/A";
         this.telephone = "0000000000"; // Numéro invalide (ou null si BDD permet)
         this.email = "anonymized_" + this.id + "@example.com"; // Email unique et manifestement invalide
         this.password = "$2a$10$invalidHashPlaceholder." + UUID.randomUUID(); // Hash invalide/inutilisable
