@@ -92,4 +92,7 @@ public interface MembreDao extends JpaRepository<Membre, Integer> {
      */
     Optional<Membre> findByCodeAmi(String codeAmi);
 
+
+    Optional<Membre> findByVerificationToken(String verificationToken);
 }
+

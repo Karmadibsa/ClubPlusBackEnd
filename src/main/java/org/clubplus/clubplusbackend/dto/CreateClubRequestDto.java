@@ -120,35 +120,7 @@ public class CreateClubRequestDto {
         @NotNull(message = "La date de naissance de l'admin est obligatoire.")
         @Past(message = "La date de naissance de l'admin doit être dans le passé.")
         private LocalDate date_naissance;
-
-        /**
-         * Numéro de voie de l'adresse de l'admin. Obligatoire, max 10.
-         */
-        @NotBlank(message = "Le numéro de voie de l'admin est obligatoire.")
-        @Size(max = 10, message = "Le numéro de voie de l'admin ne doit pas dépasser 10 caractères.")
-        private String numero_voie;
-
-        /**
-         * Rue de l'adresse de l'admin. Obligatoire, max 100.
-         */
-        @NotBlank(message = "La rue de l'admin est obligatoire.")
-        @Size(max = 100, message = "La rue de l'admin ne doit pas dépasser 100 caractères.")
-        private String rue;
-
-        /**
-         * Code postal de l'admin. Obligatoire, entre 3 et 10.
-         */
-        @NotBlank(message = "Le code postal de l'admin est obligatoire.")
-        @Size(min = 3, max = 10, message = "Le code postal de l'admin doit contenir entre 3 et 10 caractères.")
-        private String codepostal;
-
-        /**
-         * Ville de l'admin. Obligatoire, max 100.
-         */
-        @NotBlank(message = "La ville de l'admin est obligatoire.")
-        @Size(max = 100, message = "La ville de l'admin ne doit pas dépasser 100 caractères.")
-        private String ville;
-
+        
         /**
          * Numéro de téléphone de l'admin. Obligatoire, max 20.
          */

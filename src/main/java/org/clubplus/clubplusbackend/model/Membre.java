@@ -178,6 +178,12 @@ public class Membre {
      */
     private LocalDateTime anonymizeDate;
 
+    @Column(nullable = false)
+    private boolean verified = false;
+
+    @Column(unique = true)
+    private String verificationToken;
+
     // --- Relations ---
 
     /**

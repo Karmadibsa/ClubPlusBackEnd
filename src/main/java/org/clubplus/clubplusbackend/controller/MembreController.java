@@ -353,7 +353,5 @@ public class MembreController {
         return ResponseEntity.ok(latestMembers);
     }
 
-    // Rappel : La gestion centralisée des exceptions via @ControllerAdvice est essentielle
-    // pour mapper les exceptions (EntityNotFoundException, AccessDeniedException, IllegalStateException,
-    // IllegalArgumentException, MethodArgumentNotValidException) aux bonnes réponses HTTP (404, 403, 409, 400).
+
 }

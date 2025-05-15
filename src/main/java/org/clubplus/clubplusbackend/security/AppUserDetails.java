@@ -212,13 +212,6 @@ public class AppUserDetails implements UserDetails {
      */
     @Override
     public boolean isEnabled() {
-        // Exemple de personnalisation (à décommenter et adapter si 'isActif()' existe sur Membre):
-        // if (this.membre != null) {
-        //     return this.membre.isActif(); // Lie l'activation à l'état du Membre.
-        // }
-        // return false; // Ou retourner false si le membre est null.
-
-        // Comportement par défaut actuel : toujours activé.
-        return true;
+        return this.membre.isVerified();
     }
 }

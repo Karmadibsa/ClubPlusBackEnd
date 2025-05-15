@@ -25,6 +25,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.view.RedirectView;
 
 /**
  * Contrôleur REST gérant les points d'accès publics relatifs à l'authentification
@@ -42,6 +43,9 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/auth") // Point d'entrée public pour l'authentification et actions associées
 @RequiredArgsConstructor // Injection des dépendances finales via le constructeur (Lombok)
 public class AuthController {
+
+    private final String frontendEmailVerifiedUrl = "http://localhost:4200/connexion"; // À configurer
+    private final String frontendEmailVerificationFailedUrl = "http://localhost:4200/connexion"; // À configurer
 
     /**
      * Service pour la logique métier liée aux clubs.
@@ -239,5 +243,26 @@ public class AuthController {
         // Le service gère la logique de création et les conflits potentiels (ex: email) -> 409.
         Club newClub = clubService.createClubAndRegisterAdmin(creationDto);
         return ResponseEntity.status(HttpStatus.CREATED).body(newClub);
+    }
+
+
+    @GetMapping("/verify-email")
+    public RedirectView verifyEmail(@RequestParam("token") String token) {
+        try {
+            boolean isVerified = membreService.verifyUserToken(token); // Cette méthode doit être créée dans MembreService
+
+            if (isVerified) {
+                // Redirection vers une page de succès de votre frontend Angular
+                return new RedirectView(frontendEmailVerifiedUrl);
+            } else {
+                // Redirection vers une page d'échec (token invalide/expiré ou utilisateur déjà vérifié)
+                return new RedirectView(frontendEmailVerificationFailedUrl);
+            }
+        } catch (Exception e) {
+            // Gérer les erreurs inattendues
+            // Log l'erreur
+            System.err.println("Erreur lors de la vérification de l'email : " + e.getMessage());
+            return new RedirectView(frontendEmailVerificationFailedUrl);
+        }
     }
 }

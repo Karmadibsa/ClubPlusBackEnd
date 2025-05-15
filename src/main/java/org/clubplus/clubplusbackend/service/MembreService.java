@@ -18,10 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -40,6 +37,7 @@ public class MembreService {
     private final ClubDao clubRepository;
     private final AdhesionDao adhesionRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailService emailService;
     private final SecurityService securityService;
 
     // --- Méthodes de Lecture ---
@@ -174,55 +172,62 @@ public class MembreService {
     // --- Inscription et Gestion de Compte ---
 
     /**
-     * Enregistre un nouveau membre avec les informations fournies et le fait adhérer
-     * automatiquement au club spécifié par son code unique.
-     * L'email est normalisé (minuscules, sans espaces superflus).
-     * Le mot de passe est haché avant stockage.
-     * Le rôle par défaut est {@link Role#MEMBRE}.
+     * Enregistre un nouveau membre, le fait adhérer à un club, et envoie un email de vérification.
+     * [Voir la documentation complète de la méthode précédente pour les détails]
      *
-     * @param membreData L'entité {@link Membre} contenant les informations initiales (nom, email, mot de passe brut, etc.).
-     *                   L'ID doit être null. Les collections doivent être initialisées si nécessaire.
-     * @param codeClub   Le code unique du club que le nouveau membre doit rejoindre.
-     * @return L'entité {@link Membre} nouvellement créée et persistée, incluant son adhésion initiale.
-     * @throws IllegalArgumentException si l'email fourni est déjà utilisé par un autre compte (HTTP 409 Conflict).
-     * @throws EntityNotFoundException  si aucun club n'est trouvé avec le {@code codeClub} fourni (HTTP 404 Not Found).
+     * @param membreData Les infos du membre.
+     * @param codeClub   Le code du club.
+     * @return Le membre enregistré.
+     * @throws IllegalArgumentException Si l'email existe déjà.
+     * @throws EntityNotFoundException  Si le club n'existe pas.
      */
     @Transactional
     public Membre registerMembreAndJoinClub(Membre membreData, String codeClub) {
-        // Validation et Normalisation de l'email
+        // 1. Validation, normalisation, recherche du club (comme avant)
         String email = membreData.getEmail().toLowerCase().trim();
         if (membreRepository.existsByEmail(email)) {
-            throw new IllegalArgumentException("Un compte existe déjà avec cet email."); // Conflit -> HTTP 409
+            throw new IllegalArgumentException("Un compte existe déjà avec cet email.");
         }
 
-        // Recherche du club par son code
         Club clubToJoin = clubRepository.findByCodeClub(codeClub)
-                .orElseThrow(() -> new EntityNotFoundException("Club non trouvé avec le code : " + codeClub)); // Non trouvé -> HTTP 404
+                .orElseThrow(() -> new EntityNotFoundException("Club non trouvé avec le code : " + codeClub));
 
-        // Préparation de l'entité Membre avant sauvegarde
-        membreData.setEmail(email); // Email normalisé
-        membreData.setDate_inscription(LocalDate.now()); // Date d'inscription actuelle
-        membreData.setPassword(passwordEncoder.encode(membreData.getPassword())); // Hachage du mot de passe
-        membreData.setRole(Role.MEMBRE); // Rôle par défaut
-        membreData.setId(null); // Assure que c'est une création
-        membreData.setActif(true); // Un nouveau membre est actif par défaut
-        membreData.setAdhesions(new HashSet<>()); // Initialise la collection pour éviter NullPointerException
-        membreData.setAmis(new HashSet<>()); // Initialise la collection
-        // Initialiser d'autres collections si elles existent (ex: reservations, demandesAmiEnvoyees, etc.)
-        // membreData.setReservations(new HashSet<>());
-        // membreData.setDemandesAmiEnvoyees(new HashSet<>());
-        // membreData.setDemandesAmiRecues(new HashSet<>());
+        // 2. Préparation de l'entité Membre (avant sauvegarde initiale)
+        membreData.setEmail(email);
+        membreData.setDate_inscription(LocalDate.now());
+        membreData.setPassword(passwordEncoder.encode(membreData.getPassword()));
+        membreData.setRole(Role.MEMBRE);
+        membreData.setId(null);
+        membreData.setActif(true);
+        membreData.setAdhesions(new HashSet<>());
+        membreData.setAmis(new HashSet<>());
+        membreData.setVerified(false); // Ajout : Initialiser isVerified à false
+        String verificationToken = UUID.randomUUID().toString(); // Ajout : Générer un token unique
+        membreData.setVerificationToken(verificationToken); // Ajout : Stocker le token
+        // membreData.setTokenExpiryDate(LocalDateTime.now().plusDays(1)); // Optionnel: Ajouter une date d'expiration
 
-        // Sauvegarde du nouveau membre
+        // 3. Sauvegarde initiale du membre (avec isVerified = false et le token)
         Membre nouveauMembre = membreRepository.save(membreData);
 
-        // Création et sauvegarde de l'adhésion initiale
+        // 4. Création et sauvegarde de l'adhésion initiale (comme avant)
         Adhesion nouvelleAdhesion = new Adhesion(nouveauMembre, clubToJoin);
         adhesionRepository.save(nouvelleAdhesion);
 
-        // Optionnel: Recharger le membre pour inclure l'adhésion si nécessaire (dépend du mapping et du besoin du retour)
-        // return getMembreByIdOrThrow(nouveauMembre.getId());
-        return nouveauMembre; // Retourne le membre tel quel après sauvegarde initiale
+        // 5. Envoi de l'email de vérification (après sauvegarde réussie)
+        try {
+            emailService.sendVerificationEmail(nouveauMembre); // Méthode dédiée pour l'envoi
+        } catch (Exception e) {
+            // Gérer l'erreur d'envoi d'email (log, rollback si nécessaire, etc.)
+            System.err.println("Erreur lors de l'envoi de l'email de vérification à " + nouveauMembre.getEmail() + ": " + e.getMessage());
+            // Option (selon votre besoin):
+            // - Rollback de la transaction si l'envoi d'email est critique
+            //   TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            // - Lancer une exception custom pour informer l'utilisateur
+            //   throw new EmailSendingException("Erreur lors de l'envoi de l'email. Veuillez réessayer plus tard.", e);
+            // - Continuer l'inscription mais informer l'utilisateur qu'il devra contacter le support
+        }
+
+        return nouveauMembre;
     }
 
     /**
@@ -492,4 +497,28 @@ public class MembreService {
         return membreRepository.save(targetMember);
     }
 
+    @Transactional // Important pour s'assurer que les modifications sont bien persistées
+    public boolean verifyUserToken(String token) {
+        Optional<Membre> membreOptional = membreRepository.findByVerificationToken(token); // Vous devez créer cette méthode dans MembreRepository
+
+        if (membreOptional.isEmpty()) {
+            return false; // Token non trouvé
+        }
+
+        Membre membre = membreOptional.get();
+
+        if (membre.isVerified()) {
+            // Compte déjà vérifié, vous pouvez considérer cela comme un succès ou un cas spécial
+            // Si vous voulez éviter la réutilisation du lien, ne retournez pas true ici mais plutôt un code d'erreur.
+            // Pour l'instant, considérons que si déjà vérifié, c'est "ok"
+            return true;
+        }
+
+
+        membre.setVerified(true);
+        membre.setVerificationToken(null); // Très important : Invalider le token après utilisation
+        membreRepository.save(membre);
+
+        return true;
+    }
 }

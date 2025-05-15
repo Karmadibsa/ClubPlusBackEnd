@@ -6,6 +6,7 @@ import lombok.Data;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -256,4 +257,11 @@ public class GlobalExceptionHandler {
         return "N/A"; // Retourne "Non Applicable" si l'extraction échoue
     }
 
+
+    @ExceptionHandler(DisabledException.class)
+    public ResponseEntity<String> handleDisabledException(DisabledException ex, WebRequest request) {
+        // Vous pouvez personnaliser le message et le statut
+        String errorMessage = "Le compte utilisateur n'a pas été vérifié. Veuillez consulter votre e-mail de vérification.";
+        return new ResponseEntity<>(errorMessage, HttpStatus.UNAUTHORIZED); // Ou FORBIDDEN (403) si vous préférez
+    }
 }

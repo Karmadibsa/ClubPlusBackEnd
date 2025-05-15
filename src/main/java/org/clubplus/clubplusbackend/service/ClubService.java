@@ -17,10 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -51,6 +48,7 @@ public class ClubService {
     private final MembreDao membreRepository;
     private final PasswordEncoder passwordEncoder;
     private final SecurityService securityService;
+    private final EmailService emailService; // Injection de EmailService
 
 
     // --- Récupération de base (Sans sécurité contextuelle appliquée ici) ---
@@ -144,7 +142,9 @@ public class ClubService {
         adminToSave.setPassword(passwordEncoder.encode(adminInfo.getPassword())); // Hachage du mot de passe
         adminToSave.setRole(Role.ADMIN); // Attribution du rôle ADMIN
         Membre savedAdmin = membreRepository.save(adminToSave);
-
+        adminToSave.setVerified(false); // Le compte admin n'est pas vérifié initialement
+        String verificationToken = UUID.randomUUID().toString();
+        adminToSave.setVerificationToken(verificationToken);
         // 4. Création et Sauvegarde du Club
         Club clubToSave = mapDtoToClub(dto); // Utilisation d'une méthode helper
         Club savedClubWithId = clubRepository.save(clubToSave);
@@ -171,7 +171,19 @@ public class ClubService {
         // 5. Création et Sauvegarde de l'Adhesion liant l'admin au club
         Adhesion adminAdhesion = new Adhesion(savedAdmin, savedClubWithId);
         adhesionRepository.save(adminAdhesion);
-
+        
+        try {
+            emailService.sendVerificationEmail(savedAdmin); // Utilise la méthode existante de EmailService
+        } catch (Exception e) {
+            // Log l'erreur d'envoi d'email.
+            // Décidez de la stratégie :
+            // - Continuer la création du club et l'admin devra demander un nouveau lien/être vérifié manuellement.
+            // - Ou annuler la transaction (throw new RuntimeException("Erreur envoi email", e);)
+            System.err.println("CRITICAL: Échec de l'envoi de l'email de vérification pour l'admin du club " +
+                    savedAdmin.getEmail() + ". Le compte a été créé mais n'est pas vérifié. Détails: " + e.getMessage());
+            // Si l'envoi d'email est critique et doit annuler l'inscription :
+            // throw new RuntimeException("Échec de l'envoi de l'email de vérification. L'inscription du club a été annulée.", e);
+        }
         // 6. Retourner le club créé (avec son ID et potentiellement son codeClub généré)
         return savedClubWithId;
     }
