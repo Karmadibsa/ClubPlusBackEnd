@@ -78,4 +78,28 @@ public class EmailService {
         mailSender.send(message);
         System.out.println("E-mail de vérification envoyé (HTML) à " + membre.getEmail());
     }
+
+    public void sendPasswordResetEmail(Membre membre, String token, String resetPageUrl) throws MessagingException {
+        if (membre.getEmail() == null || token == null) {
+            throw new IllegalArgumentException("L'email du membre et le token ne peuvent pas être nuls.");
+        }
+
+        String resetLink = resetPageUrl + "?token=" + token; // Le lien vers votre page Angular
+
+        Context context = new Context();
+        context.setVariable("prenom", membre.getPrenom());
+        context.setVariable("resetLink", resetLink);
+
+        String htmlContent = templateEngine.process("reset-password-email.html", context); // Nouveau template
+
+        MimeMessage message = mailSender.createMimeMessage();
+        MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+        helper.setFrom(fromEmailAddress);
+        helper.setTo(membre.getEmail());
+        helper.setSubject("Réinitialisation de votre mot de passe - Club Plus");
+        helper.setText(htmlContent, true);
+
+        mailSender.send(message);
+        System.out.println("Email de réinitialisation de mot de passe envoyé à " + membre.getEmail());
+    }
 }

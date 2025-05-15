@@ -163,6 +163,10 @@ public class ConfigurationSecurite {
                         .requestMatchers("/auth/connexion").permitAll()
                         .requestMatchers("/auth/stats").permitAll()
                         .requestMatchers("/auth/verify-email").permitAll()
+                        .requestMatchers("/auth/mail-password-reset").permitAll()
+                        .requestMatchers("/auth/reset-password").permitAll()
+                        .requestMatchers("/auth/validate-reset-token").permitAll()
+
                         // Autorise l'accès public à l'inscription de club
                         .requestMatchers("/auth/club/inscription").permitAll()
                         // Exige une authentification pour toutes les autres requêtes API

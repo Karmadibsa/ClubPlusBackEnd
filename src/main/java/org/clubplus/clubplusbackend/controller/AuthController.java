@@ -1,16 +1,16 @@
 package org.clubplus.clubplusbackend.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import jakarta.mail.MessagingException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.clubplus.clubplusbackend.dto.CreateClubRequestDto;
-import org.clubplus.clubplusbackend.dto.HomepageStatsDTO;
-import org.clubplus.clubplusbackend.dto.LoginRequestDto;
+import org.clubplus.clubplusbackend.dto.*;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.security.AppUserDetails;
 import org.clubplus.clubplusbackend.security.SecurityUtils;
+import org.clubplus.clubplusbackend.security.annotation.IsConnected;
 import org.clubplus.clubplusbackend.service.ClubService;
 import org.clubplus.clubplusbackend.service.MembreService;
 import org.clubplus.clubplusbackend.service.StatsService;
@@ -249,7 +249,7 @@ public class AuthController {
     @GetMapping("/verify-email")
     public RedirectView verifyEmail(@RequestParam("token") String token) {
         try {
-            boolean isVerified = membreService.verifyUserToken(token); // Cette méthode doit être créée dans MembreService
+            boolean isVerified = membreService.verifyUserValidationToken(token); // Cette méthode doit être créée dans MembreService
 
             if (isVerified) {
                 // Redirection vers une page de succès de votre frontend Angular
@@ -263,6 +263,62 @@ public class AuthController {
             // Log l'erreur
             System.err.println("Erreur lors de la vérification de l'email : " + e.getMessage());
             return new RedirectView(frontendEmailVerificationFailedUrl);
+        }
+    }
+
+    @PostMapping("/mail-password-reset")
+    public ResponseEntity<?> requestPasswordReset(@RequestParam("email") String email) {
+        try {
+            membreService.requestPasswordReset(email);
+            return ResponseEntity.ok("Si un compte est associé à cet email, un lien de réinitialisation a été envoyé.");
+        } catch (MessagingException e) {
+            // Log l'erreur
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Erreur lors de l'envoi de l'email.");
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody ResetPasswordPayload payload) {
+        try {
+            boolean success = membreService.resetPassword(payload.token, payload.newPassword);
+            if (success) {
+                return ResponseEntity.ok("Votre mot de passe a été réinitialisé avec succès.");
+            } else {
+                // Ce cas ne devrait pas être atteint si les exceptions sont bien gérées dans le service
+                return ResponseEntity.badRequest().body("La réinitialisation du mot de passe a échoué.");
+            }
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        } catch (Exception e) {
+            // Log l'erreur
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Une erreur est survenue.");
+        }
+    }
+
+    @GetMapping("/validate-reset-token")
+    public ResponseEntity<Void> validateResetToken(@RequestParam("token") String token) {
+        boolean valid = membreService.verifyUserResetToken(token);
+        if (valid) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+    }
+
+    @IsConnected
+    @PostMapping("/change-password")
+    public ResponseEntity<?> changePasswordConnected(Authentication authentication, @Valid @RequestBody ChangePasswordConnectedPayload payload) {
+        String userEmail = authentication.getName(); // Ou l'ID si vous l'avez stocké comme 'name' dans le UserDetails
+
+        try {
+            membreService.changePasswordForAuthenticatedUser(userEmail, payload.getCurrentPassword(), payload.getNewPassword());
+            return ResponseEntity.ok().body("Mot de passe changé avec succès."); // Renvoyer un message clair
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(e.getMessage()); // Ex: "Mot de passe actuel incorrect"
+        } catch (Exception e) {
+            System.err.println("Erreur lors du changement de mot de passe pour l'utilisateur connecté : " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Une erreur interne est survenue.");
         }
     }
 }

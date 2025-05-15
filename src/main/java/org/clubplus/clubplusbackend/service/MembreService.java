@@ -1,5 +1,6 @@
 package org.clubplus.clubplusbackend.service;
 
+import jakarta.mail.MessagingException;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.dao.AdhesionDao;
@@ -11,6 +12,7 @@ import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.model.Role;
 import org.clubplus.clubplusbackend.security.SecurityService;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Limit;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,7 +20,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -31,6 +35,19 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Transactional // Applique la transactionnalité par défaut à toutes les méthodes publiques
 public class MembreService {
+
+    @Value("${jwt.secret}")
+    private String jwtSecret;
+
+    @Value("${jwt.reset-token.expiration-ms}")
+    private long jwtResetTokenExpirationMs;
+
+    @Value("${app.frontend.reset-password-page-url}")
+    private String frontendResetPasswordPageUrl;
+
+    private static final String PASSWORD_PATTERN_REGEX =
+            "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#&()\\-\\[{}\\]:;',?/*~$^+=<>]).{8,100}$";
+    private static final Pattern PASSWORD_PATTERN = Pattern.compile(PASSWORD_PATTERN_REGEX);
 
     // Dépendances injectées via Lombok @RequiredArgsConstructor
     private final MembreDao membreRepository;
@@ -498,7 +515,7 @@ public class MembreService {
     }
 
     @Transactional // Important pour s'assurer que les modifications sont bien persistées
-    public boolean verifyUserToken(String token) {
+    public boolean verifyUserValidationToken(String token) {
         Optional<Membre> membreOptional = membreRepository.findByVerificationToken(token); // Vous devez créer cette méthode dans MembreRepository
 
         if (membreOptional.isEmpty()) {
@@ -520,5 +537,180 @@ public class MembreService {
         membreRepository.save(membre);
 
         return true;
+    }
+
+    /**
+     * Initie le processus de réinitialisation de mot de passe pour un utilisateur.
+     * Génère un token unique, le stocke avec une date d'expiration et l'envoie par email.
+     *
+     * @param email L'adresse email de l'utilisateur demandant la réinitialisation.
+     * @throws MessagingException Si une erreur survient lors de l'envoi de l'email.
+     */
+    @Transactional
+    public void requestPasswordReset(String email) throws MessagingException {
+        Optional<Membre> membreOptional = membreRepository.findByEmail(email.toLowerCase().trim());
+        System.out.println(membreOptional.toString());
+
+
+        if (membreOptional.isPresent()) {
+            System.out.println("is present :" + membreOptional.isPresent());
+
+            Membre membre = membreOptional.get();
+
+            // Générer un token aléatoire unique
+            String resetToken = UUID.randomUUID().toString();
+            System.out.println(resetToken);
+
+            // Définir une date d'expiration (par exemple, 30 minutes)
+            LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(30);
+            membre.setResetPasswordToken(resetToken);
+            membre.setResetPasswordTokenExpiryDate(expiryDate);
+
+            // Sauvegarder le membre avec le token et la date d'expiration
+            membreRepository.save(membre);
+
+            // Envoyer l'email avec le lien de réinitialisation
+            // Vous devrez modifier cette méthode dans EmailService
+            emailService.sendPasswordResetEmail(membre, resetToken, frontendResetPasswordPageUrl);
+            System.out.println("Email de réinitialisation envoyé à : " + membre.getEmail()); // Pour le log
+        } else {
+            // Email non trouvé : ne rien faire ou loguer discrètement
+            // Cela évite de révéler si un email est enregistré ou non (sécurité par obscurité)
+            System.out.println("Tentative de réinitialisation pour un email non trouvé : " + email); // Pour le log
+        }
+    }
+
+    /**
+     * Valide le token de réinitialisation, vérifie la complexité du nouveau mot de passe,
+     * et met à jour le mot de passe de l'utilisateur.
+     *
+     * @param token       Le token de réinitialisation.
+     * @param newPassword Le nouveau mot de passe (en clair).
+     * @return true si la réinitialisation est réussie.
+     * @throws IllegalArgumentException si le token est invalide, si l'utilisateur n'est pas trouvé,
+     *                                  ou si le nouveau mot de passe ne respecte pas les critères de complexité.
+     * @throws IllegalStateException    si le token a expiré.
+     */
+    @Transactional
+    public boolean resetPassword(String token, String newPassword) {
+        // 1. Rechercher le membre par le token de réinitialisation
+        Membre membre = membreRepository.findByResetPasswordToken(token)
+                .orElseThrow(() -> new IllegalArgumentException("Le lien de réinitialisation est invalide ou a déjà été utilisé."));
+        // Message d'erreur plus générique pour ne pas révéler d'informations sur le token
+
+        // 2. Vérifier si le token a expiré
+        if (membre.getResetPasswordTokenExpiryDate() == null || LocalDateTime.now().isAfter(membre.getResetPasswordTokenExpiryDate())) {
+            // Optionnel : Invalider le token expiré pour qu'il ne puisse plus être tenté
+            membre.setResetPasswordToken(null);
+            membre.setResetPasswordTokenExpiryDate(null);
+            membreRepository.save(membre);
+            throw new IllegalStateException("Le lien de réinitialisation a expiré. Veuillez en demander un nouveau.");
+        }
+
+        // 3. Valider la présence et la complexité du nouveau mot de passe
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("Le nouveau mot de passe ne peut pas être vide.");
+        }
+
+        if (!PASSWORD_PATTERN.matcher(newPassword).matches()) {
+            throw new IllegalArgumentException("Le nouveau mot de passe doit faire entre 8 et 100 caractères et contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial (!@#&()...)");
+        }
+
+        // 4. (Optionnel) Vérifier si le nouveau mot de passe est différent de l'ancien
+        //    Même si l'utilisateur a oublié son ancien mot de passe, cette vérification
+        //    peut empêcher de réutiliser accidentellement le même mot de passe si le compte a été compromis.
+        if (passwordEncoder.matches(newPassword, membre.getPassword())) {
+            throw new IllegalArgumentException("Le nouveau mot de passe doit être différent de l'ancien mot de passe.");
+        }
+
+        // 5. Mettre à jour le mot de passe
+        membre.setPassword(passwordEncoder.encode(newPassword));
+
+        // 6. Invalider le token après utilisation (très important !)
+        membre.setResetPasswordToken(null);
+        membre.setResetPasswordTokenExpiryDate(null);
+
+        membreRepository.save(membre);
+        System.out.println("Mot de passe réinitialisé avec succès pour l'utilisateur (ID) : " + membre.getId());
+        // Optionnel : Envoyer un email de notification que le mot de passe a été réinitialisé
+        // emailService.sendPasswordHasBeenResetNotificationEmail(membre);
+        return true;
+    }
+
+    /**
+     * Vérifie la validité d'un token de réinitialisation de mot de passe.
+     * Utilisé par votre `verifyEmail` existant mais adapté pour le reset.
+     * C'est une vérification simple, la méthode `resetPassword` fait une validation plus complète.
+     *
+     * @deprecated La validation complète et l'action se font dans `resetPassword`.
+     * Cette méthode peut être utilisée par un endpoint GET qui redirige vers la page de saisie
+     * du nouveau mot de passe si le token est structurellement valide et non expiré.
+     */
+    @Deprecated
+    @Transactional(readOnly = true) // Pas de modification ici, juste une vérification
+    public boolean verifyUserResetToken(String token) {
+        // Rechercher le membre par le token de réinitialisation
+        Membre membreOptional = membreRepository.findByResetPasswordToken(token).orElse(null);
+        System.out.println(membreOptional.toString());
+        if (membreOptional == null) {
+
+            return false; // Token invalide ou utilisateur non trouvé
+        }
+
+        Membre membre = membreOptional;
+        // Vérifier si le token a expiré
+        if (LocalDateTime.now().isAfter(membre.getResetPasswordTokenExpiryDate())) {
+            return false; // Token expiré
+        }
+        return true;
+    }
+
+
+    /**
+     * Change le mot de passe pour un utilisateur actuellement authentifié.
+     * Vérifie d'abord si le mot de passe actuel fourni correspond.
+     * Valide également la complexité du nouveau mot de passe selon les règles définies.
+     *
+     * @param userEmail       L'email (ou l'identifiant unique) de l'utilisateur authentifié.
+     * @param currentPassword Le mot de passe actuel fourni par l'utilisateur.
+     * @param newPassword     Le nouveau mot de passe souhaité.
+     * @throws IllegalArgumentException Si l'utilisateur n'est pas trouvé, si le mot de passe actuel est incorrect,
+     *                                  ou si le nouveau mot de passe ne respecte pas les critères de complexité.
+     */
+    public void changePasswordForAuthenticatedUser(String userEmail, String currentPassword, String newPassword) {
+
+
+        Membre membre = membreRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new IllegalArgumentException("Utilisateur non trouvé. Le changement de mot de passe a échoué."));
+
+        // 1. Vérifier si le mot de passe actuel fourni correspond au mot de passe haché en base
+        if (!passwordEncoder.matches(currentPassword, membre.getPassword())) {
+            throw new IllegalArgumentException("Le mot de passe actuel est incorrect.");
+        }
+
+        // 2. Valider la présence et la complexité du nouveau mot de passe
+        if (newPassword == null || newPassword.trim().isEmpty()) {
+            throw new IllegalArgumentException("Le nouveau mot de passe ne peut pas être vide.");
+        }
+
+        if (!PASSWORD_PATTERN.matcher(newPassword).matches()) {
+            // Vous pouvez ici choisir de renvoyer un message d'erreur générique ou plus détaillé.
+            // Le message de votre annotation @Pattern est très bien :
+            throw new IllegalArgumentException("Le nouveau mot de passe doit faire entre 8 et 100 caractères et contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial (!@#&()...)");
+        }
+
+        // 3. (Optionnel) Vérifier si le nouveau mot de passe est différent de l'ancien
+        //    Cette vérification est parfois souhaitée par les politiques de sécurité.
+        if (passwordEncoder.matches(newPassword, membre.getPassword())) {
+            throw new IllegalArgumentException("Le nouveau mot de passe doit être différent de l'ancien mot de passe.");
+        }
+
+        // 4. Hasher et sauvegarder le nouveau mot de passe
+        membre.setPassword(passwordEncoder.encode(newPassword));
+        membreRepository.save(membre);
+
+        System.out.println("Mot de passe changé avec succès pour l'utilisateur : " + userEmail);
+        // Optionnel : Envoyer un email de notification de changement de mot de passe
+        // emailService.sendPasswordChangedNotificationEmail(membre);
     }
 }

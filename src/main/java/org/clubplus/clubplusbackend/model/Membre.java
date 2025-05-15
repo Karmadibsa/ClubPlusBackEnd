@@ -184,6 +184,12 @@ public class Membre {
     @Column(unique = true)
     private String verificationToken;
 
+    @Column(unique = true)
+    private String resetPasswordToken;
+
+    private LocalDateTime resetPasswordTokenExpiryDate;
+
+
     // --- Relations ---
 
     /**

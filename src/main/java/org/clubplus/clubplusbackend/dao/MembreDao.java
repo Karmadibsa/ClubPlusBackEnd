@@ -94,5 +94,8 @@ public interface MembreDao extends JpaRepository<Membre, Integer> {
 
 
     Optional<Membre> findByVerificationToken(String verificationToken);
+
+    Optional<Membre> findByResetPasswordToken(String resetPasswordToken);
+
 }
 
