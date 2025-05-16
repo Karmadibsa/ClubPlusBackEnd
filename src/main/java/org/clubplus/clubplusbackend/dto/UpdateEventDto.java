@@ -33,14 +33,14 @@ public class UpdateEventDto {
      */
     @NotNull(message = "La date et heure de début sont obligatoires.")
     @FutureOrPresent(message = "La date de début doit être dans le présent ou le futur.")
-    private LocalDateTime start;
+    private LocalDateTime startTime;
 
     /**
      * La nouvelle date/heure de fin. Obligatoire, futur et après 'start' (validé en service).
      */
     @NotNull(message = "La date et heure de fin sont obligatoires.")
     @Future(message = "La date de fin doit être dans le futur.") // @Future est plus strict que @FutureOrPresent ici
-    private LocalDateTime end;
+    private LocalDateTime endTime;
     // La validation end > start est gérée dans le service.
 
     /**

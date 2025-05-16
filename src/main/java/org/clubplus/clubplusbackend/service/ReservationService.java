@@ -96,7 +96,7 @@ public class ReservationService {
 
         // 3. L'événement est-il futur ?
         LocalDateTime now = LocalDateTime.now();
-        if (event.getStart() == null || event.getStart().isBefore(now)) {
+        if (event.getStartTime() == null || event.getStartTime().isBefore(now)) {
             throw new IllegalStateException("Impossible de réserver : l'événement (ID: " + eventId + ") est déjà commencé ou passé."); // -> 409
         }
 
@@ -294,7 +294,7 @@ public class ReservationService {
         // 3. Vérification métier : L'événement est-il futur ?
         Event event = reservation.getEvent(); // Doit être chargé
         LocalDateTime now = LocalDateTime.now();
-        if (event == null || event.getStart() == null || event.getStart().isBefore(now)) {
+        if (event == null || event.getStartTime() == null || event.getStartTime().isBefore(now)) {
             throw new IllegalStateException("Annulation impossible : l'événement (ID: " + (event != null ? event.getId() : "inconnu") + ") est déjà commencé ou passé."); // -> 409
         }
 
@@ -353,8 +353,8 @@ public class ReservationService {
 
         //    b) Est-on dans la fenêtre de scan/validation autorisée ? (Ex: 1h avant début jusqu'à la fin)
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime eventStart = event.getStart();
-        LocalDateTime eventEnd = event.getEnd();
+        LocalDateTime eventStart = event.getStartTime();
+        LocalDateTime eventEnd = event.getEndTime();
 
         if (eventStart == null || eventEnd == null) {
             // Sécurité des données, même si @NotNull devrait l'empêcher

@@ -143,13 +143,13 @@ public class EventService {
         // Applique le filtre de statut et de date
         if ("inactive".equalsIgnoreCase(statusFilter)) {
             // Trouve les événements futurs et inactifs
-            return eventRepository.findByOrganisateurIdAndActifAndStartAfter(clubId, false, now);
+            return eventRepository.findByOrganisateurIdAndActifAndStartTimeAfter(clubId, false, now);
         } else if ("all".equalsIgnoreCase(statusFilter)) {
             // Trouve tous les événements futurs (actifs et inactifs)
-            return eventRepository.findByOrganisateurIdAndStartAfter(clubId, now);
+            return eventRepository.findByOrganisateurIdAndStartTimeAfter(clubId, now);
         } else { // "active" ou null (comportement par défaut)
             // Trouve les événements futurs et actifs
-            return eventRepository.findByOrganisateurIdAndActifAndStartAfter(clubId, true, now);
+            return eventRepository.findByOrganisateurIdAndActifAndStartTimeAfter(clubId, true, now);
         }
     }
 
@@ -178,13 +178,13 @@ public class EventService {
         // Applique le filtre basé sur le paramètre statusFilter
         if ("active".equalsIgnoreCase(statusFilter)) {
             // Récupère seulement les événements futurs et actifs
-            return eventRepository.findByOrganisateurIdInAndActifAndStartAfter(memberClubIds, true, now);
+            return eventRepository.findByOrganisateurIdInAndActifAndStartTimeAfter(memberClubIds, true, now);
         } else if ("inactive".equalsIgnoreCase(statusFilter)) {
             // Récupère seulement les événements futurs et inactifs (annulés)
-            return eventRepository.findByOrganisateurIdInAndActifAndStartAfter(memberClubIds, false, now);
+            return eventRepository.findByOrganisateurIdInAndActifAndStartTimeAfter(memberClubIds, false, now);
         } else { // null, "all", ou une valeur invalide -> retourne TOUT (comportement par défaut)
             // Récupère tous les événements futurs pour ces clubs (actifs et inactifs)
-            return eventRepository.findByOrganisateurIdInAndStartAfter(memberClubIds, now);
+            return eventRepository.findByOrganisateurIdInAndStartTimeAfter(memberClubIds, now);
         }
     }
 
@@ -273,13 +273,13 @@ public class EventService {
         // Sélection de la bonne méthode DAO en fonction du statut demandé
         if ("all".equalsIgnoreCase(status)) {
             // Tous les événements futurs (actifs et inactifs)
-            return eventRepository.findByOrganisateurIdInAndStartAfter(memberClubIds, now);
+            return eventRepository.findByOrganisateurIdInAndStartTimeAfter(memberClubIds, now);
         } else if ("inactive".equalsIgnoreCase(status)) {
             // Événements futurs et inactifs
-            return eventRepository.findByOrganisateurIdInAndActifIsFalseAndStartAfter(memberClubIds, now);
+            return eventRepository.findByOrganisateurIdInAndActifIsFalseAndStartTimeAfter(memberClubIds, now);
         } else { // "active" ou par défaut
             // Événements futurs et actifs
-            return eventRepository.findByOrganisateurIdInAndActifIsTrueAndStartAfter(memberClubIds, now);
+            return eventRepository.findByOrganisateurIdInAndActifIsTrueAndStartTimeAfter(memberClubIds, now);
         }
     }
 
@@ -358,8 +358,8 @@ public class EventService {
             // Copie des propriétés de base de l'événement
             dto.setId(event.getId());
             dto.setNom(event.getNom());
-            dto.setStart(event.getStart());
-            dto.setEnd(event.getEnd());
+            dto.setStartTime(event.getStartTime());
+            dto.setEndTime(event.getEndTime());
             dto.setDescription(event.getDescription());
             dto.setLocation(event.getLocation());
             dto.setActif(event.getActif());
@@ -435,7 +435,7 @@ public class EventService {
         LocalDateTime now = LocalDateTime.now(); // Point de référence temporel
 
         // Appelle la méthode du repository pour trouver les 5 prochains événements actifs, triés par date
-        return eventRepository.findTop5ByOrganisateurIdAndActifTrueAndStartAfterOrderByStartAsc(clubId, now);
+        return eventRepository.findTop5ByOrganisateurIdAndActifTrueAndStartTimeAfterOrderByStartTimeAsc(clubId, now);
     }
 
 
@@ -464,15 +464,15 @@ public class EventService {
                 .orElseThrow(() -> new EntityNotFoundException("Club organisateur non trouvé avec l'ID : " + organisateurId));
 
         // 3. Validation des dates de l'événement
-        if (dto.getStart().isAfter(dto.getEnd())) {
+        if (dto.getStartTime().isAfter(dto.getEndTime())) {
             throw new IllegalArgumentException("La date de début doit être avant la date de fin."); // HTTP 400 Bad Request
         }
 
         // 4. Créer l'instance de l'entité Event et mapper les champs depuis le DTO
         Event newEvent = new Event();
         newEvent.setNom(dto.getNom());
-        newEvent.setStart(dto.getStart());
-        newEvent.setEnd(dto.getEnd());
+        newEvent.setStartTime(dto.getStartTime());
+        newEvent.setEndTime(dto.getEndTime());
         newEvent.setDescription(dto.getDescription());
         newEvent.setLocation(dto.getLocation());
         newEvent.setOrganisateur(organisateur); // Associer l'événement au club
@@ -532,21 +532,21 @@ public class EventService {
         securityService.checkManagerOfClubOrThrow(existingEvent.getOrganisateur().getId());
 
         // 3. Validations métier sur l'état de l'événement avant modification
-        if (existingEvent.getEnd().isBefore(LocalDateTime.now())) {
+        if (existingEvent.getEndTime().isBefore(LocalDateTime.now())) {
             throw new IllegalStateException("Impossible de modifier un événement déjà terminé."); // HTTP 409 Conflict
         }
         if (!existingEvent.getActif()) {
             throw new IllegalStateException("Impossible de modifier un événement annulé."); // HTTP 409 Conflict
         }
         // Validation des dates fournies dans le DTO
-        if (dto.getStart().isAfter(dto.getEnd())) {
+        if (dto.getStartTime().isAfter(dto.getEndTime())) {
             throw new IllegalArgumentException("La date de début doit être avant la date de fin."); // HTTP 400 Bad Request
         }
 
         // 4. Mettre à jour les propriétés simples de l'événement depuis le DTO
         existingEvent.setNom(dto.getNom());
-        existingEvent.setStart(dto.getStart());
-        existingEvent.setEnd(dto.getEnd());
+        existingEvent.setStartTime(dto.getStartTime());
+        existingEvent.setEndTime(dto.getEndTime());
         existingEvent.setDescription(dto.getDescription());
         existingEvent.setLocation(dto.getLocation());
         // Ne pas modifier 'actif' ou 'organisateur' ici, sauf si requis spécifiquement.

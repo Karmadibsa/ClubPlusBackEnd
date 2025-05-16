@@ -292,7 +292,7 @@ public class StatsService {
         log.debug("Période de recherche des événements à venir: de {} à {}", now, futureDate);
 
         // Appelle une méthode DAO qui compte les événements actifs dans la période donnée
-        long count = eventRepository.countByOrganisateurIdAndActifAndStartBetween(clubId, true, now, futureDate);
+        long count = eventRepository.countByOrganisateurIdAndActifAndStartTimeBetween(clubId, true, now, futureDate);
         log.debug("Nombre d'événements actifs à venir (30j) trouvés pour clubId {}: {}", clubId, count);
         return count;
     }

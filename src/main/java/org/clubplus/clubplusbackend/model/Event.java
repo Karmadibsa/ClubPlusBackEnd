@@ -72,7 +72,7 @@ public class Event {
     // Validation: date future ou présente.
     @Column(nullable = false) // Contrainte BDD: non null.
     @JsonView(GlobalView.Base.class)
-    private LocalDateTime start;
+    private LocalDateTime startTime;
 
     /**
      * Date et heure de fin de l'événement.
@@ -84,7 +84,7 @@ public class Event {
     @FutureOrPresent(message = "La date de fin doit être dans le présent ou le futur.")
     @Column(nullable = false)
     @JsonView(GlobalView.EventView.class)
-    private LocalDateTime end;
+    private LocalDateTime endTime;
 
     /**
      * Description détaillée de l'événement.
@@ -323,8 +323,8 @@ public class Event {
         return "Event{" +
                 "id=" + id +
                 ", nom='" + nom + '\'' +
-                ", start=" + start +
-                ", end=" + end +
+                ", start=" + startTime +
+                ", end=" + endTime +
                 ", actif=" + actif +
                 ", organisateurId=" + (organisateur != null ? organisateur.getId() : "null") + // Évite chargement LAZY
                 '}';

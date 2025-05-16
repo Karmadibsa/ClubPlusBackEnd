@@ -67,7 +67,7 @@ public class NotationService {
 
         // 1. L'événement doit être terminé
         LocalDateTime now = LocalDateTime.now();
-        if (event.getEnd() == null || event.getEnd().isAfter(now)) {
+        if (event.getEndTime() == null || event.getEndTime().isAfter(now)) {
             throw new IllegalStateException("Impossible de noter : l'événement (ID: " + eventId + ") n'est pas encore terminé."); // -> 409
         }
 

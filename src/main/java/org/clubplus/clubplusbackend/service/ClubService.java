@@ -171,7 +171,7 @@ public class ClubService {
         // 5. Création et Sauvegarde de l'Adhesion liant l'admin au club
         Adhesion adminAdhesion = new Adhesion(savedAdmin, savedClubWithId);
         adhesionRepository.save(adminAdhesion);
-        
+
         try {
             emailService.sendVerificationEmail(savedAdmin); // Utilise la méthode existante de EmailService
         } catch (Exception e) {
@@ -341,7 +341,7 @@ public class ClubService {
         // Attention: clubToDeactivate.getEvenements() peut charger beaucoup d'événements si LAZY.
         List<Event> activeFutureEvents = clubToDeactivate.getEvenements().stream()
                 .filter(event -> event != null && event.getActif() != null && event.getActif()) // Filtre sur event actif
-                .filter(event -> event.getStart() != null && event.getStart().isAfter(now))    // Filtre sur date future
+                .filter(event -> event.getStartTime() != null && event.getStartTime().isAfter(now))    // Filtre sur date future
                 .toList(); // Collecte les événements bloquants.
 
         if (!activeFutureEvents.isEmpty()) {

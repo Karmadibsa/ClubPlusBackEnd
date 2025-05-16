@@ -53,13 +53,13 @@ public class EventWithFriendsDto {
      * Date et heure de début.
      */
     @JsonView(GlobalView.Base.class)
-    private LocalDateTime start;
+    private LocalDateTime startTime;
 
     /**
      * Date et heure de fin.
      */
     @JsonView(GlobalView.EventView.class) // Visible dans la vue détaillée de l'Event
-    private LocalDateTime end;
+    private LocalDateTime endTime;
 
     /**
      * Description détaillée.

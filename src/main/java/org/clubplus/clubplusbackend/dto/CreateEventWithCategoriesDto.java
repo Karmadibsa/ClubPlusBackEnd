@@ -42,14 +42,14 @@ public class CreateEventWithCategoriesDto {
      */
     @NotNull(message = "La date et l'heure de début sont obligatoires.")
     @FutureOrPresent(message = "La date de début doit être dans le présent ou le futur.")
-    private LocalDateTime start;
+    private LocalDateTime startTime;
 
     /**
      * Date et heure de fin de l'événement. Obligatoire, présent ou futur, et après 'start' (validé en service).
      */
     @NotNull(message = "La date et l'heure de fin sont obligatoires.")
     @FutureOrPresent(message = "La date de fin doit être dans le présent ou le futur.")
-    private LocalDateTime end;
+    private LocalDateTime endTime;
 
     /**
      * Description de l'événement. Obligatoire, max 2000 caractères.

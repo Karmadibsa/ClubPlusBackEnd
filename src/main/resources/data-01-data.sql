@@ -147,7 +147,7 @@ VALUES (1, 1, '2025-04-06 18:26:39'),
 -- Karim -> Club 1
 
 -- 4. EVENTS (Dates Event 4 ajustées pour être en cours au 20 Avril)
-INSERT INTO events (id, nom, start, end, description, location, organisateur_id, actif, desactivation_date)
+INSERT INTO events (id, nom, start_time, end_time, description, location, organisateur_id, actif, desactivation_date)
 VALUES (1, 'Tournoi Badminton CSC (Passé)', '2025-02-15 14:00:00', '2025-02-15 18:00:00', 'Tournoi amical interne.',
         'Gymnase Sud', 1, 1, NULL),
        (2, 'Soirée CSC Mars (Passé)', '2025-03-20 19:00:00', '2025-03-20 23:00:00', 'Rencontre membres.', 'Club House',

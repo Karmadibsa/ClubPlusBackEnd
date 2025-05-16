@@ -49,14 +49,14 @@ public class UpdateEventWithCategoriesDto {
      */
     @NotNull(message = "La date et l'heure de début sont obligatoires.")
     @FutureOrPresent(message = "La date de début doit être dans le présent ou le futur.")
-    private LocalDateTime start;
+    private LocalDateTime startTime;
 
     /**
      * La nouvelle date/heure de fin. Obligatoire, présent ou futur, et après 'start' (validé en service).
      */
     @NotNull(message = "La date et l'heure de fin sont obligatoires.")
     @FutureOrPresent(message = "La date de fin doit être dans le présent ou le futur.")
-    private LocalDateTime end;
+    private LocalDateTime endTime;
 
     /**
      * La nouvelle description. Obligatoire, max 2000.
