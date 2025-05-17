@@ -1,0 +1,67 @@
+version: '3.8' # Spécifie la version de la syntaxe Docker Compose
+
+services:
+  # Service Backend (Spring Boot)
+  backend:
+    build:
+      context: C:\Users\mompe\Desktop\Cours\Club plus\ClubPlusBackEnd
+      dockerfile: Dockerfile # Nom du Dockerfile pour le backend (généralement Dockerfile)
+    container_name: Club-Plus-backend
+    ports:
+      - "8080:8080" # Mappe le port 8080 de votre machine au port 8080 du conteneur backend
+    environment:
+      # Ces variables sont utilisées par Spring Boot pour se connecter à MySQL
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/clubplusdb # 'db' est le nom du service MySQL ci-dessous
+      - SPRING_DATASOURCE_USERNAME=utilisateur_app
+      - SPRING_DATASOURCE_PASSWORD=mot_de_passe_app
+      - SPRING_JPA_HIBERNATE_DDL_AUTO=create-drop # Stratégie de génération du schéma (ajustez selon vos besoins)
+    depends_on: # Indique que le backend dépend du service 'db'
+      db:
+        condition: service_healthy # Attend que le service 'db' soit en bonne santé avant de démarrer le backend [5]
+    networks: # Connecte ce service au réseau défini plus bas
+      - mon-app-reseau
+
+  # Service Frontend (Angular)
+  frontend:
+    build:
+      context: C:\Users\mompe\Desktop\Cours\Club plus\FrontEndClubPlus
+      dockerfile: Dockerfile # Nom du Dockerfile pour le frontend
+    container_name: Club-Plus-frontend
+    ports:
+      - "4200:80" # Mappe le port 4200 de votre machine au port 80 du conteneur frontend (où Nginx écoute par défaut)
+    depends_on: # Le frontend peut dépendre du backend si la configuration Nginx le nécessite pour le proxy, sinon optionnel
+      - backend
+    networks:
+      - mon-app-reseau
+
+  # Service Base de données (MySQL)
+  db:
+    image: mysql:8.0 # Utilise une image MySQL officielle depuis Docker Hub [5][7]
+    container_name: Club-Plus-mysql
+    restart: unless-stopped # Redémarre le conteneur automatiquement sauf si vous l'arrêtez manuellement
+    environment:
+      # Variables d'environnement pour configurer MySQL [5][7]
+      MYSQL_DATABASE: clubplusdb
+      MYSQL_ROOT_PASSWORD: mot_de_passe_root_secret # Mot de passe pour l'utilisateur root de MySQL
+      MYSQL_USER: utilisateur_app # Crée un utilisateur spécifique pour votre application
+      MYSQL_PASSWORD: mot_de_passe_app # Mot de passe pour cet utilisateur
+    ports: # Mappe le port de la base de données
+      - "3307:3306" # Mappe le port 3307 de votre machine au port 3306 du conteneur MySQL (pour éviter conflit si MySQL local tourne sur 3306)
+    volumes: # Permet de conserver les données de MySQL même si le conteneur est supprimé et recréé [5]
+      - mysql-app-data:/var/lib/mysql # 'mysql-app-data' est un volume nommé
+    healthcheck: # Vérifie que le service MySQL est prêt et fonctionnel [5]
+      test: [ "CMD", "mysqladmin" ,"ping", "-h", "localhost", "-uroot", "-p$$MYSQL_ROOT_PASSWORD" ] # Utilise les variables d'env
+      interval: 10s # Vérifie toutes les 10 secondes
+      timeout: 5s # Temps maximum pour que la vérification réussisse
+      retries: 5 # Nombre de tentatives avant de considérer que le service est en échec
+    networks:
+      - mon-app-reseau
+
+# Les volumes nommés permettent de persister les données
+volumes:
+  mysql-app-data: # Définit le volume pour MySQL [5]
+
+# Les réseaux personnalisés permettent aux conteneurs de communiquer entre eux de manière isolée
+networks:
+  mon-app-reseau: # Définit un réseau de type "bridge" [5]
+    driver: bridge
