@@ -134,7 +134,7 @@ public class MembreService {
      * @param membreId L'ID du membre concerné.
      * @return Une liste des IDs des clubs actifs auxquels le membre appartient. Peut être vide.
      */
-    private List<Integer> findActiveClubIdsForMember(Integer membreId) {
+    List<Integer> findActiveClubIdsForMember(Integer membreId) {
         // Appelle la méthode dédiée dans AdhesionDao qui filtre par club actif
         return adhesionRepository.findActiveClubIdsByMembreId(membreId);
     }

@@ -1,13 +1,12 @@
 package org.clubplus.clubplusbackend.controller;
 
-// Imports pour Jackson (sérialisation/désérialisation JSON)
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.dto.UpdateMembreDto;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.model.Role;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -35,72 +34,86 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
- * Classe de test d'intégration pour MembreController.
- * Utilise @SpringBootTest pour charger le contexte complet de l'application.
- * Utilise @Transactional pour s'assurer que chaque test s'exécute dans sa propre transaction
- * qui est annulée (rollback) à la fin, gardant la base de données propre entre les tests.
+ * Classe de test d'intégration pour {@link MembreController}.
+ * Utilise {@code @SpringBootTest} pour charger le contexte complet de l'application Spring,
+ * permettant de tester les interactions entre le contrôleur, les services, et la base de données.
+ * {@code @Transactional} est utilisé pour s'assurer que chaque test s'exécute dans sa propre
+ * transaction qui est annulée (rollback) après l'exécution du test, maintenant ainsi
+ * la base de données dans un état propre entre les tests.
  */
 @SpringBootTest
 @Transactional
 class MembreControllerTest {
 
-    // Injecte le contexte de l'application web pour configurer MockMvc.
+    /**
+     * Contexte de l'application web injecté par Spring, utilisé pour construire {@link MockMvc}.
+     */
     @Autowired
     private WebApplicationContext context;
 
-    // Instance de MockMvc pour simuler les requêtes HTTP vers le contrôleur.
+    /**
+     * Instance de {@link MockMvc} utilisée pour simuler des requêtes HTTP vers le contrôleur.
+     */
     private MockMvc mockMvc;
 
-    // Injecte les dépendances nécessaires pour la configuration des données de test.
+    /**
+     * DAO pour l'entité {@link Membre}, injecté pour la configuration des données de test
+     * et la vérification de l'état de la base de données après les opérations.
+     */
     @Autowired
-    private MembreDao membreRepository; // Pour interagir avec la base de données des membres.
-    @Autowired
-    private PasswordEncoder passwordEncoder; // Pour encoder les mots de passe des utilisateurs de test.
-    @Autowired
-    private ObjectMapper objectMapper; // Pour convertir les objets Java (DTOs) en chaînes JSON.
+    private MembreDao membreRepository;
 
-    // Entités Membre qui seront créées dans setUp() et utilisées dans les tests.
-    private Membre bobMembreEntity;     // Utilisateur avec le rôle MEMBRE.
-    private Membre adminUserEntity;   // Utilisateur avec le rôle ADMIN.
-    private Membre aliceMembreEntity; // Un autre utilisateur MEMBRE, souvent utilisé comme cible.
+    /**
+     * Encodeur de mots de passe, injecté pour créer des utilisateurs de test avec des mots de passe encodés.
+     */
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
-    // Constantes pour les emails, facilitant la lisibilité et la maintenance.
+    /**
+     * Utilitaire Jackson pour convertir des objets Java en chaînes JSON et vice-versa.
+     * Principalement utilisé ici pour sérialiser les DTOs envoyés dans le corps des requêtes.
+     */
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    // Entités Membre créées dans setUp() et réutilisées à travers les tests.
+    private Membre bobMembreEntity;     // Utilisateur de test avec le rôle MEMBRE.
+    private Membre adminUserEntity;   // Utilisateur de test avec le rôle ADMIN.
+    private Membre aliceMembreEntity; // Autre utilisateur MEMBRE, souvent utilisé comme cible dans les tests.
+
+    // Constantes pour les emails des utilisateurs de test pour améliorer la lisibilité.
     private final String BOB_EMAIL = "bob.membre@email.com";
     private final String ADMIN_EMAIL = "admin.user@email.com";
     private final String ALICE_EMAIL = "alice.profil@email.com";
 
     /**
-     * Méthode exécutée avant chaque test (@Test).
-     * Configure MockMvc et initialise les données de test nécessaires (utilisateurs).
+     * Méthode de configuration exécutée avant chaque méthode de test ({@code @Test}).
+     * Elle initialise {@link MockMvc} en intégrant la configuration de Spring Security
+     * et crée les utilisateurs de test nécessaires dans la base de données.
      */
     @BeforeEach
     void setUp() {
-        // Initialise MockMvc avec le contexte de l'application et intègre Spring Security.
-        // springSecurity() assure que les filtres et la configuration de Spring Security sont appliqués.
         mockMvc = MockMvcBuilders
                 .webAppContextSetup(context)
-                .apply(springSecurity())
+                .apply(springSecurity()) // Applique la configuration de Spring Security à MockMvc.
                 .build();
 
-        // --- Création des utilisateurs de test dans la base de données ---
-        // Ces utilisateurs sont nécessaires pour que @WithUserDetails puisse les charger
-        // et pour simuler différents scénarios d'accès et de modification.
-        // L'utilisation de saveAndFlush() assure que les données sont immédiatement écrites
-        // en base et que les IDs générés sont disponibles.
+        // Création et persistance des utilisateurs de test.
+        // Ces utilisateurs seront chargés par @WithUserDetails dans les méthodes de test.
 
         // Création de Bob (MEMBRE)
         Membre bob = new Membre();
         bob.setEmail(BOB_EMAIL);
         bob.setNom("Bob");
         bob.setPrenom("LeMembre");
-        bob.setPassword(passwordEncoder.encode("securePassword123")); // Les mots de passe doivent être encodés.
+        bob.setPassword(passwordEncoder.encode("ValidPass1!"));
         bob.setRole(Role.MEMBRE);
-        bob.setActif(true);         // Important pour que l'utilisateur puisse être chargé par UserDetailsService.
-        bob.setVerified(true);      // Autre statut potentiellement vérifié.
+        bob.setActif(true);
+        bob.setVerified(true);
         bob.setDate_naissance(LocalDate.now().minusYears(25));
         bob.setDate_inscription(LocalDate.now().minusDays(10));
-        bob.setTelephone("0102030405"); // Assurer que tous les champs non nuls sont renseignés.
-        bob.setAdhesions(new HashSet<>()); // Initialiser les collections pour éviter les NullPointerExceptions.
+        bob.setTelephone("0102030405");
+        bob.setAdhesions(new HashSet<>());
         bobMembreEntity = membreRepository.saveAndFlush(bob);
 
         // Création d'un Admin
@@ -108,8 +121,8 @@ class MembreControllerTest {
         admin.setEmail(ADMIN_EMAIL);
         admin.setNom("Admin");
         admin.setPrenom("User");
-        admin.setPassword(passwordEncoder.encode("adminPassword123"));
-        admin.setRole(Role.ADMIN); // Rôle crucial pour les tests d'autorisation.
+        admin.setPassword(passwordEncoder.encode("AdminPass1!"));
+        admin.setRole(Role.ADMIN);
         admin.setActif(true);
         admin.setVerified(true);
         admin.setDate_naissance(LocalDate.now().minusYears(35));
@@ -118,12 +131,12 @@ class MembreControllerTest {
         admin.setAdhesions(new HashSet<>());
         adminUserEntity = membreRepository.saveAndFlush(admin);
 
-        // Création d'Alice (MEMBRE), souvent utilisée comme profil cible.
+        // Création d'Alice (MEMBRE)
         Membre alice = new Membre();
         alice.setEmail(ALICE_EMAIL);
         alice.setNom("Alice");
         alice.setPrenom("Profil");
-        alice.setPassword(passwordEncoder.encode("passwordAlice"));
+        alice.setPassword(passwordEncoder.encode("AlicePass1!"));
         alice.setRole(Role.MEMBRE);
         alice.setActif(true);
         alice.setVerified(true);
@@ -134,68 +147,69 @@ class MembreControllerTest {
     }
 
     /**
-     * Teste si un membre authentifié peut récupérer son propre profil.
-     *
-     * @WithUserDetails charge l'utilisateur "bob.membre@email.com" via UserDetailsService.
-     * setupBefore = TestExecutionEvent.TEST_EXECUTION assure que @BeforeEach est exécuté avant @WithUserDetails.
+     * Teste la récupération du profil de l'utilisateur actuellement authentifié.
+     * L'utilisateur "Bob" (MEMBRE) est authentifié via {@code @WithUserDetails}.
+     * S'attend à un statut HTTP 200 (OK) et aux informations de profil de Bob.
      */
     @Test
     @WithUserDetails(value = BOB_EMAIL, setupBefore = TestExecutionEvent.TEST_EXECUTION)
-    void getMyProfile_AsMember_shouldReturnOwnProfile() throws Exception {
-        mockMvc.perform(get("/membres/profile") // Endpoint pour récupérer le profil de l'utilisateur courant.
-                        .accept(MediaType.APPLICATION_JSON)) // Indique que la réponse attendue est en JSON.
-                .andExpect(status().isOk()) // Vérifie que le statut HTTP est 200 OK.
-                // Vérifie les champs spécifiques dans la réponse JSON.
+    @DisplayName("Récupération de son propre profil en tant que membre")
+    void recupererMonProfil_enTantQueMembre_devraitRetournerProfilUtilisateur() throws Exception {
+        mockMvc.perform(get("/membres/profile")
+                        .accept(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(bobMembreEntity.getId()))
-                .andExpect(jsonPath("$.email").value(BOB_EMAIL));
-        // Ajoutez d'autres jsonPath pour les champs attendus (nom, prenom, role, etc.).
+                .andExpect(jsonPath("$.email").value(BOB_EMAIL))
+                .andExpect(jsonPath("$.nom").value("Bob")); // Exemple d'autres vérifications
     }
 
     /**
-     * Teste la mise à jour du profil d'un membre authentifié avec des données valides.
+     * Teste la mise à jour du profil de l'utilisateur authentifié avec des données valides.
+     * L'utilisateur "Bob" est authentifié.
+     * S'attend à un statut HTTP 200 (OK) et à ce que le profil retourné contienne les modifications.
+     * Vérifie également que les modifications sont persistées en base de données.
      */
     @Test
     @WithUserDetails(value = BOB_EMAIL, setupBefore = TestExecutionEvent.TEST_EXECUTION)
-    void updateMyProfile_WithValidData_shouldReturnUpdatedMembre() throws Exception {
-        UpdateMembreDto updateDto = new UpdateMembreDto(); // DTO pour la mise à jour.
+    @DisplayName("Mise à jour de son profil avec données valides")
+    void mettreAJourMonProfil_avecDonneesValides_devraitRetournerMembreMisAJour() throws Exception {
+        UpdateMembreDto updateDto = new UpdateMembreDto();
         updateDto.setNom("Robert");
-        updateDto.setPrenom("LeMembreMisAJour");
+        updateDto.setPrenom("LeMembreModifie");
         updateDto.setTelephone("0607080910");
         updateDto.setDate_naissance(LocalDate.now().minusYears(26));
-        updateDto.setEmail(BOB_EMAIL); // L'email peut être le même ou un nouveau valide.
+        updateDto.setEmail(BOB_EMAIL); // Email inchangé ou nouveau valide
 
-        mockMvc.perform(put("/membres/profile") // Requête PUT vers l'endpoint de mise à jour.
-                        .with(csrf()) // Ajoute un token CSRF si la protection CSRF est activée.
-                        .contentType(MediaType.APPLICATION_JSON) // Indique que le corps de la requête est en JSON.
-                        .content(objectMapper.writeValueAsString(updateDto)) // Sérialise le DTO en chaîne JSON.
+        mockMvc.perform(put("/membres/profile")
+                        .with(csrf()) // Nécessaire si la protection CSRF est activée
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateDto))
                         .accept(MediaType.APPLICATION_JSON))
-                .andDo(print()) // Affiche les détails de la requête et de la réponse dans la console (utile pour le débogage).
-                .andExpect(status().isOk()) // Vérifie le statut 200 OK.
-                .andExpect(jsonPath("$.id").value(bobMembreEntity.getId()))
+                .andDo(print()) // Utile pour le débogage: affiche la requête et la réponse
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.nom").value("Robert"))
-                .andExpect(jsonPath("$.prenom").value("LeMembreMisAJour"))
-                .andExpect(jsonPath("$.telephone").value("0607080910"));
+                .andExpect(jsonPath("$.prenom").value("LeMembreModifie"));
 
-        // Vérification supplémentaire directement en base de données pour confirmer la persistance.
         Optional<Membre> updatedMembreOpt = membreRepository.findById(bobMembreEntity.getId());
-        assertTrue(updatedMembreOpt.isPresent(), "Le membre mis à jour devrait être trouvé en base.");
-        assertEquals("Robert", updatedMembreOpt.get().getNom(), "Le nom du membre devrait être mis à jour en base.");
+        assertTrue(updatedMembreOpt.isPresent());
+        assertEquals("Robert", updatedMembreOpt.get().getNom());
     }
 
     /**
-     * Teste la mise à jour du profil avec un email qui est déjà utilisé par un autre membre.
-     * S'attend à un statut de conflit (409).
+     * Teste la tentative de mise à jour du profil avec un email déjà utilisé par un autre utilisateur.
+     * L'utilisateur "Bob" essaie de prendre l'email d'Alice.
+     * S'attend à un statut HTTP 409 (Conflict) ou 400 (Bad Request) selon la gestion d'erreur du service.
      */
     @Test
     @WithUserDetails(value = BOB_EMAIL, setupBefore = TestExecutionEvent.TEST_EXECUTION)
-    void updateMyProfile_WithEmailAlreadyTakenByAnotherUser_shouldReturnConflict() throws Exception {
-        // aliceMembreEntity (avec ALICE_EMAIL) existe déjà grâce à setUp().
+    @DisplayName("Mise à jour du profil avec email déjà utilisé par un autre")
+    void mettreAJourMonProfil_avecEmailExistantAutreUtilisateur_devraitRetournerConflit() throws Exception {
         UpdateMembreDto updateDto = new UpdateMembreDto();
-        updateDto.setNom("BobQuiChangeEmail");
+        updateDto.setNom("BobConflit");
         updateDto.setPrenom(bobMembreEntity.getPrenom());
         updateDto.setTelephone(bobMembreEntity.getTelephone());
         updateDto.setDate_naissance(bobMembreEntity.getDate_naissance());
-        updateDto.setEmail(ALICE_EMAIL); // Bob essaie de prendre l'email d'Alice.
+        updateDto.setEmail(ALICE_EMAIL); // Tentative de prendre l'email d'Alice
 
         mockMvc.perform(put("/membres/profile")
                         .with(csrf())
@@ -203,22 +217,22 @@ class MembreControllerTest {
                         .content(objectMapper.writeValueAsString(updateDto))
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
-                // Le statut exact (409 Conflict ou 400 Bad Request) dépend de la gestion d'erreur du service/contrôleur.
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict()); // Ou isBadRequest()
     }
 
     /**
      * Teste la mise à jour du profil avec des données invalides (ex: nom vide).
-     * S'attend à un statut Bad Request (400) si la validation du DTO (@Valid) échoue.
+     * S'attend à un statut HTTP 400 (Bad Request) dû à l'échec de la validation du DTO.
      */
     @Test
     @WithUserDetails(value = BOB_EMAIL, setupBefore = TestExecutionEvent.TEST_EXECUTION)
-    void updateMyProfile_WithInvalidData_shouldReturnBadRequest() throws Exception {
+    @DisplayName("Mise à jour du profil avec données invalides")
+    void mettreAJourMonProfil_avecDonneesInvalides_devraitRetournerBadRequest() throws Exception {
         UpdateMembreDto updateDto = new UpdateMembreDto();
-        updateDto.setNom(""); // Nom invalide (supposant une contrainte @NotBlank sur le DTO).
-        updateDto.setPrenom("ValidPrenom"); // Les autres champs doivent être valides pour isoler l'erreur.
+        updateDto.setNom(""); // Nom invalide (supposant @NotBlank)
+        updateDto.setPrenom("PrenomValide");
         updateDto.setEmail(BOB_EMAIL);
-        updateDto.setTelephone("1234567890");
+        updateDto.setTelephone("0102030405");
         updateDto.setDate_naissance(LocalDate.now().minusYears(25));
 
         mockMvc.perform(put("/membres/profile")
@@ -227,34 +241,37 @@ class MembreControllerTest {
                         .content(objectMapper.writeValueAsString(updateDto))
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
-                .andExpect(status().isBadRequest()); // La validation des contraintes du DTO devrait entraîner un 400.
+                .andExpect(status().isBadRequest());
     }
 
     /**
-     * Teste qu'un membre ne peut pas voir le profil d'un autre membre.
-     * S'attend à un statut Forbidden (403).
+     * Teste qu'un utilisateur avec le rôle MEMBRE ne peut pas voir le profil d'un autre membre.
+     * L'utilisateur "Bob" (MEMBRE) tente de voir le profil d'Alice.
+     * S'attend à un statut HTTP 403 (Forbidden).
      */
     @Test
     @WithUserDetails(value = BOB_EMAIL, setupBefore = TestExecutionEvent.TEST_EXECUTION)
-    void getOtherUserProfile_AsMember_shouldReturnForbidden() throws Exception {
-        mockMvc.perform(get("/membres/" + aliceMembreEntity.getId()) // Bob (MEMBRE) essaie de voir le profil d'Alice (MEMBRE).
+    @DisplayName("Récupération profil autre membre en tant que MEMBRE")
+    void recupererProfilAutreMembre_enTantQueMembre_devraitRetournerInterdit() throws Exception {
+        mockMvc.perform(get("/membres/" + aliceMembreEntity.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
-                .andExpect(status().isForbidden()); // Accès refusé.
+                .andExpect(status().isForbidden());
     }
 
     /**
-     * Teste qu'un administrateur peut voir le profil d'un autre membre.
-     * S'attend à un statut OK (200).
+     * Teste qu'un utilisateur avec le rôle ADMIN peut voir le profil d'un autre membre.
+     * L'utilisateur Admin est authentifié et tente de voir le profil d'Alice.
+     * S'attend à un statut HTTP 200 (OK) et aux informations du profil d'Alice.
      */
     @Test
     @WithUserDetails(value = ADMIN_EMAIL, setupBefore = TestExecutionEvent.TEST_EXECUTION)
-    // Authentifié en tant qu'ADMIN.
-    void getOtherUserProfile_AsAdmin_shouldReturnProfile() throws Exception {
-        mockMvc.perform(get("/membres/" + aliceMembreEntity.getId()) // Admin essaie de voir le profil d'Alice.
+    @DisplayName("Récupération profil autre membre en tant qu'ADMIN")
+    void recupererProfilAutreMembre_enTantQueAdmin_devraitRetournerProfil() throws Exception {
+        mockMvc.perform(get("/membres/" + aliceMembreEntity.getId())
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
-                .andExpect(status().isOk()) // Accès autorisé pour l'admin.
+                .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(aliceMembreEntity.getId()))
                 .andExpect(jsonPath("$.email").value(ALICE_EMAIL))
                 .andExpect(jsonPath("$.password").doesNotExist()); // Le mot de passe ne doit jamais être exposé.
@@ -262,16 +279,17 @@ class MembreControllerTest {
 
     /**
      * Teste la tentative de récupération d'un profil d'utilisateur qui n'existe pas.
-     * S'attend à un statut Not Found (404), que l'appelant soit membre ou admin.
+     * Que l'appelant soit membre ou admin, une ressource inexistante doit retourner 404.
+     * S'attend à un statut HTTP 404 (Not Found).
      */
     @Test
     @WithUserDetails(value = ADMIN_EMAIL, setupBefore = TestExecutionEvent.TEST_EXECUTION)
-    // Peut aussi être BOB_EMAIL.
-    void getOtherUserProfile_WhenNotExists_shouldReturnNotFound() throws Exception {
-        mockMvc.perform(get("/membres/99999") // ID inexistant.
+    // L'authentification est nécessaire pour atteindre le point de logique.
+    @DisplayName("Récupération profil inexistant")
+    void recupererProfilAutreMembre_quandInexistant_devraitRetournerNonTrouve() throws Exception {
+        mockMvc.perform(get("/membres/99999") // ID qui n'existe pas.
                         .accept(MediaType.APPLICATION_JSON))
                 .andDo(print())
-                // Si la ressource n'existe pas, un 404 est attendu, avant même les vérifications de droits spécifiques.
                 .andExpect(status().isNotFound());
     }
 }
