@@ -145,7 +145,7 @@ public class Club {
      * Utilisé pour la suppression logique.
      * Ne peut pas être null.
      */
-    @NotNull
+    @NotNull(message = "Le statut 'actif' du club est obligatoire et ne peut pas être nul.")
     @Column(nullable = false)
     private Boolean actif = true;
 
