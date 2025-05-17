@@ -8,11 +8,6 @@ WORKDIR /app
 # Copier le fichier pom.xml pour télécharger les dépendances en premier (optimisation du cache Docker)
 COPY pom.xml .
 
-# (Si vous utilisez le wrapper Maven (mvnw), décommentez et adaptez les lignes suivantes)
-# COPY .mvn/ .mvn
-# COPY mvnw .
-# RUN ./mvnw dependency:go-offline
-
 # S'il n'y a pas de wrapper, et que vous avez copié seulement pom.xml, téléchargez les dépendances.
 # Cela peut être fait automatiquement par la commande package, mais pour une meilleure gestion du cache :
 RUN mvn dependency:go-offline -B
@@ -36,11 +31,6 @@ WORKDIR /app
 # Copier uniquement le fichier .jar construit depuis l'étape 'builder'
 # Le JAR se trouvera dans /app/target/ à l'intérieur de l'étape 'builder'
 COPY --from=builder /app/target/*.jar application.jar
-
-# AJOUTEZ CETTE LIGNE pour copier le fichier .env
-# Assurez-vous que le fichier .env existe bien à la racine de votre projet backend
-# (C:\Users\mompe\Desktop\Cours\Club plus\ClubPlusBackEnd\.env)
-COPY .env .
 
 # Exposer le port sur lequel votre application Spring Boot écoute (par défaut 8080)
 EXPOSE 8080
