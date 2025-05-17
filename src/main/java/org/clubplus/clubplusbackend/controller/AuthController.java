@@ -1,10 +1,10 @@
 package org.clubplus.clubplusbackend.controller;
 
 import com.fasterxml.jackson.annotation.JsonView;
+import jakarta.annotation.PostConstruct;
 import jakarta.mail.MessagingException;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
-import lombok.RequiredArgsConstructor;
 import org.clubplus.clubplusbackend.dto.*;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
@@ -15,6 +15,7 @@ import org.clubplus.clubplusbackend.service.ClubService;
 import org.clubplus.clubplusbackend.service.MembreService;
 import org.clubplus.clubplusbackend.service.StatsService;
 import org.clubplus.clubplusbackend.view.GlobalView;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -40,48 +41,48 @@ import org.springframework.web.servlet.view.RedirectView;
  * </p>
  */
 @RestController
-@RequestMapping("/auth") // Point d'entrée public pour l'authentification et actions associées
-@RequiredArgsConstructor // Injection des dépendances finales via le constructeur (Lombok)
+@RequestMapping("/auth")
+// Point d'entrée public pour l'authentification et actions associées // Injection des dépendances finales via le constructeur (Lombok)
 public class AuthController {
 
-    private final String frontendEmailVerifiedUrl = "http://localhost:4200/connexion"; // À configurer
-    private final String frontendEmailVerificationFailedUrl = "http://localhost:4200/connexion"; // À configurer
 
-    /**
-     * Service pour la logique métier liée aux clubs.
-     *
-     * @see ClubService
-     */
+    @Value("${APP_FRONTEND_BASE_URL}") // Ceci devrait être l'URL de votre Netlify (ex: https://club-plus.netlify.app)
+    private String frontendBaseUrl;
+
+    private String frontendEmailVerifiedSuccessPage; // Pour la redirection vers la page de succès
+    private String frontendEmailVerifiedFailurePage; // Pour la redirection vers la page d'échec
+
+    // Services injectés par @RequiredArgsConstructor
     private final ClubService clubService;
-
-    /**
-     * Service pour gérer la logique métier liée aux membres, notamment l'inscription.
-     *
-     * @see MembreService
-     */
     private final MembreService membreService;
-
-    /**
-     * Service pour récupérer les statistiques générales (ex: pour la page d'accueil).
-     *
-     * @see StatsService
-     */
     private final StatsService statsService;
-
-    /**
-     * Fournisseur d'authentification de Spring Security pour valider les identifiants utilisateur lors de la connexion.
-     * Il est configuré pour utiliser un {@code UserDetailsService} (probablement {@code AppUserDetailService})
-     * et un {@code PasswordEncoder} (probablement {@code BCryptPasswordEncoder}).
-     */
     private final AuthenticationProvider authenticationProvider;
+    private final SecurityUtils jwtUtils;
 
-    /**
-     * Utilitaire pour la génération et la validation des tokens JWT (JSON Web Tokens).
-     * Utilisé après une connexion réussie pour créer le token d'authentification.
-     *
-     * @see SecurityUtils
-     */
-    private final SecurityUtils jwtUtils; // Nommé jwtUtils pour clarifier son rôle avec les JWT
+    private static final org.slf4j.Logger logger = org.slf4j.LoggerFactory.getLogger(AuthController.class); // Utiliser SLF4J
+
+    public AuthController(ClubService clubService, MembreService membreService, StatsService statsService, AuthenticationProvider authenticationProvider, SecurityUtils jwtUtils) {
+        this.clubService = clubService;
+        this.membreService = membreService;
+        this.statsService = statsService;
+        this.authenticationProvider = authenticationProvider;
+        this.jwtUtils = jwtUtils;
+        logger.info("AuthController instance CREATED - Version Deploy-Render-Test-1"); // Changez ceci à chaque build/push
+    }
+
+    @PostConstruct
+    public void initUrls() {
+        if (frontendBaseUrl == null) {
+            logger.error("APP_FRONTEND_BASE_URL n'est pas injecté ! Vérifiez la variable d'environnement sur Render.");
+            // Définir des valeurs par défaut robustes ou lever une exception si critique
+            this.frontendEmailVerifiedSuccessPage = "https://default-success-url.com"; // Mettez une URL par défaut
+            this.frontendEmailVerifiedFailurePage = "https://default-failure-url.com";
+        } else {
+            this.frontendEmailVerifiedSuccessPage = frontendBaseUrl + "/email-verified-success"; // Ex: https://club-plus.netlify.app/email-verified-success
+            this.frontendEmailVerifiedFailurePage = frontendBaseUrl + "/email-verified-failure"; // Ex: https://club-plus.netlify.app/email-verified-failure
+        }
+        logger.info("Frontend redirect URLs initialized: Success={}, Failure={}", frontendEmailVerifiedSuccessPage, frontendEmailVerifiedFailurePage);
+    }
 
     /**
      * Endpoint public pour inscrire un nouveau membre et l'associer automatiquement à un club via son code.
@@ -248,22 +249,26 @@ public class AuthController {
 
     @GetMapping("/verify-email")
     public RedirectView verifyEmail(@RequestParam("token") String token) {
+        logger.info("Endpoint /auth/verify-email CALLED with token: {}", token);
         try {
-            boolean isVerified = membreService.verifyUserValidationToken(token); // Cette méthode doit être créée dans MembreService
-
+            boolean isVerified = membreService.verifyUserValidationToken(token);
             if (isVerified) {
-                // Redirection vers une page de succès de votre frontend Angular
-                return new RedirectView(frontendEmailVerifiedUrl);
+                logger.info("Email verification successful for token: {}", token);
+                return new RedirectView(frontendEmailVerifiedSuccessPage);
             } else {
-                // Redirection vers une page d'échec (token invalide/expiré ou utilisateur déjà vérifié)
-                return new RedirectView(frontendEmailVerificationFailedUrl);
+                logger.warn("Email verification FAILED or token invalid for token: {}", token);
+                return new RedirectView(frontendEmailVerifiedFailurePage);
             }
         } catch (Exception e) {
-            // Gérer les erreurs inattendues
-            // Log l'erreur
-            System.err.println("Erreur lors de la vérification de l'email : " + e.getMessage());
-            return new RedirectView(frontendEmailVerificationFailedUrl);
+            logger.error("Error during email verification for token {}: {}", token, e.getMessage(), e);
+            return new RedirectView(frontendEmailVerifiedFailurePage);
         }
+    }
+
+    @GetMapping("/test-auth-path")
+    public String testAuthPath() {
+        logger.info("Endpoint /auth/test-auth-path CALLED - Version Deploy-Render-Test-1");
+        return "Path /auth/test-auth-path works! Version Deploy-Render-Test-1";
     }
 
     @PostMapping("/mail-password-reset")
