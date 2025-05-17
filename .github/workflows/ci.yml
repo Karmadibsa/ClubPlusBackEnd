@@ -33,4 +33,4 @@ jobs:
             ${{ runner.os }}-maven-
 
       - name: Compilation et tests Maven
-        run: mvn clean verify --batch-mode
+        run: mvn clean verify --batch-mode -e -X
