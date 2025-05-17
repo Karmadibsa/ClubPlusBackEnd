@@ -1,0 +1,7 @@
+# .dockerignore
+.git
+.gitignore
+.idea/
+target/
+*.iml
+.local.env # Important !
