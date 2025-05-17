@@ -88,37 +88,43 @@ public class MembreService {
      */
     @Transactional(readOnly = true)
     public Membre getMembreByIdWithSecurityCheck(Integer targetUserId) {
-        // 1. Récupérer l'ID de l'utilisateur courant (lance une exception si non authentifié)
+        // 1. Récupérer l'utilisateur courant et son ID.
         Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+        Membre currentUser = membreRepository.findById(currentUserId)
+                .orElseThrow(() -> new EntityNotFoundException("Utilisateur courant non trouvé (ID: " + currentUserId + ")"));
 
-        // 2. Récupérer le membre cible (doit être actif, grâce au filtre @Where sur l'entité Membre)
-        Membre targetUser = membreRepository.findById(targetUserId)
-                .orElseThrow(() -> new EntityNotFoundException("Membre non trouvé ou inactif (ID: " + targetUserId + ")")); // -> 404
-
-        // 3. Vérifier si l'utilisateur courant est le propriétaire du profil demandé
-        if (currentUserId.equals(targetUserId)) {
-            return targetUser; // Accès autorisé car c'est soi-même
+        // 2. CAS SPÉCIAL : L'utilisateur courant est ADMIN
+        // Si l'utilisateur authentifié a le rôle ADMIN, il peut voir n'importe quel profil.
+        // S'il essaie de voir un profil qui n'existe pas, une EntityNotFoundException sera levée (menant à un 404).
+        if (currentUser.getRole() == Role.ADMIN) {
+            return membreRepository.findById(targetUserId)
+                    .orElseThrow(() -> new EntityNotFoundException("Membre non trouvé ou inactif (ID: " + targetUserId + ")"));
         }
 
-        // 4. Récupérer l'utilisateur courant (doit être actif)
-        //    Bien que l'ID soit connu, recharger l'entité est plus sûr pour obtenir les adhésions.
-        Membre currentUser = membreRepository.findById(currentUserId)
-                .orElseThrow(() -> new EntityNotFoundException("Utilisateur courant non trouvé (ID: " + currentUserId + ")")); // Sécurité supplémentaire
+        // 3. CAS GÉNÉRAL : L'utilisateur courant N'EST PAS ADMIN
+        // Il doit être soit le propriétaire du profil, soit partager un club actif commun.
 
-        // 5. Trouver les IDs des clubs ACTIFS communs aux deux membres
+        // D'abord, vérifier si le membre cible existe. Si non, EntityNotFoundException (menant à un 404).
+        Membre targetUser = membreRepository.findById(targetUserId)
+                .orElseThrow(() -> new EntityNotFoundException("Membre non trouvé ou inactif (ID: " + targetUserId + ")"));
+
+        // Vérifier si l'utilisateur courant est le propriétaire du profil demandé.
+        if (currentUserId.equals(targetUserId)) {
+            return targetUser; // Accès autorisé car c'est son propre profil.
+        }
+
+        // Vérifier s'ils partagent un club actif commun.
         List<Integer> currentUserActiveClubIds = findActiveClubIdsForMember(currentUserId);
         List<Integer> targetUserActiveClubIds = findActiveClubIdsForMember(targetUserId);
-
-        // 6. Vérifier s'il existe au moins un club actif en commun
         boolean hasCommonActiveClub = currentUserActiveClubIds.stream()
                 .anyMatch(targetUserActiveClubIds::contains);
 
         if (hasCommonActiveClub) {
-            return targetUser; // Accès autorisé car partage d'un club actif
+            return targetUser; // Accès autorisé car partage d'un club actif.
         }
 
-        // 7. Si aucune condition d'accès n'est remplie, refuser l'accès
-        throw new AccessDeniedException("Accès refusé : Vous n'êtes pas autorisé à voir ce profil."); // -> 403
+        // 4. Si aucune des conditions d'accès n'est remplie pour un non-admin, refuser l'accès.
+        throw new AccessDeniedException("Accès refusé : Vous n'êtes pas autorisé à voir ce profil.");
     }
 
     /**
@@ -262,54 +268,66 @@ public class MembreService {
      */
     @Transactional
     public Membre updateMyProfile(UpdateMembreDto updateMembreDto) {
-        Integer currentUserId = securityService.getCurrentUserIdOrThrow(); // Récupère l'ID courant
-        Membre existingMembre = getMembreByIdOrThrow(currentUserId); // Récupère l'entité Membre associée
+        Integer currentUserId = securityService.getCurrentUserIdOrThrow();
+        Membre existingMembre = getMembreByIdOrThrow(currentUserId);
 
-        boolean updated = false; // Flag pour savoir si une sauvegarde est nécessaire
+        boolean updated = false;
 
-        // Mise à jour conditionnelle des champs modifiables
+        // Nom
         if (updateMembreDto.getNom() != null && !updateMembreDto.getNom().isBlank()) {
-            existingMembre.setNom(updateMembreDto.getNom().trim()); // Trim pour la propreté
-            updated = true;
+            String newNom = updateMembreDto.getNom().trim();
+            if (!newNom.equals(existingMembre.getNom())) { // Vérifier si la valeur a réellement changé
+                existingMembre.setNom(newNom);
+                updated = true;
+            }
         }
+        // Prenom
         if (updateMembreDto.getPrenom() != null && !updateMembreDto.getPrenom().isBlank()) {
-            existingMembre.setPrenom(updateMembreDto.getPrenom().trim());
-            updated = true;
+            String newPrenom = updateMembreDto.getPrenom().trim();
+            if (!newPrenom.equals(existingMembre.getPrenom())) {
+                existingMembre.setPrenom(newPrenom);
+                updated = true;
+            }
         }
+        // Date Naissance
         if (updateMembreDto.getDate_naissance() != null) {
-            // Ajouter validation si nécessaire (ex: date non future)
-            existingMembre.setDate_naissance(updateMembreDto.getDate_naissance());
-            updated = true;
+            if (!updateMembreDto.getDate_naissance().equals(existingMembre.getDate_naissance())) {
+                existingMembre.setDate_naissance(updateMembreDto.getDate_naissance());
+                updated = true;
+            }
         }
-        // Mise à jour du téléphone
-        if (updateMembreDto.getTelephone() != null) { // Peut être null ou vide
-            // Ajouter validation de format si nécessaire
-            existingMembre.setTelephone(updateMembreDto.getTelephone());
-            updated = true;
+        // Telephone
+        if (updateMembreDto.getTelephone() != null) { // Permet une chaîne vide pour effacer, ou null pour ignorer
+            String newTelephone = updateMembreDto.getTelephone().trim(); // Attention si DTO.telephone peut être null
+            // Pour être précis:
+            String currentTelephone = existingMembre.getTelephone() == null ? "" : existingMembre.getTelephone();
+            if (!newTelephone.equals(currentTelephone)) {
+                existingMembre.setTelephone(updateMembreDto.getTelephone()); // Stocker la valeur brute du DTO (ou trimée)
+                updated = true;
+            }
         }
 
-        // Mise à jour de l'email (avec validation d'unicité)
-        String newEmail = updateMembreDto.getEmail();
-        if (newEmail != null && !newEmail.isBlank()) {
-            String normalizedNewEmail = newEmail.toLowerCase().trim();
-            // Vérifier si l'email a changé ET s'il existe déjà pour un AUTRE utilisateur
-            if (!normalizedNewEmail.equalsIgnoreCase(existingMembre.getEmail()) &&
-                    membreRepository.existsByEmailAndIdNot(normalizedNewEmail, currentUserId)) {
-                throw new IllegalArgumentException("Cet email est déjà utilisé par un autre membre."); // Conflit -> HTTP 409
-            }
-            // Si l'email est différent ou si la casse/espaces ont changé, mettre à jour
-            if (!normalizedNewEmail.equals(existingMembre.getEmail())) {
+        // Email
+        String newEmailFromDto = updateMembreDto.getEmail();
+        if (newEmailFromDto != null && !newEmailFromDto.isBlank()) {
+            String normalizedNewEmail = newEmailFromDto.toLowerCase().trim();
+            String currentEmailNormalized = existingMembre.getEmail() == null ? "" : existingMembre.getEmail().toLowerCase().trim();
+
+            if (!normalizedNewEmail.equals(currentEmailNormalized)) { // L'email a-t-il changé ?
+                if (membreRepository.existsByEmailAndIdNot(normalizedNewEmail, currentUserId)) {
+                    throw new IllegalArgumentException("Cet email est déjà utilisé par un autre membre.");
+                }
                 existingMembre.setEmail(normalizedNewEmail);
                 updated = true;
             }
         }
 
-        // Sauvegarde uniquement si des modifications ont été détectées
         if (updated) {
+            // Si vous n'avez pas mocké `membreRepository.save()`, il pourrait retourner null dans un test
+            // ou une nouvelle instance, ce qui ferait échouer assertSame.
+            // Pour ce test, nous voulons vérifier que save() n'est PAS appelé.
             return membreRepository.save(existingMembre);
         }
-
-        // Si aucune mise à jour n'a été effectuée, retourne l'entité existante non modifiée
         return existingMembre;
     }
 

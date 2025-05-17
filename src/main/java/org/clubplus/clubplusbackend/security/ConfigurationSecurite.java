@@ -159,16 +159,7 @@ public class ConfigurationSecurite {
                 // Configure les autorisations pour les requêtes HTTP
                 .authorizeHttpRequests(auth -> auth
                         // Autorise l'accès public aux endpoints d'authentification/inscription
-                        .requestMatchers("/auth/membre/inscription/**").permitAll()
-                        .requestMatchers("/auth/connexion").permitAll()
-                        .requestMatchers("/auth/stats").permitAll()
-                        .requestMatchers("/auth/verify-email").permitAll()
-                        .requestMatchers("/auth/mail-password-reset").permitAll()
-                        .requestMatchers("/auth/reset-password").permitAll()
-                        .requestMatchers("/auth/validate-reset-token").permitAll()
-
-                        // Autorise l'accès public à l'inscription de club
-                        .requestMatchers("/auth/club/inscription").permitAll()
+                        .requestMatchers("/auth/**").permitAll()
                         // Exige une authentification pour toutes les autres requêtes API
                         .requestMatchers("/**").authenticated()
                         // Refuse toutes les autres requêtes non explicitement autorisées (principe de sécurité par défaut)
@@ -180,6 +171,7 @@ public class ConfigurationSecurite {
         // Construit et retourne la chaîne de filtres configurée
         return http.build();
     }
+
 
     /**
      * Définit la configuration CORS (Cross-Origin Resource Sharing) pour l'application.

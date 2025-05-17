@@ -52,7 +52,7 @@ public class Membre {
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @JsonView(GlobalView.Base.class)
+    @JsonView({GlobalView.Base.class, GlobalView.ProfilView.class})
     private Integer id;
 
     /**
@@ -63,7 +63,7 @@ public class Membre {
     @NotBlank(message = "Le nom ne peut pas être vide.")
     @Size(min = 2, max = 50, message = "Le nom doit contenir entre 2 et 50 caractères.")
     @Column(nullable = false, length = 50)
-    @JsonView(GlobalView.Base.class)
+    @JsonView({GlobalView.Base.class, GlobalView.ProfilView.class})
     private String nom;
 
     /**
@@ -74,7 +74,7 @@ public class Membre {
     @NotBlank(message = "Le prénom ne peut pas être vide.")
     @Size(min = 2, max = 50, message = "Le prénom doit contenir entre 2 et 50 caractères.")
     @Column(nullable = false, length = 50)
-    @JsonView(GlobalView.Base.class)
+    @JsonView({GlobalView.Base.class, GlobalView.ProfilView.class})
     private String prenom;
 
     /**
