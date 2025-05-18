@@ -42,8 +42,6 @@ public class MembreService {
     @Value("${jwt.reset-token.expiration-ms}")
     private long jwtResetTokenExpirationMs;
 
-    @Value("${app.frontend.reset-password-page-url}")
-    private String frontendResetPasswordPageUrl;
 
     private static final String PASSWORD_PATTERN_REGEX =
             "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#&()\\-\\[{}\\]:;',?/*~$^+=<>]).{8,100}$";
@@ -589,7 +587,7 @@ public class MembreService {
 
             // Envoyer l'email avec le lien de réinitialisation
             // Vous devrez modifier cette méthode dans EmailService
-            emailService.sendPasswordResetEmail(membre, resetToken, frontendResetPasswordPageUrl);
+            emailService.sendPasswordResetEmail(membre, resetToken);
             System.out.println("Email de réinitialisation envoyé à : " + membre.getEmail()); // Pour le log
         } else {
             // Email non trouvé : ne rien faire ou loguer discrètement

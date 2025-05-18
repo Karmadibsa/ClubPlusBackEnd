@@ -25,8 +25,11 @@ public class EmailService {
     @Value("${spring.mail.username}") // ou @Value("${spring.mail.from}")
     private String fromEmailAddress;
 
-    @Value("${app.frontend.verification-url}")
-    private String frontendVerificationUrl;
+    @Value("${APP_BACKEND_BASE_URL}") // Ceci devrait être l'URL de votre Netlify (ex: https://club-plus.netlify.app)
+    private String backendBaseUrl;
+
+    @Value("${APP_FRONTEND_BASE_URL}") // Ceci devrait être l'URL de votre Netlify (ex: https://club-plus.netlify.app)
+    private String frontendBaseUrl;
 
     /**
      * Envoie un e-mail simple.
@@ -57,7 +60,7 @@ public class EmailService {
             throw new IllegalArgumentException("Membre email et token de vérification ne peuvent pas être nuls.");
         }
 
-        String verificationLink = frontendVerificationUrl + "?token=" + membre.getVerificationToken();
+        String verificationLink = backendBaseUrl + "/auth/verify-email?token=" + membre.getVerificationToken();
 
         // Crée un contexte Thymeleaf pour passer les variables au template
         Context context = new Context();
@@ -79,12 +82,12 @@ public class EmailService {
         System.out.println("E-mail de vérification envoyé (HTML) à " + membre.getEmail());
     }
 
-    public void sendPasswordResetEmail(Membre membre, String token, String resetPageUrl) throws MessagingException {
+    public void sendPasswordResetEmail(Membre membre, String token) throws MessagingException {
         if (membre.getEmail() == null || token == null) {
             throw new IllegalArgumentException("L'email du membre et le token ne peuvent pas être nuls.");
         }
 
-        String resetLink = resetPageUrl + "?token=" + token; // Le lien vers votre page Angular
+        String resetLink = frontendBaseUrl + "?token=" + token; // Le lien vers votre page Angular
 
         Context context = new Context();
         context.setVariable("prenom", membre.getPrenom());

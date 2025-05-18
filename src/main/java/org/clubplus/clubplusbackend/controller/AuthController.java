@@ -75,11 +75,11 @@ public class AuthController {
         if (frontendBaseUrl == null) {
             logger.error("APP_FRONTEND_BASE_URL n'est pas injecté ! Vérifiez la variable d'environnement sur Render.");
             // Définir des valeurs par défaut robustes ou lever une exception si critique
-            this.frontendEmailVerifiedSuccessPage = "https://default-success-url.com"; // Mettez une URL par défaut
-            this.frontendEmailVerifiedFailurePage = "https://default-failure-url.com";
+            this.frontendEmailVerifiedSuccessPage = "https://google.com"; // Mettez une URL par défaut
+            this.frontendEmailVerifiedFailurePage = "https://google.com";
         } else {
-            this.frontendEmailVerifiedSuccessPage = frontendBaseUrl + "/email-verified-success"; // Ex: https://club-plus.netlify.app/email-verified-success
-            this.frontendEmailVerifiedFailurePage = frontendBaseUrl + "/email-verified-failure"; // Ex: https://club-plus.netlify.app/email-verified-failure
+            this.frontendEmailVerifiedSuccessPage = frontendBaseUrl + "/connexion"; // Ex: https://club-plus.netlify.app/email-verified-success
+            this.frontendEmailVerifiedFailurePage = frontendBaseUrl + "/accueil"; // Ex: https://club-plus.netlify.app/email-verified-failure
         }
         logger.info("Frontend redirect URLs initialized: Success={}, Failure={}", frontendEmailVerifiedSuccessPage, frontendEmailVerifiedFailurePage);
     }
