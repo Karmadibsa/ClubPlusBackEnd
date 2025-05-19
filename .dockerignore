@@ -4,4 +4,4 @@
 .idea/
 target/
 *.iml
-.local.env # Important !
+.local.env

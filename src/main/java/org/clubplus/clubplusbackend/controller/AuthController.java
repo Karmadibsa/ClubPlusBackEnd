@@ -265,12 +265,6 @@ public class AuthController {
         }
     }
 
-    @GetMapping("/test-auth-path")
-    public String testAuthPath() {
-        logger.info("Endpoint /auth/test-auth-path CALLED - Version Deploy-Render-Test-1");
-        return "Path /auth/test-auth-path works! Version Deploy-Render-Test-1";
-    }
-
     @PostMapping("/mail-password-reset")
     public ResponseEntity<?> requestPasswordReset(@RequestParam("email") String email) {
         try {

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title th:text="'Nouveau message de contact : ' + ${subject}"></title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        h1 {
+            color: #1a5f7a; /* Couleur de votre thème --main-blue */
+        }
+
+        p {
+            margin-bottom: 10px;
+        }
+
+        strong {
+            color: #000;
+        }
+
+        .message-content {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-left: 3px solid #f26115; /* Couleur de votre thème --main-orange */
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Nouveau message via le formulaire de contact</h1>
+    <p>Vous avez reçu un nouveau message de :</p>
+    <ul>
+        <li><strong>Nom :</strong> <span th:text="${name}">[Nom de l'expéditeur]</span></li>
+        <li><strong>Email de l'expéditeur :</strong> <span th:text="${email}">[Email de l'expéditeur]</span></li>
+        <li><strong>Sujet :</strong> <span th:text="${subject}">[Sujet du message]</span></li>
+    </ul>
+    <hr>
+    <h2>Message :</h2>
+    <div class="message-content">
+        <p th:text="${message}">[Contenu du message]</p>
+    </div>
+    <hr>
+    <p><em>Cet email a été envoyé automatiquement depuis le formulaire de contact de l'application Club Plus.</em></p>
+</div>
+</body>
+</html>

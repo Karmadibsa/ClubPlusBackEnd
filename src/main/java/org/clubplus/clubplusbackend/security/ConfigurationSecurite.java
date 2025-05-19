@@ -160,6 +160,7 @@ public class ConfigurationSecurite {
                 .authorizeHttpRequests(auth -> auth
                         // Autorise l'accès public aux endpoints d'authentification/inscription
                         .requestMatchers("/auth/**").permitAll()
+                        .requestMatchers("/contact").permitAll()
                         // Exige une authentification pour toutes les autres requêtes API
                         .requestMatchers("/**").authenticated()
                         // Refuse toutes les autres requêtes non explicitement autorisées (principe de sécurité par défaut)

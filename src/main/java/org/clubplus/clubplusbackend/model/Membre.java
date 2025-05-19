@@ -130,7 +130,7 @@ public class Membre {
      * Format: "AMIS-XXXXXX". Non modifiable.
      * Visible dans la vue détaillée du profil de l'utilisateur.
      */
-    @Column(unique = true, length = 11, updatable = false) // Contraintes BDD: unique, taille fixe, non modifiable.
+    @Column(unique = true, length = 11) // Contraintes BDD: unique, taille fixe, non modifiable.
     @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
     private String codeAmi;
 

@@ -22,7 +22,7 @@ jobs:
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin' # ou 'corretto'
-          java-version: '23'
+          java-version: '17'
 
       - name: Cache du dépôt Maven
         uses: actions/cache@v3
