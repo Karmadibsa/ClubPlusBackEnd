@@ -58,7 +58,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/clubplusbackend # Nom de l'image corrigé
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/club-plus-backend # Nom de l'image corrigé
           # Tags spécifiques pour la branche main
           tags: |
             type=sha # Tag avec le SHA du commit
