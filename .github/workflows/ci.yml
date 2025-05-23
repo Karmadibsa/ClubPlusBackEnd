@@ -11,44 +11,41 @@ on:
       - developpement
 
 jobs:
-  build_and_test: # Renommé pour plus de clarté
+  build_and_test:
+    name: Build and Test Application
     runs-on: ubuntu-latest
-    outputs: # Pour passer des informations à d'autres jobs si besoin (non utilisé ici mais bonne pratique)
-      image_tag: ${{ steps.image_metadata.outputs.version }} # Exemple de sortie
-
-    steps:
-      - name: Checkout du code
-        uses: actions/checkout@v4 # Version plus récente
-
-      - name: Configuration de Java 17
-        uses: actions/setup-java@v4 # Version plus récente
-        with:
-          distribution: 'temurin'
-          java-version: '17'
-          cache: 'maven' # Utilise le cache Maven intégré à setup-java
-
-      - name: Compilation et tests Maven
-        run: mvn clean verify --batch-mode -e
-
-      # Cette étape est facultative ici car on construit l'image dans le job suivant
-      # Mais si vous vouliez un artefact JAR, vous pourriez le garder et le télécharger
-      # - name: Package application (Skip tests as they ran in 'verify')
-      #   run: mvn package -DskipTests --batch-mode
-
-  build_and_push_docker_image:
-    name: Build and Push Docker Image
-    runs-on: ubuntu-latest
-    needs: build_and_test # Ce job ne s'exécute que si build_and_test réussit
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/developpement') # Ne pousse que sur un push vers main ou developpement
+    # outputs: # Décommentez et utilisez si vous avez besoin de passer des infos spécifiques
+    # image_tag: ${{ steps.image_metadata.outputs.version }}
 
     steps:
       - name: Checkout du code
         uses: actions/checkout@v4
 
-      - name: Set up QEMU # Nécessaire pour les builds multi-plateformes (facultatif si vous ne ciblez qu'une plateforme)
+      - name: Configuration de Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'maven'
+
+      - name: Compilation et tests Maven
+        run: mvn clean verify --batch-mode -e
+
+  build_and_push_docker_image_to_main: # Nom de job plus spécifique
+    name: Build and Push Docker Image to Main
+    runs-on: ubuntu-latest
+    needs: build_and_test # Dépend du succès du job de test
+    # Condition pour ne s'exécuter QUE sur un push vers la branche 'main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
 
-      - name: Set up Docker Buildx # Outil de build avancé de Docker
+      - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
@@ -59,29 +56,21 @@ jobs:
 
       - name: Extract metadata (tags, labels) for Docker
         id: meta
-        uses: docker/metadata-action@v5 # Action pour générer des tags et labels pertinents
+        uses: docker/metadata-action@v5
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/club-plus-backend # ex: votrenomdocker/nomdurepo
-          # Génère des tags :
-          # - 'latest' pour la branche main
-          # - nom de la branche pour les autres branches (ex: 'developpement')
-          # - SHA du commit
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/clubplusbackend # Nom de l'image corrigé
+          # Tags spécifiques pour la branche main
           tags: |
-            type=schedule
-            type=ref,event=branch
-            type=ref,event=pr
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=sha # Tag avec le SHA du commit
+            type=raw,value=latest # Tag 'latest' pour la branche main
+            # Vous pourriez ajouter d'autres tags si besoin, ex: version sémantique si vous en utilisez
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v6 # Version plus récente
+        uses: docker/build-push-action@v6
         with:
-          context: . # Contexte de build (racine du dépôt où se trouve le Dockerfile)
-          file: ./Dockerfile # Chemin vers votre Dockerfile (si ce n'est pas ./Dockerfile)
-          push: true # Pousse l'image si le build réussit
+          context: .
+          file: ./Dockerfile
+          push: true # Pousse l'image
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
