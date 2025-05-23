@@ -61,7 +61,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5 # Action pour générer des tags et labels pertinents
         with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ github.event.repository.name }} # ex: votrenomdocker/nomdurepo
+          images: ${{ secrets.DOCKERHUB_USERNAME }}/$club-plus-backend # ex: votrenomdocker/nomdurepo
           # Génère des tags :
           # - 'latest' pour la branche main
           # - nom de la branche pour les autres branches (ex: 'developpement')
