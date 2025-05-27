@@ -120,11 +120,12 @@ public class Club {
     private String telephone;
 
     @NotBlank(message = "L'email du club est obligatoire.")
-    @Email(message = "Le format de l'email est invalide.")
+    @Email(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", message = "Le format de l'email est invalide. Il doit contenir un domaine valide (ex: .com, .fr).")
     @Size(max = 254, message = "L'email ne doit pas dépasser 254 caractères.")
     @Column(nullable = false, unique = true, length = 254)
     @JsonView({GlobalView.ClubView.class, GlobalView.ReservationView.class, GlobalView.ClubMembreView.class})
     private String email;
+
 
     // --- Code Club ---
 

@@ -154,8 +154,8 @@ VALUES (1, 'Tournoi Badminton CSC (Passé)', '2025-02-15 14:00:00', '2025-02-15 
         1, 1, NULL),
        (3, 'Tournoi Padel Lyon (Futur)', '2025-06-07 10:00:00', '2025-06-07 17:00:00', 'Tournoi P100 Hommes.',
         'Lyon Padel Est', 1, 1, NULL),
-       (4, 'Initiation Escalade CSC (En Cours)', '2025-04-21 14:00:00', '2025-04-21 18:00:00', 'Découverte salle.',
-        'Salle GrimpUp', 1, 1, NULL), -- DATE MODIFIEE
+       (4, 'Initiation Escalade CSC (En Cours)', NOW() + INTERVAL 1 HOUR, NOW() + INTERVAL 3 HOUR, 'Découverte salle.',
+        'Salle GrimpUp', 1, 1, NULL),
        (5, '[Annulé] Stage Tennis CSC (Futur)', '2025-07-10 09:00:00', '2025-07-12 17:00:00', 'Stage intensif.',
         'Courts Central', 1, 0, '2025-04-15 09:30:00'),
        (6, 'Soirée Jeux Club Paris (Futur)', '2025-08-10 19:00:00', '2025-08-10 23:00:00', 'Rencontre amicale jeux.',
@@ -314,6 +314,7 @@ VALUES -- Réservations pour MEMBREs uniquement
        (3, 2, 4, '2025-03-10 10:30:00', UUID(), 'UTILISE'),     -- Membre 5 @ Event 2 (Passé) / Cat 4
        (6, 3, 6, '2025-05-15 11:00:00', UUID(), 'CONFIRME'),    -- Membre 6 @ Event 3 (Futur) / Cat 6
        (7, 4, 8, '2025-04-18 14:00:00', UUID(), 'UTILISE'),     -- Membre 7 @ Event 4 (Passé récent) / Cat 8
+       (3, 4, 8, '2025-04-18 14:00:00', UUID(), 'CONFIRME'),    -- Membre 7 @ Event 4 (Passé récent) / Cat 8
        (8, 7, 13, '2025-02-20 15:00:00', UUID(), 'UTILISE'),    -- Membre 8 @ Event 7 (Passé) / Cat 13
        (9, 9, 15, '2025-05-20 16:00:00', UUID(), 'CONFIRME'),   -- Membre 9 @ Event 9 (Futur) / Cat 15 (joueur A)
        (10, 9, 16, '2025-05-21 17:00:00', UUID(), 'CONFIRME'),  -- Membre 10 @ Event 9 (Futur) / Cat 16 (joueur B)

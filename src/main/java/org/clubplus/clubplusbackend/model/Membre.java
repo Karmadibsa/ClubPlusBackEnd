@@ -110,15 +110,16 @@ public class Membre {
     @JsonView({GlobalView.MembreView.class, GlobalView.ReservationView.class, GlobalView.ProfilView.class})
     private String telephone;
 
+
     /**
      * Adresse email du membre.
      * Utilisée comme identifiant unique pour la connexion.
      * Doit être unique dans la base de données et au format email valide.
      */
     @NotBlank(message = "L'email est obligatoire.")
-    @Email(message = "Le format de l'email est invalide.") // Validation de format.
-    @Size(max = 254, message = "L'email ne doit pas dépasser 254 caractères.") // Limite standard RFC.
-    @Column(nullable = false, unique = true, length = 254) // Contraintes BDD: non null, unique, taille max.
+    @Email(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", message = "Le format de l'email est invalide. Il doit contenir un domaine valide (ex: .com, .fr).")
+    @Size(max = 254, message = "L'email ne doit pas dépasser 254 caractères.")
+    @Column(nullable = false, unique = true, length = 254)
     @JsonView({GlobalView.MembreView.class, GlobalView.ReservationView.class, GlobalView.ProfilView.class})
     private String email;
 
