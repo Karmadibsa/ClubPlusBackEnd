@@ -13,9 +13,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-import java.time.YearMonth;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -67,12 +67,23 @@ public class StatsService {
         log.debug("Calcul des adhésions mensuelles pour clubId: {}", clubId);
 
         // 3. Calculer la période de 12 mois (les 11 mois précédents + le mois courant) et appeler le DAO
-        LocalDateTime today = LocalDateTime.now();
-        // Commence au premier jour du mois, 11 mois avant aujourd'hui
-        LocalDateTime startDate = today.minusMonths(11).withDayOfMonth(1).toLocalDate().atStartOfDay();
+
+        Instant today = Instant.now();
+
+// Convertir l'Instant actuel en LocalDate en UTC
+        LocalDate localDateTodayUTC = today.atZone(ZoneOffset.UTC).toLocalDate();
+
+// Soustraire 11 mois
+        LocalDate localDateElevenMonthsAgoUTC = localDateTodayUTC.minusMonths(11);
+
+// Aller au premier jour de ce mois
+        LocalDate localDateFirstDayOfThatMonthUTC = localDateElevenMonthsAgoUTC.withDayOfMonth(1);
+
+// Convertir cette LocalDate (qui est en UTC) en un Instant au début de ce jour
+        Instant startDate = localDateFirstDayOfThatMonthUTC.atStartOfDay(ZoneOffset.UTC).toInstant();
         log.debug("Période de calcul des adhésions: de {} à {}", startDate, today);
         // Récupère les agrégats bruts [année, mois, compte] depuis le DAO
-        List<Object[]> results = adhesionRepository.findMonthlyAdhesionsToClubSince(clubId, startDate);
+        List<Object[]> results = adhesionRepository.findMonthlyAdhesionsToClubSince(clubId, LocalDateTime.from(startDate));
         log.debug("Résultats bruts des adhésions reçus ({} mois avec données): {}", results.size(), results);
 
         // 4. Formater les résultats pour inclure les mois à zéro et structurer la sortie
@@ -106,7 +117,7 @@ public class StatsService {
         log.debug("Calcul des moyennes de notation pour clubId: {}", clubId);
 
         // 1. Identifier les événements passés du club
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         List<Integer> pastEventIds = eventRepository.findPastEventIdsByOrganisateurId(clubId, now);
         log.debug("IDs des événements passés trouvés pour clubId {}: {}", clubId, pastEventIds);
 
@@ -287,8 +298,8 @@ public class StatsService {
         log.debug("Comptage des événements à venir (30j) pour clubId: {}", clubId);
 
         // Définir la période : de maintenant à dans 30 jours
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime futureDate = now.plusDays(30);
+        Instant now = Instant.now();
+        Instant futureDate = now.plus(30, ChronoUnit.DAYS); // Ajoute 30 jours
         log.debug("Période de recherche des événements à venir: de {} à {}", now, futureDate);
 
         // Appelle une méthode DAO qui compte les événements actifs dans la période donnée
@@ -310,7 +321,7 @@ public class StatsService {
      * @param today     La date de fin de la période (utilisée pour déterminer le dernier mois).
      * @return Une liste de {@code Map<String, Object>} triée chronologiquement, chaque map contenant "monthYear" et "count".
      */
-    private List<Map<String, Object>> formatMonthlyResults(List<Object[]> results, LocalDateTime startDate, LocalDateTime today) {
+    private List<Map<String, Object>> formatMonthlyResults(List<Object[]> results, Instant startDate, Instant today) {
         // Utilise TreeMap pour garantir l'ordre chronologique des mois
         Map<YearMonth, Long> monthlyCounts = new TreeMap<>();
         YearMonth startMonth = YearMonth.from(startDate);

@@ -107,6 +107,7 @@ public class ReservationController {
     @JsonView(GlobalView.ReservationView.class) // Vue JSON pour la liste de réservations
     public ResponseEntity<List<Reservation>> getMyReservations(@RequestParam(required = false) String status) {
         List<Reservation> reservations = reservationService.findMyReservations(status);
+        System.out.println(reservations);
         return ResponseEntity.ok(reservations);
     }
 

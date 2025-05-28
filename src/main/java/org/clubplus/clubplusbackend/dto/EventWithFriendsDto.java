@@ -11,7 +11,7 @@ import org.clubplus.clubplusbackend.model.Event;
 import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -53,13 +53,13 @@ public class EventWithFriendsDto {
      * Date et heure de début.
      */
     @JsonView(GlobalView.Base.class)
-    private LocalDateTime startTime;
+    private Instant startTime;
 
     /**
      * Date et heure de fin.
      */
     @JsonView(GlobalView.EventView.class) // Visible dans la vue détaillée de l'Event
-    private LocalDateTime endTime;
+    private Instant endTime;
 
     /**
      * Description détaillée.

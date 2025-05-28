@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -48,17 +49,16 @@ class ClubTest {
     private Club createValidClub() {
         Club club = new Club();
         club.setNom("Club Sportif Valide");
-        club.setDate_creation(LocalDate.now().minusYears(1)); // Doit être passée ou présente
-        club.setDate_inscription(LocalDate.now().minusMonths(11)); // Doit être passée ou présente
-        club.setNumero_voie("12B"); // Obligatoire
+        club.setDate_creation(LocalDate.now().minusYears(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        club.setDate_inscription(LocalDate.now().minusMonths(11).atStartOfDay(ZoneOffset.UTC).toInstant());
+        club.setNumero_voie("12B");
         club.setRue("Rue Principale");
         club.setCodepostal("75001");
         club.setVille("Paris");
         club.setTelephone("0123456789");
-        club.setEmail("contact.valide@clubexample.com"); // Format email valide
-        club.setCodeClub("CLUB001"); // Le codeClub est généré @PostPersist, mais on peut le setter pour les tests de l'entité.
-        // Les contraintes de taille/unicité seraient testées au niveau DAO.
-        club.setActif(true); // Valeur par défaut, mais bon à expliciter
+        club.setEmail("contact.valide@clubexample.com");
+        club.setCodeClub("CLUB001");
+        club.setActif(true);
         return club;
     }
 
@@ -221,7 +221,7 @@ class ClubTest {
     @DisplayName("Date de création dans le futur doit générer une violation")
     void quandDateCreationEstDansLeFutur_alorsViolation() {
         Club club = createValidClub();
-        club.setDate_creation(LocalDate.now().plusDays(1));
+        club.setDate_creation(LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
         Set<ConstraintViolation<Club>> violations = validator.validate(club);
         assertFalse(violations.isEmpty());
         assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("date_creation") && v.getMessage().contains("La date de création doit être dans le passé ou aujourd'hui.")));
@@ -231,7 +231,7 @@ class ClubTest {
     @DisplayName("Date d'inscription dans le futur doit générer une violation")
     void quandDateInscriptionEstDansLeFutur_alorsViolation() {
         Club club = createValidClub();
-        club.setDate_inscription(LocalDate.now().plusDays(1));
+        club.setDate_inscription(LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
         Set<ConstraintViolation<Club>> violations = validator.validate(club);
         assertFalse(violations.isEmpty());
         assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("date_inscription") && v.getMessage().contains("La date d'inscription doit être dans le passé ou aujourd'hui.")));

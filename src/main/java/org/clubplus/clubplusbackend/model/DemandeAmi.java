@@ -8,7 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
 
 /**
@@ -99,7 +99,7 @@ public class DemandeAmi {
     @NotNull // Validation applicative : la date est requise.
     @Column(nullable = false, updatable = false) // Contrainte BDD: non null, non modifiable après création.
     @JsonView({GlobalView.DemandeView.class})
-    private LocalDateTime dateDemande = LocalDateTime.now(); // Initialisation à la date/heure actuelle.
+    private Instant dateDemande = Instant.now(); // Initialisation à la date/heure actuelle.
 
     /**
      * Constructeur métier pour créer une nouvelle instance de DemandeAmi.

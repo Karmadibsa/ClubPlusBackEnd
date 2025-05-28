@@ -12,7 +12,10 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.dao.DataIntegrityViolationException;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -60,6 +63,11 @@ public class MembreDaoTest {
      */
     @BeforeEach
     void setUp() {
+        Instant now = Instant.now();
+        ZonedDateTime zdtNow = now.atZone(ZoneOffset.UTC); // Convertir en ZonedDateTime en UTC
+        ZonedDateTime zdtTwoYearsAgo = zdtNow.minusYears(2); // Soustraire 2
+        Instant creationDate1 = zdtTwoYearsAgo.toInstant(); // Reconvertir en Instant
+
         // Création et persistance de club1
         club1 = new Club();
         club1.setNom("Club Alpha");
@@ -71,10 +79,13 @@ public class MembreDaoTest {
         club1.setRue("Rue Alpha");
         club1.setCodepostal("75001");
         club1.setVille("Paris");
-        club1.setDate_creation(LocalDate.now().minusYears(2));
-        club1.setDate_inscription(LocalDate.now().minusYears(2)); // Champ obligatoire pour Club
+        club1.setDate_creation(creationDate1);
+        club1.setDate_inscription(creationDate1);
         entityManager.persistAndFlush(club1); // Persiste club1 et le rend visible pour les tests.
 
+
+        ZonedDateTime zdtOneYearsAgo = zdtNow.minusYears(1); // Soustraire 2
+        Instant creationDate2 = zdtOneYearsAgo.toInstant(); // Reconvertir en Instant
         // Création et persistance de club2
         club2 = new Club();
         club2.setNom("Club Beta");
@@ -86,8 +97,8 @@ public class MembreDaoTest {
         club2.setRue("Rue Beta");
         club2.setCodepostal("75002");
         club2.setVille("Paris");
-        club2.setDate_creation(LocalDate.now().minusYears(1));
-        club2.setDate_inscription(LocalDate.now().minusYears(1)); // Champ obligatoire pour Club
+        club2.setDate_creation(creationDate2);
+        club2.setDate_inscription(creationDate2);
         entityManager.persistAndFlush(club2);
     }
 
@@ -102,6 +113,15 @@ public class MembreDaoTest {
      * @return Une instance de Membre prête à être persistée ou utilisée dans les tests.
      */
     private Membre createMembreTemplate(String email, String nom, Role role, String codeAmi) {
+        LocalDate dateNaissance = LocalDate.of(1990, 1, 15);
+        Instant instantNaissance = dateNaissance.atStartOfDay(ZoneOffset.UTC).toInstant(); // Début du jour en UTC
+        Instant nowForInscription = Instant.now(); // Obtenir l'instant actuel
+
+// Convertir en ZonedDateTime en UTC, soustraire 1 an, puis reconvertir en Instant
+        ZonedDateTime zdtNow = nowForInscription.atZone(ZoneOffset.UTC);
+        ZonedDateTime zdtOneYearAgo = zdtNow.minusYears(1);
+        Instant inscriptionDate = zdtOneYearAgo.toInstant();
+
         Membre membre = new Membre();
         membre.setEmail(email);
         membre.setNom(nom);
@@ -110,8 +130,8 @@ public class MembreDaoTest {
         membre.setRole(role);
         membre.setActif(true);
         membre.setVerified(true);
-        membre.setDate_naissance(LocalDate.of(1990, 1, 15));
-        membre.setDate_inscription(LocalDate.now().minusYears(1)); // Champ obligatoire.
+        membre.setDate_naissance(instantNaissance);
+        membre.setDate_inscription(inscriptionDate);
         membre.setTelephone("0123456789"); // Doit respecter les contraintes.
         membre.setCodeAmi(codeAmi); // Doit respecter la taille max (11 caractères).
         // Les collections (comme adhesions) sont généralement initialisées par le constructeur de Membre.

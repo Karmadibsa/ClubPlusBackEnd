@@ -19,7 +19,9 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.HashSet;
 import java.util.Optional;
 
@@ -91,58 +93,63 @@ class MembreControllerTest {
      * Elle initialise {@link MockMvc} en intégrant la configuration de Spring Security
      * et crée les utilisateurs de test nécessaires dans la base de données.
      */
+
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders
-                .webAppContextSetup(context)
-                .apply(springSecurity()) // Applique la configuration de Spring Security à MockMvc.
+                .webAppContextSetup(context) // Assurez-vous que 'context' est injecté via @Autowired
+                .apply(springSecurity())
                 .build();
 
         // Création et persistance des utilisateurs de test.
-        // Ces utilisateurs seront chargés par @WithUserDetails dans les méthodes de test.
 
         // Création de Bob (MEMBRE)
         Membre bob = new Membre();
-        bob.setEmail(BOB_EMAIL);
+        bob.setEmail(BOB_EMAIL); // Assurez-vous que BOB_EMAIL est défini
         bob.setNom("Bob");
         bob.setPrenom("LeMembre");
-        bob.setPassword(passwordEncoder.encode("ValidPass1!"));
+        bob.setPassword(passwordEncoder.encode("ValidPass1!")); // Assurez-vous que passwordEncoder est injecté
         bob.setRole(Role.MEMBRE);
         bob.setActif(true);
         bob.setVerified(true);
-        bob.setDate_naissance(LocalDate.now().minusYears(25));
-        bob.setDate_inscription(LocalDate.now().minusDays(10));
+        // Conversion de LocalDate en Instant (début du jour UTC)
+        bob.setDate_naissance(LocalDate.now().minusYears(25).atStartOfDay(ZoneOffset.UTC).toInstant());
+        bob.setDate_inscription(LocalDate.now().minusDays(10).atStartOfDay(ZoneOffset.UTC).toInstant());
         bob.setTelephone("0102030405");
-        bob.setAdhesions(new HashSet<>());
-        bobMembreEntity = membreRepository.saveAndFlush(bob);
+        bob.setAdhesions(new HashSet<>()); // Initialisation pour éviter NullPointerException si le constructeur ne le fait pas
+        bobMembreEntity = membreRepository.saveAndFlush(bob); // Assurez-vous que membreRepository est injecté
 
         // Création d'un Admin
         Membre admin = new Membre();
-        admin.setEmail(ADMIN_EMAIL);
+        admin.setEmail(ADMIN_EMAIL); // Assurez-vous que ADMIN_EMAIL est défini
         admin.setNom("Admin");
         admin.setPrenom("User");
         admin.setPassword(passwordEncoder.encode("AdminPass1!"));
         admin.setRole(Role.ADMIN);
         admin.setActif(true);
         admin.setVerified(true);
-        admin.setDate_naissance(LocalDate.now().minusYears(35));
-        admin.setDate_inscription(LocalDate.now().minusDays(100));
+        // Conversion de LocalDate en Instant (début du jour UTC)
+        admin.setDate_naissance(LocalDate.now().minusYears(35).atStartOfDay(ZoneOffset.UTC).toInstant());
+        admin.setDate_inscription(LocalDate.now().minusDays(100).atStartOfDay(ZoneOffset.UTC).toInstant());
         admin.setTelephone("0908070605");
         admin.setAdhesions(new HashSet<>());
         adminUserEntity = membreRepository.saveAndFlush(admin);
 
         // Création d'Alice (MEMBRE)
         Membre alice = new Membre();
-        alice.setEmail(ALICE_EMAIL);
+        alice.setEmail(ALICE_EMAIL); // Assurez-vous que ALICE_EMAIL est défini
         alice.setNom("Alice");
         alice.setPrenom("Profil");
         alice.setPassword(passwordEncoder.encode("AlicePass1!"));
         alice.setRole(Role.MEMBRE);
         alice.setActif(true);
         alice.setVerified(true);
-        alice.setDate_naissance(LocalDate.now().minusYears(30));
+        // Conversion de LocalDate en Instant (début du jour UTC)
+        alice.setDate_naissance(LocalDate.now().minusYears(30).atStartOfDay(ZoneOffset.UTC).toInstant());
+        alice.setDate_inscription(LocalDate.now().minusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
         alice.setTelephone("0655667788");
-        alice.setDate_inscription(LocalDate.now().minusDays(1));
+        // Si Adhesions n'est pas initialisé dans le constructeur de Membre et que vous y accédez plus tard, initialisez-le.
+        // alice.setAdhesions(new HashSet<>()); // Si nécessaire
         aliceMembreEntity = membreRepository.saveAndFlush(alice);
     }
 
@@ -173,11 +180,15 @@ class MembreControllerTest {
     @WithUserDetails(value = BOB_EMAIL, setupBefore = TestExecutionEvent.TEST_EXECUTION)
     @DisplayName("Mise à jour de son profil avec données valides")
     void mettreAJourMonProfil_avecDonneesValides_devraitRetournerMembreMisAJour() throws Exception {
+        LocalDate dateNaissanceApprox = LocalDate.now().minusYears(26);
+
+// 2. Convertir cette LocalDate en un Instant représentant le début de cette journée en UTC
+        Instant instantNaissance = dateNaissanceApprox.atStartOfDay(ZoneOffset.UTC).toInstant();
         UpdateMembreDto updateDto = new UpdateMembreDto();
         updateDto.setNom("Robert");
         updateDto.setPrenom("LeMembreModifie");
         updateDto.setTelephone("0607080910");
-        updateDto.setDate_naissance(LocalDate.now().minusYears(26));
+        updateDto.setDate_naissance(instantNaissance);
         updateDto.setEmail(BOB_EMAIL); // Email inchangé ou nouveau valide
 
         mockMvc.perform(put("/membres/profile")
@@ -228,12 +239,16 @@ class MembreControllerTest {
     @WithUserDetails(value = BOB_EMAIL, setupBefore = TestExecutionEvent.TEST_EXECUTION)
     @DisplayName("Mise à jour du profil avec données invalides")
     void mettreAJourMonProfil_avecDonneesInvalides_devraitRetournerBadRequest() throws Exception {
+        LocalDate dateNaissanceApprox = LocalDate.now().minusYears(25);
+
+// 2. Convertir cette LocalDate en un Instant représentant le début de cette journée en UTC
+        Instant instantNaissance = dateNaissanceApprox.atStartOfDay(ZoneOffset.UTC).toInstant();
         UpdateMembreDto updateDto = new UpdateMembreDto();
         updateDto.setNom(""); // Nom invalide (supposant @NotBlank)
         updateDto.setPrenom("PrenomValide");
         updateDto.setEmail(BOB_EMAIL);
         updateDto.setTelephone("0102030405");
-        updateDto.setDate_naissance(LocalDate.now().minusYears(25));
+        updateDto.setDate_naissance(instantNaissance);
 
         mockMvc.perform(put("/membres/profile")
                         .with(csrf())

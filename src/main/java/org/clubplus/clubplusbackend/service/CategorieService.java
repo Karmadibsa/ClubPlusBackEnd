@@ -13,7 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -141,7 +141,7 @@ public class CategorieService {
                 .orElseThrow(() -> new EntityNotFoundException("Impossible d'ajouter la catégorie: Événement non trouvé (ID: " + eventId + ")"));
 
         // Vérification métier: l'événement ne doit pas être terminé.
-        if (event.getEndTime() != null && event.getEndTime().isBefore(LocalDateTime.now())) {
+        if (event.getEndTime() != null && event.getEndTime().isBefore(Instant.now())) {
             throw new IllegalStateException("Impossible d'ajouter une catégorie à un événement qui est déjà terminé (ID: " + eventId + ").");
         }
         // Vérification métier: l'événement doit être actif.
@@ -212,7 +212,7 @@ public class CategorieService {
         Event event = existingCategorie.getEvent(); // Récupère l'événement lié.
 
         // 2. Vérifier le statut/date de l'événement parent.
-        if (event.getEndTime() != null && event.getEndTime().isBefore(LocalDateTime.now())) {
+        if (event.getEndTime() != null && event.getEndTime().isBefore(Instant.now())) {
             throw new IllegalStateException("Impossible de modifier une catégorie d'un événement qui est déjà terminé (ID: " + eventId + ").");
         }
         if (event.getActif() == null || !event.getActif()) {
@@ -306,7 +306,7 @@ public class CategorieService {
         Event event = categorieToDelete.getEvent(); // Récupère l'événement lié.
 
         // 2. Vérifier le statut/date de l'événement parent.
-        if (event.getEndTime() != null && event.getEndTime().isBefore(LocalDateTime.now())) {
+        if (event.getEndTime() != null && event.getEndTime().isBefore(Instant.now())) {
             throw new IllegalStateException("Impossible de supprimer une catégorie d'un événement qui est déjà terminé (ID: " + eventId + ").");
         }
         if (event.getActif() == null || !event.getActif()) {

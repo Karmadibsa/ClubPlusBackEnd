@@ -15,7 +15,8 @@ import org.slf4j.LoggerFactory;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.UUID;
@@ -131,7 +132,7 @@ public class Reservation {
     @PastOrPresent(message = "La date de réservation doit être dans le passé ou aujourd'hui.") // Validation logique.
     @Column(nullable = false, updatable = false) // Contrainte BDD: non null, non modifiable.
     @JsonView(GlobalView.ReservationView.class)
-    private LocalDateTime dateReservation;
+    private Instant dateReservation;
 
     /**
      * Statut actuel de la réservation (ex: CONFIRME, UTILISE, ANNULE).
@@ -202,7 +203,7 @@ public class Reservation {
         }
 
         // Initialisation des champs par défaut.
-        this.dateReservation = LocalDateTime.now();
+        this.dateReservation = Instant.now();
         this.reservationUuid = UUID.randomUUID().toString(); // Génération de l'UUID unique.
         this.status = ReservationStatus.CONFIRME; // Statut par défaut.
     }
@@ -249,8 +250,10 @@ public class Reservation {
 
             // Construction des informations à inclure.
             String nomComplet = membre.getPrenom() + " " + membre.getNom();
-            String dateFormatted = dateReservation.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME); // Format standard ISO.
+            DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
+                    .withZone(ZoneOffset.UTC); // <<< Spécifier UTC [2][3]
 
+            String dateFormatted = formatter.format(dateReservation);
             // Encodage URL des parties variables pour éviter les caractères problématiques.
             String encodedNom = URLEncoder.encode(nomComplet, StandardCharsets.UTF_8);
             String encodedDate = URLEncoder.encode(dateFormatted, StandardCharsets.UTF_8);

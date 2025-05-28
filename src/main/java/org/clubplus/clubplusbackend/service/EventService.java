@@ -10,7 +10,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -139,7 +139,7 @@ public class EventService {
         }
         securityService.checkIsCurrentUserMemberOfClubOrThrow(clubId);
 
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         // Applique le filtre de statut et de date
         if ("inactive".equalsIgnoreCase(statusFilter)) {
             // Trouve les événements futurs et inactifs
@@ -173,7 +173,7 @@ public class EventService {
             return Collections.emptyList(); // Si l'utilisateur n'est membre d'aucun club
         }
 
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
 
         // Applique le filtre basé sur le paramètre statusFilter
         if ("active".equalsIgnoreCase(statusFilter)) {
@@ -268,7 +268,7 @@ public class EventService {
             return Collections.emptyList(); // Pas de clubs actifs ou pas d'adhésions
         }
 
-        LocalDateTime now = LocalDateTime.now(); // Date de référence pour "futur"
+        Instant now = Instant.now(); // Date de référence pour "futur"
 
         // Sélection de la bonne méthode DAO en fonction du statut demandé
         if ("all".equalsIgnoreCase(status)) {
@@ -309,7 +309,7 @@ public class EventService {
         System.out.println("Membre " + currentUserId + " appartient aux clubs: " + memberClubIds); // Logger préférable
 
         // 2. Déterminer le statut booléen pour la requête DAO basé sur statusFilter
-        LocalDateTime now = LocalDateTime.now(); // Pour filtrer les événements futurs
+        Instant now = Instant.now(); // Pour filtrer les événements futurs
         Boolean actifStatus = null; // Null signifie "tous les statuts" (actif et inactif)
         if ("active".equalsIgnoreCase(statusFilter)) {
             actifStatus = true;
@@ -432,7 +432,7 @@ public class EventService {
         // Récupère l'ID du club géré par l'utilisateur (lance une exception si non autorisé/non trouvé)
         Integer clubId = securityService.getCurrentUserManagedClubIdOrThrow();
 
-        LocalDateTime now = LocalDateTime.now(); // Point de référence temporel
+        Instant now = Instant.now(); // Point de référence temporel
 
         // Appelle la méthode du repository pour trouver les 5 prochains événements actifs, triés par date
         return eventRepository.findTop5ByOrganisateurIdAndActifTrueAndStartTimeAfterOrderByStartTimeAsc(clubId, now);
@@ -532,7 +532,7 @@ public class EventService {
         securityService.checkManagerOfClubOrThrow(existingEvent.getOrganisateur().getId());
 
         // 3. Validations métier sur l'état de l'événement avant modification
-        if (existingEvent.getEndTime().isBefore(LocalDateTime.now())) {
+        if (existingEvent.getEndTime().isBefore(Instant.now())) {
             throw new IllegalStateException("Impossible de modifier un événement déjà terminé."); // HTTP 409 Conflict
         }
         if (!existingEvent.getActif()) {

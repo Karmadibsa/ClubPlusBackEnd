@@ -15,8 +15,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -198,7 +197,7 @@ public class ClubService {
         membre.setDate_naissance(adminInfo.getDate_naissance());
         membre.setTelephone(adminInfo.getTelephone());
         membre.setEmail(adminInfo.getEmail().toLowerCase().trim()); // Email normalisé
-        membre.setDate_inscription(LocalDate.now()); // Date inscription système
+        membre.setDate_inscription(Instant.now()); // Date inscription système
         membre.setActif(true); // Actif par défaut
         // Le rôle et le mot de passe sont définis dans la méthode appelante
         return membre;
@@ -217,7 +216,7 @@ public class ClubService {
         club.setVille(dto.getVille());
         club.setTelephone(dto.getTelephone());
         club.setDate_creation(dto.getDate_creation()); // Date "réelle" fournie
-        club.setDate_inscription(LocalDate.now()); // Date inscription système
+        club.setDate_inscription(Instant.now()); // Date inscription système
         club.setActif(true); // Actif par défaut
         club.setAdhesions(new HashSet<>()); // Initialiser les collections
         club.setEvenements(new ArrayList<>());
@@ -337,7 +336,7 @@ public class ClubService {
         Club clubToDeactivate = getActiveClubByIdOrThrow(id); // Utilise la méthode helper qui gère @Where
 
         // 3. Validation Métier : Y a-t-il des événements futurs actifs ?
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         // Attention: clubToDeactivate.getEvenements() peut charger beaucoup d'événements si LAZY.
         List<Event> activeFutureEvents = clubToDeactivate.getEvenements().stream()
                 .filter(event -> event != null && event.getActif() != null && event.getActif()) // Filtre sur event actif

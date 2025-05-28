@@ -12,8 +12,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -95,7 +96,7 @@ public class ReservationService {
         }
 
         // 3. L'événement est-il futur ?
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (event.getStartTime() == null || event.getStartTime().isBefore(now)) {
             throw new IllegalStateException("Impossible de réserver : l'événement (ID: " + eventId + ") est déjà commencé ou passé."); // -> 409
         }
@@ -293,7 +294,7 @@ public class ReservationService {
 
         // 3. Vérification métier : L'événement est-il futur ?
         Event event = reservation.getEvent(); // Doit être chargé
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (event == null || event.getStartTime() == null || event.getStartTime().isBefore(now)) {
             throw new IllegalStateException("Annulation impossible : l'événement (ID: " + (event != null ? event.getId() : "inconnu") + ") est déjà commencé ou passé."); // -> 409
         }
@@ -352,9 +353,9 @@ public class ReservationService {
         }
 
         //    b) Est-on dans la fenêtre de scan/validation autorisée ? (Ex: 1h avant début jusqu'à la fin)
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime eventStart = event.getStartTime();
-        LocalDateTime eventEnd = event.getEndTime();
+        Instant now = Instant.now();
+        Instant eventStart = event.getStartTime();
+        Instant eventEnd = event.getEndTime();
 
         if (eventStart == null || eventEnd == null) {
             // Sécurité des données, même si @NotNull devrait l'empêcher
@@ -362,16 +363,16 @@ public class ReservationService {
         }
 
         // Définir la fenêtre de validation
-        LocalDateTime scanWindowStart = eventStart.minusHours(1); // 1 heure avant le début
-        LocalDateTime scanWindowEnd = eventEnd;                 // Jusqu'à la fin
+        Instant scanWindowStart = eventStart.minus(1, ChronoUnit.HOURS);// 1 heure avant le début
+        Instant scanWindowEnd = eventEnd;                 // Jusqu'à la fin
 
         // Vérifier si 'now' est EN DEHORS de la fenêtre [scanWindowStart, scanWindowEnd]
         if (now.isBefore(scanWindowStart) || now.isAfter(scanWindowEnd)) {
             // Formatter les dates pour un message d'erreur clair
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm 'le' dd/MM/yyyy");
             throw new IllegalStateException("Validation non autorisée actuellement. Fenêtre de validation : de "
-                    + scanWindowStart.format(formatter) + " à "
-                    + scanWindowEnd.format(formatter) + "."); // -> 409
+                    + formatter.format(scanWindowStart) + " à " // <<< CORRECT MAINTENANT
+                    + formatter.format(scanWindowEnd) + ".");
         }
 
         //    c) Le statut actuel de la réservation est-il CONFIRME ?

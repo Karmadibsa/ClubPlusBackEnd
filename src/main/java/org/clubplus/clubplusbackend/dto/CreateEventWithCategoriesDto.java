@@ -10,7 +10,7 @@ import lombok.Setter;
 import org.clubplus.clubplusbackend.model.Categorie;
 import org.clubplus.clubplusbackend.model.Event;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -42,14 +42,14 @@ public class CreateEventWithCategoriesDto {
      */
     @NotNull(message = "La date et l'heure de début sont obligatoires.")
     @FutureOrPresent(message = "La date de début doit être dans le présent ou le futur.")
-    private LocalDateTime startTime;
+    private Instant startTime;
 
     /**
      * Date et heure de fin de l'événement. Obligatoire, présent ou futur, et après 'start' (validé en service).
      */
     @NotNull(message = "La date et l'heure de fin sont obligatoires.")
     @FutureOrPresent(message = "La date de fin doit être dans le présent ou le futur.")
-    private LocalDateTime endTime;
+    private Instant endTime;
 
     /**
      * Description de l'événement. Obligatoire, max 2000 caractères.

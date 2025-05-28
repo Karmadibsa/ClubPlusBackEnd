@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
 
 /**
@@ -101,7 +101,7 @@ public class Adhesion {
     @NotNull // Validation applicative.
     @Column(nullable = false,       // Contrainte NOT NULL BDD.
             updatable = false)    // La date d'adhésion ne doit pas être modifiée après création.
-    private LocalDateTime dateAdhesion;
+    private Instant dateAdhesion;
 
     /**
      * Constructeur métier pour créer une nouvelle instance d'Adhesion.
@@ -117,7 +117,7 @@ public class Adhesion {
         this.membre = Objects.requireNonNull(membre, "Membre ne peut pas être null pour créer une Adhesion");
         this.club = Objects.requireNonNull(club, "Club ne peut pas être null pour créer une Adhesion");
         // Initialisation de la date au moment de la création de l'instance.
-        this.dateAdhesion = LocalDateTime.now();
+        this.dateAdhesion = Instant.now();
     }
 
     // Les Getters et Setters sont générés par Lombok (@Getter, @Setter).

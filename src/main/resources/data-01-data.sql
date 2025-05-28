@@ -313,17 +313,22 @@ VALUES -- Réservations pour MEMBREs uniquement
        (5, 2, 4, '2025-03-10 10:30:00', UUID(), 'UTILISE'),     -- Membre 5 @ Event 2 (Passé) / Cat 4
        (3, 2, 4, '2025-03-10 10:30:00', UUID(), 'UTILISE'),     -- Membre 5 @ Event 2 (Passé) / Cat 4
        (6, 3, 6, '2025-05-15 11:00:00', UUID(), 'CONFIRME'),    -- Membre 6 @ Event 3 (Futur) / Cat 6
+       (5, 3, 6, '2025-05-15 11:00:00', UUID(), 'CONFIRME'),    -- Membre 6 @ Event 3 (Futur) / Cat 6
+       (5, 4, 8, '2025-05-15 11:00:00', UUID(), 'CONFIRME'),    -- Membre 6 @ Event 3 (Futur) / Cat 6
        (7, 4, 8, '2025-04-18 14:00:00', UUID(), 'UTILISE'),     -- Membre 7 @ Event 4 (Passé récent) / Cat 8
        (3, 4, 8, '2025-04-18 14:00:00', UUID(), 'CONFIRME'),    -- Membre 7 @ Event 4 (Passé récent) / Cat 8
        (8, 7, 13, '2025-02-20 15:00:00', UUID(), 'UTILISE'),    -- Membre 8 @ Event 7 (Passé) / Cat 13
        (9, 9, 15, '2025-05-20 16:00:00', UUID(), 'CONFIRME'),   -- Membre 9 @ Event 9 (Futur) / Cat 15 (joueur A)
+       (5, 9, 15, '2025-05-20 16:00:00', UUID(), 'CONFIRME'),   -- Membre 9 @ Event 9 (Futur) / Cat 15 (joueur A)
        (10, 9, 16, '2025-05-21 17:00:00', UUID(), 'CONFIRME'),  -- Membre 10 @ Event 9 (Futur) / Cat 16 (joueur B)
        (11, 10, 18, '2025-04-05 09:30:00', UUID(), 'UTILISE'),  -- Membre 11 @ Event 10 (Passé) / Cat 18
        (12, 11, 19, '2025-04-30 10:00:00', UUID(), 'CONFIRME'), -- Membre 12 @ Event 11 (Futur) / Cat 19
+       (5, 11, 19, '2025-04-30 10:00:00', UUID(), 'CONFIRME'),  -- Membre 12 @ Event 11 (Futur) / Cat 19
        (13, 12, 20, '2025-07-01 11:00:00', UUID(), 'CONFIRME'), -- Membre 13 @ Event 12 (Futur) / Cat 20
        (14, 13, 21, '2025-03-25 18:00:00', UUID(), 'UTILISE'),  -- Membre 14 @ Event 13 (Passé) / Cat 21
        (15, 14, 22, '2025-09-01 12:00:00', UUID(), 'CONFIRME'), -- Membre 15 @ Event 14 (Futur) / Cat 22
        (16, 15, 23, '2025-06-10 13:00:00', UUID(), 'CONFIRME'), -- Membre 16 @ Event 15 (Futur) / Cat 23
+       (5, 15, 23, '2025-06-10 13:00:00', UUID(), 'CONFIRME'),  -- Membre 16 @ Event 15 (Futur) / Cat 23
        (17, 16, 24, '2025-02-15 14:00:00', UUID(), 'UTILISE'),  -- Membre 17 @ Event 16 (Passé) / Cat 24
        (18, 17, 26, '2025-04-20 15:00:00', UUID(), 'CONFIRME'), -- Membre 18 @ Event 17 (Futur) / Cat 26
        (19, 19, 28, '2025-05-05 16:00:00', UUID(), 'ANNULE'),   -- Membre 19 @ Event 19 (Futur, inactif) / Cat 28 - Annulé

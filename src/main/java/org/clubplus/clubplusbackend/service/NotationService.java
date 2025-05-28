@@ -13,7 +13,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -66,7 +66,7 @@ public class NotationService {
         // --- Validation des Règles Métier ---
 
         // 1. L'événement doit être terminé
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         if (event.getEndTime() == null || event.getEndTime().isAfter(now)) {
             throw new IllegalStateException("Impossible de noter : l'événement (ID: " + eventId + ") n'est pas encore terminé."); // -> 409
         }

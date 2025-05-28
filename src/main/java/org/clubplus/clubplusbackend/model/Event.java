@@ -13,7 +13,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -72,7 +72,7 @@ public class Event {
     // Validation: date future ou présente.
     @Column(nullable = false) // Contrainte BDD: non null.
     @JsonView(GlobalView.Base.class)
-    private LocalDateTime startTime;
+    private Instant startTime;
 
     /**
      * Date et heure de fin de l'événement.
@@ -84,7 +84,7 @@ public class Event {
     @FutureOrPresent(message = "La date de fin doit être dans le présent ou le futur.")
     @Column(nullable = false)
     @JsonView(GlobalView.EventView.class)
-    private LocalDateTime endTime;
+    private Instant endTime;
 
     /**
      * Description détaillée de l'événement.
@@ -125,7 +125,7 @@ public class Event {
      * Reste {@code null} tant que l'événement est actif.
      */
     @Column(name = "desactivation_date") // Nom de colonne clair en BDD.
-    private LocalDateTime desactivationDate;
+    private Instant desactivationDate;
 
     // --- Relations ---
 
@@ -208,7 +208,7 @@ public class Event {
         }
 
         // Enregistre le moment de la désactivation.
-        this.desactivationDate = LocalDateTime.now();
+        this.desactivationDate = Instant.now();
 
         // Note: Le champ 'actif' doit être mis à 'false' par l'appelant (service) avant la sauvegarde.
     }

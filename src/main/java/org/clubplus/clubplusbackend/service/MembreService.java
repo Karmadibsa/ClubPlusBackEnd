@@ -19,8 +19,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -215,7 +216,7 @@ public class MembreService {
 
         // 2. Préparation de l'entité Membre (avant sauvegarde initiale)
         membreData.setEmail(email);
-        membreData.setDate_inscription(LocalDate.now());
+        membreData.setDate_inscription(Instant.from(LocalDate.now()));
         membreData.setPassword(passwordEncoder.encode(membreData.getPassword()));
         membreData.setRole(Role.MEMBRE);
         membreData.setId(null);
@@ -225,7 +226,7 @@ public class MembreService {
         membreData.setVerified(false); // Ajout : Initialiser isVerified à false
         String verificationToken = UUID.randomUUID().toString(); // Ajout : Générer un token unique
         membreData.setVerificationToken(verificationToken); // Ajout : Stocker le token
-        // membreData.setTokenExpiryDate(LocalDateTime.now().plusDays(1)); // Optionnel: Ajouter une date d'expiration
+        // membreData.setTokenExpiryDate(Instant.now().plusDays(1)); // Optionnel: Ajouter une date d'expiration
 
         // 3. Sauvegarde initiale du membre (avec isVerified = false et le token)
         Membre nouveauMembre = membreRepository.save(membreData);
@@ -578,7 +579,8 @@ public class MembreService {
             System.out.println(resetToken);
 
             // Définir une date d'expiration (par exemple, 30 minutes)
-            LocalDateTime expiryDate = LocalDateTime.now().plusMinutes(30);
+            Instant now = Instant.now();
+            Instant expiryDate = now.plus(30, ChronoUnit.MINUTES); // Ajoute 30 minutes
             membre.setResetPasswordToken(resetToken);
             membre.setResetPasswordTokenExpiryDate(expiryDate);
 
@@ -615,7 +617,7 @@ public class MembreService {
         // Message d'erreur plus générique pour ne pas révéler d'informations sur le token
 
         // 2. Vérifier si le token a expiré
-        if (membre.getResetPasswordTokenExpiryDate() == null || LocalDateTime.now().isAfter(membre.getResetPasswordTokenExpiryDate())) {
+        if (membre.getResetPasswordTokenExpiryDate() == null || Instant.now().isAfter(membre.getResetPasswordTokenExpiryDate())) {
             // Optionnel : Invalider le token expiré pour qu'il ne puisse plus être tenté
             membre.setResetPasswordToken(null);
             membre.setResetPasswordTokenExpiryDate(null);
@@ -675,7 +677,7 @@ public class MembreService {
 
         Membre membre = membreOptional;
         // Vérifier si le token a expiré
-        if (LocalDateTime.now().isAfter(membre.getResetPasswordTokenExpiryDate())) {
+        if (Instant.now().isAfter(membre.getResetPasswordTokenExpiryDate())) {
             return false; // Token expiré
         }
         return true;

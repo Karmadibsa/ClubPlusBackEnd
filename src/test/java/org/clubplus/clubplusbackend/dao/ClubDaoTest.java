@@ -10,6 +10,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.dao.DataIntegrityViolationException;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -68,8 +69,10 @@ public class ClubDaoTest {
         club.setCodeClub(codeClub);
         club.setActif(true);
         // Initialisation de tous les champs obligatoires (non nuls) de l'entité Club.
-        club.setDate_creation(LocalDate.now().minusMonths(6));
-        club.setDate_inscription(LocalDate.now().minusMonths(5));
+        club.setDate_creation(LocalDate.now().minusMonths(6).atStartOfDay(ZoneOffset.UTC).toInstant());
+
+// Pour la date d'inscription (il y a 5 mois, début du jour UTC)
+        club.setDate_inscription(LocalDate.now().minusMonths(5).atStartOfDay(ZoneOffset.UTC).toInstant());
         club.setNumero_voie("123");
         club.setRue("Rue du Test Valide");
         club.setCodepostal("75000");

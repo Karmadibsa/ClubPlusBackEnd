@@ -187,7 +187,8 @@ public class ConfigurationSecurite {
         CorsConfiguration configuration = new CorsConfiguration();
         // Définit les origines autorisées (ex: votre frontend Angular/React)
         // IMPORTANT: Soyez spécifique en production, évitez "*"
-        configuration.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:3000", "https://club-plus.netlify.app", "https://club-plus.onrender.com")); // À adapter
+        configuration.setAllowedOrigins(List.of("http://localhost:4200", "http://localhost:3000", "https://club-plus.netlify.app", "https://club-plus.onrender.com", "http://192.168.137.1:8080", "http://172.16.1.124:8080")); // À adapter
+
         // Définit les méthodes HTTP autorisées
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
         // Définit les en-têtes HTTP autorisés (ex: Authorization, Content-Type). "*" autorise tous les en-têtes.

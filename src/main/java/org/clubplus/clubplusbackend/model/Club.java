@@ -11,8 +11,7 @@ import lombok.Setter;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.hibernate.annotations.Where;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 
 /**
@@ -69,7 +68,7 @@ public class Club {
     @PastOrPresent(message = "La date de création doit être dans le passé ou aujourd'hui.")
     @Column(nullable = false, updatable = false)
     @JsonView(GlobalView.ClubView.class)
-    private LocalDate date_creation;
+    private Instant date_creation;
 
     /**
      * Date d'inscription du club dans le système.
@@ -83,7 +82,7 @@ public class Club {
     @PastOrPresent(message = "La date d'inscription doit être dans le passé ou aujourd'hui.")
     @Column(nullable = false, updatable = false)
     @JsonView(GlobalView.ClubView.class)
-    private LocalDate date_inscription;
+    private Instant date_inscription;
 
     // --- Adresse ---
 
@@ -155,7 +154,7 @@ public class Club {
      * Null si le club est actif.
      */
     @Column(name = "desactivation_date")
-    private LocalDateTime desactivationDate;
+    private Instant desactivationDate;
 
     // --- Relations ---
 
@@ -204,7 +203,7 @@ public class Club {
             this.nom = "[Désactivé] " + this.nom;
         }
         this.email = "inactive+" + this.id + "@clubplus.invalid";
-        this.desactivationDate = LocalDateTime.now();
+        this.desactivationDate = Instant.now();
     }
 
     // --- equals et hashCode basés sur l'ID ---

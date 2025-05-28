@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.clubplus.clubplusbackend.model.Membre;
 
-import java.time.LocalDate;
+import java.time.Instant;
 
 /**
  * DTO (Data Transfer Object) utilisé pour recevoir les données nécessaires à la mise à jour
@@ -48,7 +48,7 @@ public class UpdateMembreDto {
      */
     @NotNull(message = "La date de naissance est requise")
     @Past(message = "La date de naissance doit être dans le passé.") // Validation ajoutée
-    private LocalDate date_naissance;
+    private Instant date_naissance;
 
     /**
      * Le nouvel email du membre. Obligatoire, format valide. Doit être unique.

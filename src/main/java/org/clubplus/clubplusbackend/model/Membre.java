@@ -12,8 +12,9 @@ import lombok.Setter;
 import org.clubplus.clubplusbackend.view.GlobalView;
 import org.hibernate.annotations.Where;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -86,7 +87,7 @@ public class Membre {
     @Past(message = "La date de naissance doit être dans le passé.") // Validation logique.
     @Column(nullable = false)
     @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
-    private LocalDate date_naissance;
+    private Instant date_naissance;
 
     /**
      * Date d'inscription du membre dans le système.
@@ -97,7 +98,7 @@ public class Membre {
     @NotNull // Assure qu'une date est présente lors de la persistance.
     @Column(nullable = false, updatable = false) // Non modifiable après création.
     @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
-    private LocalDate date_inscription = LocalDate.now(); // Initialisation par défaut, peut être surchargée.
+    private Instant date_inscription = Instant.now(); // Initialisation par défaut, peut être surchargée.
 
     // --- Contact ---
 
@@ -177,7 +178,7 @@ public class Membre {
      * Date et heure auxquelles les données du membre ont été anonymisées.
      * Reste {@code null} tant que le membre est actif.
      */
-    private LocalDateTime anonymizeDate;
+    private Instant anonymizeDate;
 
     @Column(nullable = false)
     private boolean verified = false;
@@ -188,7 +189,7 @@ public class Membre {
     @Column(unique = true)
     private String resetPasswordToken;
 
-    private LocalDateTime resetPasswordTokenExpiryDate;
+    private Instant resetPasswordTokenExpiryDate;
 
 
     // --- Relations ---
@@ -339,11 +340,12 @@ public class Membre {
         }
 
         String anonymizedSuffix = "_id" + this.id; // Suffixe basé sur l'ID.
-
+        LocalDate dateDeNaissance = LocalDate.of(1900, 1, 1);
+        Instant instantDeNaissance = dateDeNaissance.atStartOfDay(ZoneOffset.UTC).toInstant();
         // 1. Anonymiser les informations personnelles identifiables
         this.nom = "Utilisateur";
         this.prenom = "Anonyme" + anonymizedSuffix; // Rend unique pour éviter collisions potentielles
-        this.date_naissance = LocalDate.of(1900, 1, 1); // Date générique (ou null si BDD permet)
+        this.date_naissance = instantDeNaissance;
         this.telephone = "0000000000"; // Numéro invalide (ou null si BDD permet)
         this.email = "anonymized_" + this.id + "@example.com"; // Email unique et manifestement invalide
         this.password = "$2a$10$invalidHashPlaceholder." + UUID.randomUUID(); // Hash invalide/inutilisable
@@ -368,7 +370,7 @@ public class Membre {
         // Note: this.amis devrait être vide après la boucle.
 
         // 4. Enregistrer la date d'anonymisation
-        this.anonymizeDate = LocalDateTime.now();
+        this.anonymizeDate = Instant.now();
 
         // Note: Le champ 'actif' doit être mis à 'false' par l'appelant (service) avant la sauvegarde.
     }

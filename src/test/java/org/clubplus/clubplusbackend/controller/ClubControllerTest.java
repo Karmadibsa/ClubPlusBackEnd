@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -103,7 +104,7 @@ class ClubControllerTest {
     void setUp() {
         mockMvc = MockMvcBuilders
                 .webAppContextSetup(context)
-                .apply(springSecurity()) // Applique les filtres et la configuration de Spring Security à MockMvc.
+                .apply(springSecurity())
                 .build();
 
         // --- Création et persistance des données de test ---
@@ -111,54 +112,47 @@ class ClubControllerTest {
         // Création du Club de test "Alpha"
         clubTestAlpha = new Club();
         clubTestAlpha.setNom("Club Alpha de Test");
-        clubTestAlpha.setEmail("alpha.test@clubexample.com"); // Email unique pour le club
-        // Le codeClub est généré par le service après la création. Pour les tests où on le récupère,
-        // on peut le setter manuellement après sa création en base si besoin, ou le laisser
-        // être setté par la logique métier si on teste la création.
-        // Si un code est requis par un test avant la création (ex: DTO), il faut le fournir.
-        // Ici, on simule un code qui pourrait être généré ou attendu pour un club existant.
-        clubTestAlpha.setCodeClub("CLUB-001"); // Format: CLUB-XXXX (9 caractères max)
+        clubTestAlpha.setEmail("alpha.test@clubexample.com");
+        clubTestAlpha.setCodeClub("CLUB-001");
         clubTestAlpha.setActif(true);
-        clubTestAlpha.setDate_creation(LocalDate.now().minusYears(1));
-        clubTestAlpha.setDate_inscription(LocalDate.now().minusYears(1)); // Champ obligatoire
-        clubTestAlpha.setNumero_voie("1A"); // Champ obligatoire
+        // Conversion de LocalDate en Instant (début du jour UTC)
+        clubTestAlpha.setDate_creation(LocalDate.now().minusYears(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        clubTestAlpha.setDate_inscription(LocalDate.now().minusYears(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        clubTestAlpha.setNumero_voie("1A");
         clubTestAlpha.setRue("Rue Alpha Test");
         clubTestAlpha.setCodepostal("75001");
         clubTestAlpha.setVille("Paris");
         clubTestAlpha.setTelephone("0101010101");
-        clubRepository.saveAndFlush(clubTestAlpha); // Sauvegarde et flush pour avoir l'ID et rendre visible.
-        // Si le codeClub est généré dynamiquement dans le service après le premier save,
-        // il faudrait le récupérer ici et le réassigner à clubTestAlpha si des tests en dépendent.
-        // Ex: clubTestAlpha.setCodeClub(String.format("CLUB-%04d", clubTestAlpha.getId()));
-        // clubRepository.saveAndFlush(clubTestAlpha);
+        clubRepository.saveAndFlush(clubTestAlpha);
 
         // Création de l'administrateur pour Club Alpha
         adminClubAlpha = new Membre();
         adminClubAlpha.setEmail(ADMIN_ALPHA_EMAIL);
         adminClubAlpha.setNom("AdminAlphaNom");
         adminClubAlpha.setPrenom("AdminAlphaPrenom");
-        adminClubAlpha.setPassword(passwordEncoder.encode("AdminPass123!"));
+        adminClubAlpha.setPassword(passwordEncoder.encode("AdminPass123!")); // Assurez-vous que passwordEncoder est injecté
         adminClubAlpha.setRole(Role.ADMIN);
         adminClubAlpha.setActif(true);
         adminClubAlpha.setVerified(true);
-        adminClubAlpha.setDate_naissance(LocalDate.now().minusYears(30));
-        adminClubAlpha.setDate_inscription(LocalDate.now().minusDays(10));
+        // Conversion de LocalDate en Instant (début du jour UTC)
+        adminClubAlpha.setDate_naissance(LocalDate.now().minusYears(30).atStartOfDay(ZoneOffset.UTC).toInstant());
+        adminClubAlpha.setDate_inscription(LocalDate.now().minusDays(10).atStartOfDay(ZoneOffset.UTC).toInstant());
         adminClubAlpha.setTelephone("0202020202");
         membreRepository.saveAndFlush(adminClubAlpha);
-        adhesionRepository.saveAndFlush(new Adhesion(adminClubAlpha, clubTestAlpha)); // L'admin est membre de son club.
+        adhesionRepository.saveAndFlush(new Adhesion(adminClubAlpha, clubTestAlpha));
 
         // Création d'un membre simple pour Club Alpha
         membreClubAlpha = new Membre();
         membreClubAlpha.setEmail(MEMBRE_ALPHA_EMAIL);
-        // ... (initialiser les autres champs de membreClubAlpha comme pour adminClubAlpha, rôle MEMBRE)
         membreClubAlpha.setNom("MembreAlphaNom");
         membreClubAlpha.setPrenom("MembreAlphaPrenom");
         membreClubAlpha.setPassword(passwordEncoder.encode("MembrePass123!"));
         membreClubAlpha.setRole(Role.MEMBRE);
         membreClubAlpha.setActif(true);
         membreClubAlpha.setVerified(true);
-        membreClubAlpha.setDate_naissance(LocalDate.now().minusYears(25));
-        membreClubAlpha.setDate_inscription(LocalDate.now().minusDays(5));
+        // Conversion de LocalDate en Instant (début du jour UTC)
+        membreClubAlpha.setDate_naissance(LocalDate.now().minusYears(25).atStartOfDay(ZoneOffset.UTC).toInstant());
+        membreClubAlpha.setDate_inscription(LocalDate.now().minusDays(5).atStartOfDay(ZoneOffset.UTC).toInstant());
         membreClubAlpha.setTelephone("0303030303");
         membreRepository.saveAndFlush(membreClubAlpha);
         adhesionRepository.saveAndFlush(new Adhesion(membreClubAlpha, clubTestAlpha));
@@ -166,34 +160,33 @@ class ClubControllerTest {
         // Création d'un utilisateur avec rôle RESERVATION pour Club Alpha
         utilisateurReservation = new Membre();
         utilisateurReservation.setEmail(RESERVATION_USER_EMAIL);
-        // ... (initialiser les autres champs de utilisateurReservation, rôle RESERVATION)
         utilisateurReservation.setNom("UserResaNom");
         utilisateurReservation.setPrenom("UserResaPrenom");
         utilisateurReservation.setPassword(passwordEncoder.encode("ResaPass123!"));
         utilisateurReservation.setRole(Role.RESERVATION);
         utilisateurReservation.setActif(true);
         utilisateurReservation.setVerified(true);
-        utilisateurReservation.setDate_naissance(LocalDate.now().minusYears(28));
-        utilisateurReservation.setDate_inscription(LocalDate.now().minusDays(8));
+        // Conversion de LocalDate en Instant (début du jour UTC)
+        utilisateurReservation.setDate_naissance(LocalDate.now().minusYears(28).atStartOfDay(ZoneOffset.UTC).toInstant());
+        utilisateurReservation.setDate_inscription(LocalDate.now().minusDays(8).atStartOfDay(ZoneOffset.UTC).toInstant());
         utilisateurReservation.setTelephone("0404040404");
         membreRepository.saveAndFlush(utilisateurReservation);
         adhesionRepository.saveAndFlush(new Adhesion(utilisateurReservation, clubTestAlpha));
 
-        // Création d'un autre admin (pour tester les accès inter-clubs ou non autorisés)
+        // Création d'un autre admin
         autreAdmin = new Membre();
         autreAdmin.setEmail(AUTRE_ADMIN_EMAIL);
-        // ... (initialiser les autres champs de autreAdmin, rôle ADMIN)
         autreAdmin.setNom("AutreAdminNom");
         autreAdmin.setPrenom("AutreAdminPrenom");
         autreAdmin.setPassword(passwordEncoder.encode("AutreAdminPass123!"));
         autreAdmin.setRole(Role.ADMIN);
         autreAdmin.setActif(true);
         autreAdmin.setVerified(true);
-        autreAdmin.setDate_naissance(LocalDate.now().minusYears(40));
-        autreAdmin.setDate_inscription(LocalDate.now().minusDays(20));
+        // Conversion de LocalDate en Instant (début du jour UTC)
+        autreAdmin.setDate_naissance(LocalDate.now().minusYears(40).atStartOfDay(ZoneOffset.UTC).toInstant());
+        autreAdmin.setDate_inscription(LocalDate.now().minusDays(20).atStartOfDay(ZoneOffset.UTC).toInstant());
         autreAdmin.setTelephone("0505050505");
         membreRepository.saveAndFlush(autreAdmin);
-        // Par défaut, cet admin n'est PAS membre du clubTestAlpha.
     }
 
     /**

@@ -9,6 +9,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -47,8 +48,8 @@ class MembreTest {
         Membre membre = new Membre();
         membre.setNom("ValideNom");
         membre.setPrenom("ValidePrenom");
-        membre.setDate_naissance(LocalDate.now().minusYears(20)); // Date dans le passé
-        membre.setDate_inscription(LocalDate.now()); // Date actuelle
+        membre.setDate_naissance(LocalDate.now().minusYears(20).atStartOfDay(ZoneOffset.UTC).toInstant());
+        membre.setDate_inscription(LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant());
         membre.setTelephone("0123456789"); // Format téléphone valide (simple exemple)
         membre.setEmail("valide@example.com"); // Format email valide
         membre.setPassword("ValidPass1!"); // Mot de passe respectant les contraintes de complexité
@@ -189,7 +190,7 @@ class MembreTest {
     @DisplayName("La date de naissance dans le futur doit générer une violation")
     void whenDateNaissanceIsInFuture_thenViolation() {
         Membre membre = createValidMembre();
-        membre.setDate_naissance(LocalDate.now().plusDays(1)); // Scénario: date de naissance demain
+        membre.setDate_naissance(LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
         Set<ConstraintViolation<Membre>> violations = validator.validate(membre);
         assertFalse(violations.isEmpty(), "Une date de naissance dans le futur devrait générer une violation.");
         assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("date_naissance") && v.getMessage().contains("La date de naissance doit être dans le passé")));

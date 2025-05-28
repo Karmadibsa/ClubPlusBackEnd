@@ -160,6 +160,7 @@ public class AuthController {
         // Tente d'authentifier l'utilisateur avec les identifiants fournis.
         // L'AuthenticationProvider configuré (utilisant AppUserDetailService et PasswordEncoder)
         // lèvera une AuthenticationException (ou une sous-classe) si les identifiants sont invalides.
+        System.out.println("loginRequest = " + loginRequest);
         Authentication authentication = authenticationProvider.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         loginRequest.getEmail(),

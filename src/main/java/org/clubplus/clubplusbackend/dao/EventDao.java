@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -43,7 +43,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * @param dateTime La date et heure de référence.
      * @return Une liste des {@link Event}s commençant après la date/heure fournie.
      */
-    List<Event> findByStartTimeAfter(LocalDateTime dateTime);
+    List<Event> findByStartTimeAfter(Instant dateTime);
 
     // --- Recherche Combinée ---
 
@@ -55,7 +55,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * @param now     La date et heure actuelle pour filtrer les événements futurs.
      * @return Une liste des {@link Event}s futurs correspondants.
      */
-    List<Event> findByOrganisateurIdInAndStartTimeAfter(Collection<Integer> clubIds, LocalDateTime now);
+    List<Event> findByOrganisateurIdInAndStartTimeAfter(Collection<Integer> clubIds, Instant now);
 
     /**
      * Recherche les événements futurs ({@code start} après {@code now}) organisés par
@@ -65,7 +65,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * @param now    La date et heure actuelle pour filtrer les événements futurs.
      * @return Une liste des {@link Event}s futurs correspondants.
      */
-    List<Event> findByOrganisateurIdAndStartTimeAfter(Integer clubId, LocalDateTime now);
+    List<Event> findByOrganisateurIdAndStartTimeAfter(Integer clubId, Instant now);
 
     /**
      * Recherche les 5 prochains événements actifs ({@code actif = true}) organisés par un club spécifique,
@@ -75,7 +75,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * @param now    La date et heure actuelle pour filtrer les événements futurs.
      * @return Une liste contenant jusqu'à 5 des prochains {@link Event}s actifs du club.
      */
-    List<Event> findTop5ByOrganisateurIdAndActifTrueAndStartTimeAfterOrderByStartTimeAsc(Integer clubId, LocalDateTime now);
+    List<Event> findTop5ByOrganisateurIdAndActifTrueAndStartTimeAfterOrderByStartTimeAsc(Integer clubId, Instant now);
 
     // --- Requêtes Spécifiques ---
 
@@ -89,7 +89,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * @return Une liste d'{@link Integer} représentant les IDs des événements passés et actifs du club.
      */
     @Query("SELECT e.id FROM Event e WHERE e.organisateur.id = :clubId AND e.endTime < :now AND e.actif = true")
-    List<Integer> findPastEventIdsByOrganisateurId(@Param("clubId") Integer clubId, @Param("now") LocalDateTime now);
+    List<Integer> findPastEventIdsByOrganisateurId(@Param("clubId") Integer clubId, @Param("now") Instant now);
 
     /**
      * Compte le nombre d'événements pour un club spécifique, en fonction de leur statut actif ou inactif.
@@ -176,7 +176,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * @param startTime      La date et heure de référence pour filtrer les événements futurs.
      * @return Une liste des {@link Event}s futurs et actifs correspondants.
      */
-    List<Event> findByOrganisateurIdAndActifAndStartTimeAfter(Integer organisateurId, boolean actif, LocalDateTime startTime);
+    List<Event> findByOrganisateurIdAndActifAndStartTimeAfter(Integer organisateurId, boolean actif, Instant startTime);
 
     /**
      * Recherche les événements futurs ({@code start} après {@code now}) et actifs
@@ -187,7 +187,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * @param now     La date et heure actuelle pour filtrer les événements futurs.
      * @return Une liste des {@link Event}s futurs et actifs correspondants.
      */
-    List<Event> findByOrganisateurIdInAndActifAndStartTimeAfter(Collection<Integer> clubIds, boolean actif, LocalDateTime now);
+    List<Event> findByOrganisateurIdInAndActifAndStartTimeAfter(Collection<Integer> clubIds, boolean actif, Instant now);
 
     /**
      * Recherche tous les événements futurs ({@code start} après {@code startTime})
@@ -197,7 +197,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * @param startTime La date et heure de référence pour filtrer les événements futurs.
      * @return Une liste des {@link Event}s futurs correspondants.
      */
-    List<Event> findByActifAndStartTimeAfter(boolean actif, LocalDateTime startTime);
+    List<Event> findByActifAndStartTimeAfter(boolean actif, Instant startTime);
 
     /**
      * Compte le nombre d'événements actifs ({@code actif = true}) pour un club donné
@@ -209,7 +209,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * @param end    La date/heure de fin de l'intervalle (inclusive).
      * @return Le nombre ({@code long}) d'événements correspondants.
      */
-    long countByOrganisateurIdAndActifAndStartTimeBetween(Integer clubId, boolean actif, LocalDateTime start, LocalDateTime end);
+    long countByOrganisateurIdAndActifAndStartTimeBetween(Integer clubId, boolean actif, Instant start, Instant end);
 
     /**
      * Recherche une page d'événements pour un club organisateur spécifique, dont la date de début
@@ -227,8 +227,8 @@ public interface EventDao extends JpaRepository<Event, Integer> {
             AND (e.startTime BETWEEN :dateStart AND :dateEnd)
             """)
     Page<Event> findByOrganisateurIdAndDate(@Param("clubId") Integer clubId,
-                                            @Param("dateStart") LocalDateTime dateStart,
-                                            @Param("dateEnd") LocalDateTime dateEnd, // Corrigé le nom du paramètre ici
+                                            @Param("dateStart") Instant dateStart,
+                                            @Param("dateEnd") Instant dateEnd, // Corrigé le nom du paramètre ici
                                             Pageable pageable);
 
     /**
@@ -239,7 +239,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * @param now           La date et heure actuelle pour filtrer les événements futurs.
      * @return Une liste des {@link Event}s futurs et inactifs correspondants.
      */
-    List<Event> findByOrganisateurIdInAndActifIsFalseAndStartTimeAfter(Set<Integer> memberClubIds, LocalDateTime now);
+    List<Event> findByOrganisateurIdInAndActifIsFalseAndStartTimeAfter(Set<Integer> memberClubIds, Instant now);
 
     /**
      * Recherche les événements futurs ({@code start} après {@code now}) et **actifs**
@@ -249,7 +249,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
      * @param now           La date et heure actuelle pour filtrer les événements futurs.
      * @return Une liste des {@link Event}s futurs et actifs correspondants.
      */
-    List<Event> findByOrganisateurIdInAndActifIsTrueAndStartTimeAfter(Set<Integer> memberClubIds, LocalDateTime now);
+    List<Event> findByOrganisateurIdInAndActifIsTrueAndStartTimeAfter(Set<Integer> memberClubIds, Instant now);
 
     /**
      * Recherche les événements futurs ({@code start} après {@code after}) pour une collection de clubs,
@@ -279,7 +279,7 @@ public interface EventDao extends JpaRepository<Event, Integer> {
     // Filtre sur la participation des amis
     List<Event> findUpcomingEventsInClubsWithStatusAndFriends(
             @Param("clubIds") Collection<Integer> clubIds,
-            @Param("after") LocalDateTime after,
+            @Param("after") Instant after,
             @Param("actifStatus") Boolean actifStatus, // null pour ignorer ce filtre
             @Param("friendIds") Collection<Integer> friendIds);
 
@@ -307,6 +307,6 @@ public interface EventDao extends JpaRepository<Event, Integer> {
     // Filtre optionnel sur le statut actif
     List<Event> findUpcomingEventsInClubsWithStatus(
             @Param("clubIds") Collection<Integer> clubIds,
-            @Param("after") LocalDateTime after,
+            @Param("after") Instant after,
             @Param("actifStatus") Boolean actifStatus); // null pour ignorer ce filtre
 }

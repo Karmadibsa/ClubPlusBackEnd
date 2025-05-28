@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Objects;
 
 /**
@@ -146,7 +146,7 @@ public class Notation {
     @PastOrPresent // Une notation est faite après ou pendant l'événement.
     @Column(nullable = false, updatable = false) // Contrainte BDD: non null, non modifiable.
     @JsonView(GlobalView.NotationView.class)
-    private LocalDateTime dateNotation;
+    private Instant dateNotation;
 
     // --- Callbacks JPA ---
 
@@ -158,7 +158,7 @@ public class Notation {
     @PrePersist
     public void onPrePersist() {
         if (this.dateNotation == null) {
-            this.dateNotation = LocalDateTime.now();
+            this.dateNotation = Instant.now();
         }
     }
 

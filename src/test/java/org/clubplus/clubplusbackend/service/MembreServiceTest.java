@@ -21,6 +21,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
@@ -74,7 +75,7 @@ class MembreServiceTest {
         membreTest.setPassword("MotDePasseHache"); // Le contenu exact importe peu ici, car PasswordEncoder est mocké.
         membreTest.setRole(Role.MEMBRE);
         membreTest.setActif(true);
-        membreTest.setDate_naissance(LocalDate.now().minusYears(20));
+        membreTest.setDate_naissance(LocalDate.now().minusYears(20).atStartOfDay(ZoneOffset.UTC).toInstant());
         membreTest.setAdhesions(new HashSet<>());
 
         clubTest = new Club();
@@ -254,8 +255,8 @@ class MembreServiceTest {
         dto.setPrenom("NouveauPrenom");
         dto.setEmail("nouveau@example.com");
         dto.setTelephone("0987654321");
-        dto.setDate_naissance(LocalDate.of(1995, 5, 5));
-
+        dto.setDate_naissance(LocalDate.of(1995, 5, 5).atStartOfDay(ZoneOffset.UTC).toInstant());
+        
         when(securityService.getCurrentUserIdOrThrow()).thenReturn(membreTest.getId());
         when(membreRepository.findById(membreTest.getId())).thenReturn(Optional.of(membreTest));
         // Supposer que le nouvel email n'est pas déjà pris par un autre utilisateur.
