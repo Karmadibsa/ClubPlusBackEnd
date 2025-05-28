@@ -4,7 +4,7 @@ import jakarta.validation.constraints.*;
 import lombok.Data;
 import org.clubplus.clubplusbackend.model.Event;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * DTO (Data Transfer Object) utilisé pour recevoir les données nécessaires
@@ -33,14 +33,14 @@ public class UpdateEventDto {
      */
     @NotNull(message = "La date et heure de début sont obligatoires.")
     @FutureOrPresent(message = "La date de début doit être dans le présent ou le futur.")
-    private LocalDateTime startTime;
+    private Instant startTime;
 
     /**
      * La nouvelle date/heure de fin. Obligatoire, futur et après 'start' (validé en service).
      */
     @NotNull(message = "La date et heure de fin sont obligatoires.")
     @Future(message = "La date de fin doit être dans le futur.") // @Future est plus strict que @FutureOrPresent ici
-    private LocalDateTime endTime;
+    private Instant endTime;
     // La validation end > start est gérée dans le service.
 
     /**

@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -48,7 +48,7 @@ public class GlobalExceptionHandler {
         /**
          * L'horodatage exact de l'occurrence de l'erreur.
          */
-        private LocalDateTime timestamp;
+        private Instant timestamp;
         /**
          * Le code de statut HTTP correspondant à l'erreur (ex: 404, 403).
          */
@@ -99,7 +99,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex, WebRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(
-                LocalDateTime.now(),
+                Instant.now(),
                 HttpStatus.UNAUTHORIZED.value(), // 401
                 HttpStatus.UNAUTHORIZED.getReasonPhrase(), // "Unauthorized"
                 // Message générique pour ne pas donner trop d'infos en cas d'attaque
@@ -122,7 +122,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(
-                LocalDateTime.now(),
+                Instant.now(),
                 HttpStatus.FORBIDDEN.value(), // 403
                 HttpStatus.FORBIDDEN.getReasonPhrase(), // "Forbidden"
                 // Utilise le message de l'exception s'il est défini, sinon un message générique.
@@ -145,7 +145,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleEntityNotFoundException(EntityNotFoundException ex, WebRequest request) {
         ErrorResponse errorResponse = new ErrorResponse(
-                LocalDateTime.now(),
+                Instant.now(),
                 HttpStatus.NOT_FOUND.value(), // 404
                 HttpStatus.NOT_FOUND.getReasonPhrase(), // "Not Found"
                 // Utilise le message spécifique de l'exception (souvent informatif) ou un message par défaut.
@@ -170,7 +170,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
         HttpStatus status = HttpStatus.CONFLICT; // 409 - Conflit
         ErrorResponse errorResponse = new ErrorResponse(
-                LocalDateTime.now(),
+                Instant.now(),
                 status.value(),
                 status.getReasonPhrase(), // "Conflict"
                 ex.getMessage() != null && !ex.getMessage().isBlank() ? ex.getMessage() : "Requête invalide ou conflit avec l'état actuel des données."
@@ -193,7 +193,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalStateException(IllegalStateException ex, WebRequest request) {
         HttpStatus status = HttpStatus.CONFLICT; // 409 - Conflit
         ErrorResponse errorResponse = new ErrorResponse(
-                LocalDateTime.now(),
+                Instant.now(),
                 status.value(),
                 status.getReasonPhrase(), // "Conflict"
                 ex.getMessage() != null && !ex.getMessage().isBlank() ? ex.getMessage() : "Opération non permise dans l'état actuel de la ressource."
@@ -218,7 +218,7 @@ public class GlobalExceptionHandler {
 
         // À défaut de logger configuré, on utilise System.err (NON RECOMMANDÉ EN PRODUCTION)
         System.err.println("--- ERREUR SERVEUR INATTENDUE (500) ---");
-        System.err.println("Timestamp: " + LocalDateTime.now());
+        System.err.println("Timestamp: " + Instant.now());
         System.err.println("Path: " + getPathSafe(request)); // Afficher le chemin si possible
         System.err.println("Exception Type: " + ex.getClass().getName());
         System.err.println("Message: " + ex.getMessage());
@@ -226,7 +226,7 @@ public class GlobalExceptionHandler {
         System.err.println("--------------------------------------");
 
         ErrorResponse errorResponse = new ErrorResponse(
-                LocalDateTime.now(),
+                Instant.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(), // 500
                 HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase(), // "Internal Server Error"
                 // Message volontairement générique pour le client final

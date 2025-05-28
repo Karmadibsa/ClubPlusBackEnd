@@ -17,7 +17,6 @@ import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
-import java.util.stream.Collectors;
 
 import static org.clubplus.clubplusbackend.model.ReservationStatus.UTILISE;
 
@@ -83,7 +82,7 @@ public class StatsService {
         Instant startDate = localDateFirstDayOfThatMonthUTC.atStartOfDay(ZoneOffset.UTC).toInstant();
         log.debug("Période de calcul des adhésions: de {} à {}", startDate, today);
         // Récupère les agrégats bruts [année, mois, compte] depuis le DAO
-        List<Object[]> results = adhesionRepository.findMonthlyAdhesionsToClubSince(clubId, LocalDateTime.from(startDate));
+        List<Object[]> results = adhesionRepository.findMonthlyAdhesionsToClubSince(clubId, Instant.from(startDate));
         log.debug("Résultats bruts des adhésions reçus ({} mois avec données): {}", results.size(), results);
 
         // 4. Formater les résultats pour inclure les mois à zéro et structurer la sortie
@@ -322,10 +321,21 @@ public class StatsService {
      * @return Une liste de {@code Map<String, Object>} triée chronologiquement, chaque map contenant "monthYear" et "count".
      */
     private List<Map<String, Object>> formatMonthlyResults(List<Object[]> results, Instant startDate, Instant today) {
+        // Assurez-vous que log est initialisé (par exemple, via Lombok @Slf4j ou manuellement)
+        // Si 'log' n'est pas un champ de la classe, vous pouvez le déclarer localement pour cette méthode
+        // ou, mieux, comme un champ statique final de la classe.
+        // Pour cet exemple, je vais supposer qu'il est disponible. Si ce n'est pas le cas, ajoutez :
+        // private static final Logger log = LoggerFactory.getLogger(StatsService.class); // (à adapter au nom de votre classe)
+
         // Utilise TreeMap pour garantir l'ordre chronologique des mois
         Map<YearMonth, Long> monthlyCounts = new TreeMap<>();
-        YearMonth startMonth = YearMonth.from(startDate);
-        YearMonth endMonth = YearMonth.from(today);
+
+        // Convertir les Instant en ZonedDateTime en UTC pour pouvoir en extraire YearMonth
+        ZonedDateTime zdtStartDate = startDate.atZone(ZoneOffset.UTC);
+        ZonedDateTime zdtToday = today.atZone(ZoneOffset.UTC);
+
+        YearMonth startMonth = YearMonth.from(zdtStartDate); // <<< CORRIGÉ
+        YearMonth endMonth = YearMonth.from(zdtToday);       // <<< CORRIGÉ
 
         // 1. Initialiser la map avec 0 pour tous les mois de la période
         YearMonth current = startMonth;
@@ -342,32 +352,49 @@ public class StatsService {
                 if (result != null && result.length >= 3 && result[0] != null && result[1] != null && result[2] != null) {
                     int year = ((Number) result[0]).intValue();
                     int month = ((Number) result[1]).intValue();
-                    long count = ((Number) result[2]).longValue();
+                    long count = ((Number) result[2]).longValue(); // S'assurer que c'est bien un Long ou compatible
+
                     YearMonth ym = YearMonth.of(year, month);
+
                     // Mettre à jour la valeur si le mois est bien dans notre période initialisée
                     if (monthlyCounts.containsKey(ym)) {
                         monthlyCounts.put(ym, count);
                         log.trace("Mise à jour pour {}: {}", ym, count);
                     } else {
-                        log.warn("Résultat reçu pour un mois hors période initialisée: {}", ym);
+                        // Ce cas peut se produire si la requête DAO renvoie des mois en dehors de la période startDate/today.
+                        // C'est peu probable si la requête est bien bornée, mais c'est une bonne sécurité.
+                        log.warn("Résultat reçu pour un mois ({}) hors de la période initialisée ({} à {}). Il sera ajouté.",
+                                ym, startMonth, endMonth);
+                        // Optionnel: ajouter quand même si c'est un comportement désiré, sinon juste loguer et ignorer.
+                        // monthlyCounts.put(ym, count); // Décommentez pour ajouter même si hors période initialisée
                     }
                 } else {
                     log.warn("Résultat brut invalide ou incomplet ignoré: {}", Arrays.toString(result));
                 }
-            } catch (Exception e) {
-                // Log l'erreur mais continue le traitement des autres résultats
-                log.error("Erreur lors du formatage d'un résultat d'adhésion mensuelle: {} - {}", Arrays.toString(result), e.getMessage(), e);
+            } catch (ClassCastException | NullPointerException e) {
+                // Attraper des exceptions spécifiques si possible, plutôt que Exception générique.
+                log.error("Erreur de type ou de valeur null lors du traitement d'un résultat d'adhésion mensuelle: {} - {}",
+                        Arrays.toString(result), e.getMessage());
+            } catch (Exception e) { // Garder un catch générique pour les autres erreurs imprévues
+                log.error("Erreur inattendue lors du formatage d'un résultat d'adhésion mensuelle: {} - {}",
+                        Arrays.toString(result), e.getMessage(), e); // Loguer l'exception complète pour le débogage
             }
         }
 
         // 3. Formater la map en liste de maps pour la sortie JSON
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
-        return monthlyCounts.entrySet().stream()
-                .map(entry -> Map.<String, Object>of(
-                        "monthYear", entry.getKey().format(formatter),
-                        "count", entry.getValue()
-                ))
-                .collect(Collectors.toList());
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM"); // Vous l'aviez déjà, c'est bien.
+
+        // Utilisation de ArrayList et HashMap pour la construction, plus traditionnel si Stream n'est pas souhaité ici
+        // ou si on veut être plus explicite avec les types.
+        List<Map<String, Object>> formattedResults = new ArrayList<>();
+        for (Map.Entry<YearMonth, Long> entry : monthlyCounts.entrySet()) {
+            Map<String, Object> monthData = new HashMap<>(); // Utilisez HashMap ou LinkedHashMap si l'ordre d'insertion des clés "monthYear", "count" importe.
+            monthData.put("monthYear", entry.getKey().format(formatter));
+            monthData.put("count", entry.getValue());
+            formattedResults.add(monthData);
+        }
+        return formattedResults;
+        
     }
 
     /**

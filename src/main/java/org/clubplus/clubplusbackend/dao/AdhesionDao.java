@@ -9,7 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -76,7 +76,7 @@ public interface AdhesionDao extends JpaRepository<Adhesion, Integer> {
             "WHERE a.club.id = :clubId AND a.dateAdhesion >= :startDate " +
             "GROUP BY FUNCTION('YEAR', a.dateAdhesion), FUNCTION('MONTH', a.dateAdhesion) " +
             "ORDER BY FUNCTION('YEAR', a.dateAdhesion) ASC, FUNCTION('MONTH', a.dateAdhesion) ASC")
-    List<Object[]> findMonthlyAdhesionsToClubSince(@Param("clubId") Integer clubId, @Param("startDate") LocalDateTime startDate);
+    List<Object[]> findMonthlyAdhesionsToClubSince(@Param("clubId") Integer clubId, @Param("startDate") Instant startDate);
 
     /**
      * Récupère uniquement les identifiants (IDs) des clubs auxquels un membre spécifique adhère.
