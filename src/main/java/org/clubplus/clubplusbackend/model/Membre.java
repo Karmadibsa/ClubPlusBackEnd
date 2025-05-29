@@ -14,7 +14,6 @@ import org.hibernate.annotations.Where;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.*;
 
 /**
@@ -87,7 +86,7 @@ public class Membre {
     @Past(message = "La date de naissance doit être dans le passé.") // Validation logique.
     @Column(nullable = false)
     @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
-    private Instant date_naissance;
+    private LocalDate date_naissance;
 
     /**
      * Date d'inscription du membre dans le système.
@@ -340,12 +339,11 @@ public class Membre {
         }
 
         String anonymizedSuffix = "_id" + this.id; // Suffixe basé sur l'ID.
-        LocalDate dateDeNaissance = LocalDate.of(1900, 1, 1);
-        Instant instantDeNaissance = dateDeNaissance.atStartOfDay(ZoneOffset.UTC).toInstant();
+
         // 1. Anonymiser les informations personnelles identifiables
         this.nom = "Utilisateur";
         this.prenom = "Anonyme" + anonymizedSuffix; // Rend unique pour éviter collisions potentielles
-        this.date_naissance = instantDeNaissance;
+        this.date_naissance = LocalDate.of(1990, 1, 1);
         this.telephone = "0000000000"; // Numéro invalide (ou null si BDD permet)
         this.email = "anonymized_" + this.id + "@example.com"; // Email unique et manifestement invalide
         this.password = "$2a$10$invalidHashPlaceholder." + UUID.randomUUID(); // Hash invalide/inutilisable

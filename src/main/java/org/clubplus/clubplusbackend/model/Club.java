@@ -12,6 +12,7 @@ import org.clubplus.clubplusbackend.view.GlobalView;
 import org.hibernate.annotations.Where;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.*;
 
 /**
@@ -68,7 +69,7 @@ public class Club {
     @PastOrPresent(message = "La date de création doit être dans le passé ou aujourd'hui.")
     @Column(nullable = false, updatable = false)
     @JsonView(GlobalView.ClubView.class)
-    private Instant date_creation;
+    private LocalDate date_creation;
 
     /**
      * Date d'inscription du club dans le système.
@@ -82,7 +83,7 @@ public class Club {
     @PastOrPresent(message = "La date d'inscription doit être dans le passé ou aujourd'hui.")
     @Column(nullable = false, updatable = false)
     @JsonView(GlobalView.ClubView.class)
-    private Instant date_inscription;
+    private LocalDate date_inscription;
 
     // --- Adresse ---
 

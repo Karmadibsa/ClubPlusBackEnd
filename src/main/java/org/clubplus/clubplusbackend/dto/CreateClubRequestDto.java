@@ -6,7 +6,7 @@ import lombok.Data;
 import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
 
-import java.time.Instant;
+import java.time.LocalDate;
 
 /**
  * DTO (Data Transfer Object) utilisé pour recevoir les informations nécessaires
@@ -36,7 +36,7 @@ public class CreateClubRequestDto {
      */
     @NotNull(message = "La date de création 'réelle' du club est obligatoire.")
     @PastOrPresent(message = "La date de création doit être dans le passé ou aujourd'hui.")
-    private Instant date_creation; // La date d'inscription système sera gérée par l'entité/service.
+    private LocalDate date_creation; // La date d'inscription système sera gérée par l'entité/service.
 
     /**
      * Numéro de voie de l'adresse du club. Obligatoire, max 10 caractères.
@@ -119,7 +119,7 @@ public class CreateClubRequestDto {
          */
         @NotNull(message = "La date de naissance de l'admin est obligatoire.")
         @Past(message = "La date de naissance de l'admin doit être dans le passé.")
-        private Instant date_naissance;
+        private LocalDate date_naissance;
 
         /**
          * Numéro de téléphone de l'admin. Obligatoire, max 20.
