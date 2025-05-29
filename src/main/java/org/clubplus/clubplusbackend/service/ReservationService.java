@@ -181,10 +181,10 @@ public class ReservationService {
         // Appelle la méthode du repository appropriée en fonction du statut (filtré ou non)
         if (status != null) {
             // Si un statut valide a été trouvé, filtre par ce statut
-            return reservationRepository.findByMembreIdAndStatus(currentUserId, status);
+            return reservationRepository.findByMembreIdAndStatusAndEvent_EndTimeAfter(currentUserId, status, Instant.now());
         } else {
             // Sinon (statusFilter était null, "all", ou invalide et géré par le catch), retourne toutes les réservations du membre
-            return reservationRepository.findByMembreId(currentUserId);
+            return reservationRepository.findByMembreIdAndEvent_EndTimeAfter(currentUserId, Instant.now());
         }
     }
 

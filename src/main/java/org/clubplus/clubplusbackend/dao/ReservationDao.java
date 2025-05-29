@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -131,4 +132,16 @@ public interface ReservationDao extends JpaRepository<Reservation, Integer> {
             @Param("memberIds") Collection<Integer> memberIds,
             @Param("status") ReservationStatus status // Passer ReservationStatus.CONFIRME par ex.
     );
+
+    /**
+     * Trouve les réservations d'un membre pour un statut donné,
+     * uniquement pour les événements dont la date de fin est après l'heure actuelle.
+     */
+    List<Reservation> findByMembreIdAndStatusAndEvent_EndTimeAfter(Integer membreId, ReservationStatus status, Instant currentTime);
+
+    /**
+     * Trouve toutes les réservations d'un membre (quel que soit le statut),
+     * uniquement pour les événements dont la date de fin est après l'heure actuelle.
+     */
+    List<Reservation> findByMembreIdAndEvent_EndTimeAfter(Integer membreId, Instant currentTime);
 }

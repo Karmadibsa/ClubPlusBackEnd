@@ -83,7 +83,7 @@ public class Event {
     @NotNull(message = "La date et l'heure de fin sont obligatoires.")
     @FutureOrPresent(message = "La date de fin doit être dans le présent ou le futur.")
     @Column(nullable = false)
-    @JsonView(GlobalView.EventView.class)
+    @JsonView(GlobalView.Base.class)
     private Instant endTime;
 
     /**

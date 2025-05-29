@@ -154,7 +154,7 @@ VALUES (1, 'Tournoi Badminton CSC (Passé)', '2025-02-15 14:00:00', '2025-02-15 
         1, 1, NULL),
        (3, 'Tournoi Padel Lyon (Futur)', '2025-06-07 10:00:00', '2025-06-07 17:00:00', 'Tournoi P100 Hommes.',
         'Lyon Padel Est', 1, 1, NULL),
-       (4, 'Initiation Escalade CSC (En Cours)', NOW() + INTERVAL 1 HOUR, NOW() + INTERVAL 3 HOUR, 'Découverte salle.',
+       (4, 'Initiation Escalade CSC (En Cours)', NOW() + INTERVAL 0 HOUR, NOW() + INTERVAL 3 HOUR, 'Découverte salle.',
         'Salle GrimpUp', 1, 1, NULL),
        (5, '[Annulé] Stage Tennis CSC (Futur)', '2025-07-10 09:00:00', '2025-07-12 17:00:00', 'Stage intensif.',
         'Courts Central', 1, 0, '2025-04-15 09:30:00'),

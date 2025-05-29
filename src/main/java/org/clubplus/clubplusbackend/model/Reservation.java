@@ -13,11 +13,7 @@ import org.clubplus.clubplusbackend.view.GlobalView;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.time.ZoneOffset;
-import java.time.format.DateTimeFormatter;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -226,48 +222,17 @@ public class Reservation {
     }
 
     /**
-     * Méthode privée utilitaire pour générer la chaîne de caractères destinée au QR Code.
-     * Formate les informations clés (UUID, IDs, date, nom) dans une chaîne structurée,
-     * en encodant les parties variables (nom, date) pour une meilleure compatibilité URL/QR Code.
-     * Inclut des vérifications de robustesse et logue les avertissements/erreurs.
+     * Génère la chaîne de caractères pour le QR Code, contenant uniquement l'UUID de la réservation.
      *
-     * @return La chaîne de données formatée, ou une chaîne d'erreur en cas de problème.
+     * @return L'UUID de la réservation sous forme de chaîne, ou une chaîne d'erreur si l'UUID est manquant.
      */
     private String generateQrCodeDataString() {
-        try {
-            // Vérification des prérequis pour générer une chaîne QR code valide.
-            if (reservationUuid == null || event == null || membre == null || categorie == null || dateReservation == null) {
-                log.warn("Données manquantes pour génération QR code (Réservation UUID: {})", reservationUuid);
-                return "error:missing-data";
-            }
-            Integer eventId = event.getId();
-            Integer membreId = membre.getId();
-            Integer categorieId = categorie.getId();
-            if (eventId == null || membreId == null || categorieId == null) {
-                log.warn("ID(s) manquant(s) pour génération QR code (Réservation UUID: {})", reservationUuid);
-                return "error:missing-ids";
-            }
-
-            // Construction des informations à inclure.
-            String nomComplet = membre.getPrenom() + " " + membre.getNom();
-            DateTimeFormatter formatter = DateTimeFormatter.ISO_LOCAL_DATE_TIME
-                    .withZone(ZoneOffset.UTC); // <<< Spécifier UTC [2][3]
-
-            String dateFormatted = formatter.format(dateReservation);
-            // Encodage URL des parties variables pour éviter les caractères problématiques.
-            String encodedNom = URLEncoder.encode(nomComplet, StandardCharsets.UTF_8);
-            String encodedDate = URLEncoder.encode(dateFormatted, StandardCharsets.UTF_8);
-
-            // Format structuré de la chaîne (exemple, peut être adapté).
-            // Utilisation de clés courtes (uuid, evt, cat, user, date, name) pour une chaîne plus courte.
-            return String.format("uuid:%s|evt:%d|cat:%d|user:%d|date:%s|name:%s",
-                    this.reservationUuid, eventId, categorieId, membreId, encodedDate, encodedNom);
-
-        } catch (Exception e) {
-            // Loguer l'erreur réelle pour le débogage.
-            log.error("Erreur lors de la génération de la chaîne QR code pour Réservation UUID {}", reservationUuid, e);
-            return "error:generation-failed"; // Chaîne d'erreur générique.
+        if (this.reservationUuid == null) {
+            log.warn("Impossible de générer les données du QR code : reservationUuid est null.");
+            return "error:uuid-missing";
         }
+        // Préfixer l'UUID avec "uuid:"
+        return "uuid:" + this.reservationUuid.toString();
     }
 
     // --- equals() et hashCode() ---
