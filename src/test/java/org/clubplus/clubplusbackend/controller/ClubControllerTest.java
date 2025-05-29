@@ -116,7 +116,7 @@ class ClubControllerTest {
         clubTestAlpha.setCodeClub("CLUB-001");
         clubTestAlpha.setActif(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
-        clubTestAlpha.setDate_creation(LocalDate.now().minusYears(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        clubTestAlpha.setDate_creation(LocalDate.of(2020, 1, 15));
         clubTestAlpha.setDate_inscription(LocalDate.now().minusYears(1).atStartOfDay(ZoneOffset.UTC).toInstant());
         clubTestAlpha.setNumero_voie("1A");
         clubTestAlpha.setRue("Rue Alpha Test");
@@ -135,7 +135,7 @@ class ClubControllerTest {
         adminClubAlpha.setActif(true);
         adminClubAlpha.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
-        adminClubAlpha.setDate_naissance(LocalDate.now().minusYears(30).atStartOfDay(ZoneOffset.UTC).toInstant());
+        adminClubAlpha.setDate_naissance(LocalDate.of(1995, 1, 15));
         adminClubAlpha.setDate_inscription(LocalDate.now().minusDays(10).atStartOfDay(ZoneOffset.UTC).toInstant());
         adminClubAlpha.setTelephone("0202020202");
         membreRepository.saveAndFlush(adminClubAlpha);
@@ -151,7 +151,7 @@ class ClubControllerTest {
         membreClubAlpha.setActif(true);
         membreClubAlpha.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
-        membreClubAlpha.setDate_naissance(LocalDate.now().minusYears(25).atStartOfDay(ZoneOffset.UTC).toInstant());
+        membreClubAlpha.setDate_naissance(LocalDate.of(2000, 1, 15));
         membreClubAlpha.setDate_inscription(LocalDate.now().minusDays(5).atStartOfDay(ZoneOffset.UTC).toInstant());
         membreClubAlpha.setTelephone("0303030303");
         membreRepository.saveAndFlush(membreClubAlpha);
@@ -167,7 +167,7 @@ class ClubControllerTest {
         utilisateurReservation.setActif(true);
         utilisateurReservation.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
-        utilisateurReservation.setDate_naissance(LocalDate.now().minusYears(28).atStartOfDay(ZoneOffset.UTC).toInstant());
+        utilisateurReservation.setDate_naissance(LocalDate.of(1998, 1, 15));
         utilisateurReservation.setDate_inscription(LocalDate.now().minusDays(8).atStartOfDay(ZoneOffset.UTC).toInstant());
         utilisateurReservation.setTelephone("0404040404");
         membreRepository.saveAndFlush(utilisateurReservation);
@@ -183,7 +183,7 @@ class ClubControllerTest {
         autreAdmin.setActif(true);
         autreAdmin.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
-        autreAdmin.setDate_naissance(LocalDate.now().minusYears(40).atStartOfDay(ZoneOffset.UTC).toInstant());
+        autreAdmin.setDate_naissance(LocalDate.of(1985, 1, 15));
         autreAdmin.setDate_inscription(LocalDate.now().minusDays(20).atStartOfDay(ZoneOffset.UTC).toInstant());
         autreAdmin.setTelephone("0505050505");
         membreRepository.saveAndFlush(autreAdmin);

@@ -83,7 +83,7 @@ public class Club {
     @PastOrPresent(message = "La date d'inscription doit être dans le passé ou aujourd'hui.")
     @Column(nullable = false, updatable = false)
     @JsonView(GlobalView.ClubView.class)
-    private LocalDate date_inscription;
+    private Instant date_inscription;
 
     // --- Adresse ---
 

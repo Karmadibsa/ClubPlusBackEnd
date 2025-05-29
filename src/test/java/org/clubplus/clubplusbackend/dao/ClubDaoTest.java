@@ -69,7 +69,7 @@ public class ClubDaoTest {
         club.setCodeClub(codeClub);
         club.setActif(true);
         // Initialisation de tous les champs obligatoires (non nuls) de l'entité Club.
-        club.setDate_creation(LocalDate.now().minusMonths(6).atStartOfDay(ZoneOffset.UTC).toInstant());
+        club.setDate_creation(LocalDate.of(2025, 1, 15));
 
 // Pour la date d'inscription (il y a 5 mois, début du jour UTC)
         club.setDate_inscription(LocalDate.now().minusMonths(5).atStartOfDay(ZoneOffset.UTC).toInstant());

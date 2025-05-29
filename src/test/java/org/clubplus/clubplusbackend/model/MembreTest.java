@@ -48,7 +48,7 @@ class MembreTest {
         Membre membre = new Membre();
         membre.setNom("ValideNom");
         membre.setPrenom("ValidePrenom");
-        membre.setDate_naissance(LocalDate.now().minusYears(20).atStartOfDay(ZoneOffset.UTC).toInstant());
+        membre.setDate_naissance(LocalDate.of(2000, 1, 15));
         membre.setDate_inscription(LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant());
         membre.setTelephone("0123456789"); // Format téléphone valide (simple exemple)
         membre.setEmail("valide@example.com"); // Format email valide
@@ -190,7 +190,7 @@ class MembreTest {
     @DisplayName("La date de naissance dans le futur doit générer une violation")
     void whenDateNaissanceIsInFuture_thenViolation() {
         Membre membre = createValidMembre();
-        membre.setDate_naissance(LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        membre.setDate_naissance(LocalDate.of(2030, 1, 15));
         Set<ConstraintViolation<Membre>> violations = validator.validate(membre);
         assertFalse(violations.isEmpty(), "Une date de naissance dans le futur devrait générer une violation.");
         assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("date_naissance") && v.getMessage().contains("La date de naissance doit être dans le passé")));

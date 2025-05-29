@@ -135,7 +135,7 @@ class ClubServiceTest {
         clubTest.setEmail("initial@club.com");
         clubTest.setCodeClub("CLUB-0001"); // Format respectant les contraintes (ex: 9 chars max)
         clubTest.setActif(true);
-        clubTest.setDate_creation(oneYearAgoInstant);
+        clubTest.setDate_creation((LocalDate.of(2024, 1, 15)));
         clubTest.setDate_inscription(oneYearAgoInstant);
         clubTest.setNumero_voie("1");
         clubTest.setRue("Rue Initiale");
@@ -154,25 +154,19 @@ class ClubServiceTest {
         adminTest.setActif(true);
 
         LocalDate dateNaissanceApprox = LocalDate.now().minusYears(30);
-
-// 2. Convertir cette LocalDate en un Instant représentant le début de cette journée en UTC
-        Instant instantNaissance = dateNaissanceApprox.atStartOfDay(ZoneOffset.UTC).toInstant();
-        LocalDate dateCreationApprox = LocalDate.now().minusMonths(1);
-
-// 2. Convertir cette LocalDate en un Instant représentant le début de cette journée en UTC
-        Instant instantCreation = dateCreationApprox.atStartOfDay(ZoneOffset.UTC).toInstant();
+        
         // Initialisation d'un DTO pour la création de club, utilisant les setters
         CreateClubRequestDto.AdminInfo adminInfo = new CreateClubRequestDto.AdminInfo();
         adminInfo.setNom("AdminNomDto");
         adminInfo.setPrenom("AdminPrenomDto");
-        adminInfo.setDate_naissance(instantNaissance);
+        adminInfo.setDate_naissance(LocalDate.of(2000, 1, 15));
         adminInfo.setEmail("admin.dto@example.com");
         adminInfo.setTelephone("0200000000");
         adminInfo.setPassword("AdminPassDto1!"); // Mot de passe conforme aux règles de complexité
 
         createClubDto = new CreateClubRequestDto();
         createClubDto.setNom("Nouveau Club DTO");
-        createClubDto.setDate_creation(instantCreation);
+        createClubDto.setDate_creation(LocalDate.of(2020, 1, 15));
         createClubDto.setNumero_voie("123");
         createClubDto.setRue("Rue DTO");
         createClubDto.setCodepostal("75002");

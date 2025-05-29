@@ -113,7 +113,7 @@ class MembreControllerTest {
         bob.setActif(true);
         bob.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
-        bob.setDate_naissance(LocalDate.now().minusYears(25).atStartOfDay(ZoneOffset.UTC).toInstant());
+        bob.setDate_naissance(LocalDate.of(2000, 1, 15));
         bob.setDate_inscription(LocalDate.now().minusDays(10).atStartOfDay(ZoneOffset.UTC).toInstant());
         bob.setTelephone("0102030405");
         bob.setAdhesions(new HashSet<>()); // Initialisation pour éviter NullPointerException si le constructeur ne le fait pas
@@ -129,7 +129,7 @@ class MembreControllerTest {
         admin.setActif(true);
         admin.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
-        admin.setDate_naissance(LocalDate.now().minusYears(35).atStartOfDay(ZoneOffset.UTC).toInstant());
+        admin.setDate_naissance(LocalDate.of(1990, 1, 15));
         admin.setDate_inscription(LocalDate.now().minusDays(100).atStartOfDay(ZoneOffset.UTC).toInstant());
         admin.setTelephone("0908070605");
         admin.setAdhesions(new HashSet<>());
@@ -145,7 +145,7 @@ class MembreControllerTest {
         alice.setActif(true);
         alice.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
-        alice.setDate_naissance(LocalDate.now().minusYears(30).atStartOfDay(ZoneOffset.UTC).toInstant());
+        alice.setDate_naissance(LocalDate.of(1990, 1, 15));
         alice.setDate_inscription(LocalDate.now().minusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
         alice.setTelephone("0655667788");
         // Si Adhesions n'est pas initialisé dans le constructeur de Membre et que vous y accédez plus tard, initialisez-le.
@@ -180,15 +180,13 @@ class MembreControllerTest {
     @WithUserDetails(value = BOB_EMAIL, setupBefore = TestExecutionEvent.TEST_EXECUTION)
     @DisplayName("Mise à jour de son profil avec données valides")
     void mettreAJourMonProfil_avecDonneesValides_devraitRetournerMembreMisAJour() throws Exception {
-        LocalDate dateNaissanceApprox = LocalDate.now().minusYears(26);
 
 // 2. Convertir cette LocalDate en un Instant représentant le début de cette journée en UTC
-        Instant instantNaissance = dateNaissanceApprox.atStartOfDay(ZoneOffset.UTC).toInstant();
         UpdateMembreDto updateDto = new UpdateMembreDto();
         updateDto.setNom("Robert");
         updateDto.setPrenom("LeMembreModifie");
         updateDto.setTelephone("0607080910");
-        updateDto.setDate_naissance(instantNaissance);
+        updateDto.setDate_naissance(LocalDate.of(2000, 1, 15));
         updateDto.setEmail(BOB_EMAIL); // Email inchangé ou nouveau valide
 
         mockMvc.perform(put("/membres/profile")
@@ -248,7 +246,7 @@ class MembreControllerTest {
         updateDto.setPrenom("PrenomValide");
         updateDto.setEmail(BOB_EMAIL);
         updateDto.setTelephone("0102030405");
-        updateDto.setDate_naissance(instantNaissance);
+        updateDto.setDate_naissance(LocalDate.of(2000, 1, 15));
 
         mockMvc.perform(put("/membres/profile")
                         .with(csrf())

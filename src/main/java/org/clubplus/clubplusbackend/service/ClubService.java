@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -217,7 +216,7 @@ public class ClubService {
         club.setVille(dto.getVille());
         club.setTelephone(dto.getTelephone());
         club.setDate_creation(dto.getDate_creation()); // Date "réelle" fournie
-        club.setDate_inscription(LocalDate.now()); // Date inscription système
+        club.setDate_inscription(Instant.now()); // Date inscription système
         club.setActif(true); // Actif par défaut
         club.setAdhesions(new HashSet<>()); // Initialiser les collections
         club.setEvenements(new ArrayList<>());

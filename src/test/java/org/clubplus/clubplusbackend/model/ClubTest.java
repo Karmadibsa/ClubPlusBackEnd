@@ -49,7 +49,7 @@ class ClubTest {
     private Club createValidClub() {
         Club club = new Club();
         club.setNom("Club Sportif Valide");
-        club.setDate_creation(LocalDate.now().minusYears(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        club.setDate_creation(LocalDate.of(2024, 1, 15));
         club.setDate_inscription(LocalDate.now().minusMonths(11).atStartOfDay(ZoneOffset.UTC).toInstant());
         club.setNumero_voie("12B");
         club.setRue("Rue Principale");
@@ -221,7 +221,7 @@ class ClubTest {
     @DisplayName("Date de création dans le futur doit générer une violation")
     void quandDateCreationEstDansLeFutur_alorsViolation() {
         Club club = createValidClub();
-        club.setDate_creation(LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        club.setDate_creation(LocalDate.of(2035, 1, 15));
         Set<ConstraintViolation<Club>> violations = validator.validate(club);
         assertFalse(violations.isEmpty());
         assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("date_creation") && v.getMessage().contains("La date de création doit être dans le passé ou aujourd'hui.")));
