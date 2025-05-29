@@ -198,7 +198,7 @@ public class ClubService {
         membre.setDate_naissance(adminInfo.getDate_naissance());
         membre.setTelephone(adminInfo.getTelephone());
         membre.setEmail(adminInfo.getEmail().toLowerCase().trim()); // Email normalisé
-        membre.setDate_inscription(Instant.now()); // Date inscription système
+        membre.setDate_inscription(LocalDate.now()); // Date inscription système
         membre.setActif(true); // Actif par défaut
         // Le rôle et le mot de passe sont définis dans la méthode appelante
         return membre;

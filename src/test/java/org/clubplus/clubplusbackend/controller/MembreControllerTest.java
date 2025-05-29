@@ -114,7 +114,7 @@ class MembreControllerTest {
         bob.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
         bob.setDate_naissance(LocalDate.of(2000, 1, 15));
-        bob.setDate_inscription(LocalDate.now().minusDays(10).atStartOfDay(ZoneOffset.UTC).toInstant());
+        bob.setDate_inscription(LocalDate.now().minusDays(10));
         bob.setTelephone("0102030405");
         bob.setAdhesions(new HashSet<>()); // Initialisation pour éviter NullPointerException si le constructeur ne le fait pas
         bobMembreEntity = membreRepository.saveAndFlush(bob); // Assurez-vous que membreRepository est injecté
@@ -130,7 +130,7 @@ class MembreControllerTest {
         admin.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
         admin.setDate_naissance(LocalDate.of(1990, 1, 15));
-        admin.setDate_inscription(LocalDate.now().minusDays(100).atStartOfDay(ZoneOffset.UTC).toInstant());
+        admin.setDate_inscription(LocalDate.now().minusDays(100));
         admin.setTelephone("0908070605");
         admin.setAdhesions(new HashSet<>());
         adminUserEntity = membreRepository.saveAndFlush(admin);
@@ -146,7 +146,7 @@ class MembreControllerTest {
         alice.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
         alice.setDate_naissance(LocalDate.of(1990, 1, 15));
-        alice.setDate_inscription(LocalDate.now().minusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        alice.setDate_inscription(LocalDate.now().minusDays(1));
         alice.setTelephone("0655667788");
         // Si Adhesions n'est pas initialisé dans le constructeur de Membre et que vous y accédez plus tard, initialisez-le.
         // alice.setAdhesions(new HashSet<>()); // Si nécessaire

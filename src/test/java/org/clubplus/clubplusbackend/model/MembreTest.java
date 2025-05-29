@@ -9,7 +9,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -49,7 +48,7 @@ class MembreTest {
         membre.setNom("ValideNom");
         membre.setPrenom("ValidePrenom");
         membre.setDate_naissance(LocalDate.of(2000, 1, 15));
-        membre.setDate_inscription(LocalDate.now().atStartOfDay(ZoneOffset.UTC).toInstant());
+        membre.setDate_inscription(LocalDate.now());
         membre.setTelephone("0123456789"); // Format téléphone valide (simple exemple)
         membre.setEmail("valide@example.com"); // Format email valide
         membre.setPassword("ValidPass1!"); // Mot de passe respectant les contraintes de complexité

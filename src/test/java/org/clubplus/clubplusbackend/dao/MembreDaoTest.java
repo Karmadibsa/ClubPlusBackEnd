@@ -124,7 +124,7 @@ public class MembreDaoTest {
         membre.setActif(true);
         membre.setVerified(true);
         membre.setDate_naissance(LocalDate.of(1990, 1, 15));
-        membre.setDate_inscription(inscriptionDate);
+        membre.setDate_inscription(LocalDate.now());
         membre.setTelephone("0123456789"); // Doit respecter les contraintes.
         membre.setCodeAmi(codeAmi); // Doit respecter la taille max (11 caractères).
         // Les collections (comme adhesions) sont généralement initialisées par le constructeur de Membre.

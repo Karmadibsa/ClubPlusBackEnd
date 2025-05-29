@@ -216,7 +216,7 @@ public class MembreService {
 
         // 2. Préparation de l'entité Membre (avant sauvegarde initiale)
         membreData.setEmail(email);
-        membreData.setDate_inscription(Instant.from(LocalDate.now()));
+        membreData.setDate_inscription(LocalDate.now());
         membreData.setPassword(passwordEncoder.encode(membreData.getPassword()));
         membreData.setRole(Role.MEMBRE);
         membreData.setId(null);

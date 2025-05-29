@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.WebApplicationContext;
 
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
@@ -136,7 +135,7 @@ class ClubControllerTest {
         adminClubAlpha.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
         adminClubAlpha.setDate_naissance(LocalDate.of(1995, 1, 15));
-        adminClubAlpha.setDate_inscription(LocalDate.now().minusDays(10).atStartOfDay(ZoneOffset.UTC).toInstant());
+        adminClubAlpha.setDate_inscription(LocalDate.now().minusDays(10));
         adminClubAlpha.setTelephone("0202020202");
         membreRepository.saveAndFlush(adminClubAlpha);
         adhesionRepository.saveAndFlush(new Adhesion(adminClubAlpha, clubTestAlpha));
@@ -152,7 +151,7 @@ class ClubControllerTest {
         membreClubAlpha.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
         membreClubAlpha.setDate_naissance(LocalDate.of(2000, 1, 15));
-        membreClubAlpha.setDate_inscription(LocalDate.now().minusDays(5).atStartOfDay(ZoneOffset.UTC).toInstant());
+        membreClubAlpha.setDate_inscription(LocalDate.now().minusDays(5));
         membreClubAlpha.setTelephone("0303030303");
         membreRepository.saveAndFlush(membreClubAlpha);
         adhesionRepository.saveAndFlush(new Adhesion(membreClubAlpha, clubTestAlpha));
@@ -168,7 +167,7 @@ class ClubControllerTest {
         utilisateurReservation.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
         utilisateurReservation.setDate_naissance(LocalDate.of(1998, 1, 15));
-        utilisateurReservation.setDate_inscription(LocalDate.now().minusDays(8).atStartOfDay(ZoneOffset.UTC).toInstant());
+        utilisateurReservation.setDate_inscription(LocalDate.now().minusDays(8));
         utilisateurReservation.setTelephone("0404040404");
         membreRepository.saveAndFlush(utilisateurReservation);
         adhesionRepository.saveAndFlush(new Adhesion(utilisateurReservation, clubTestAlpha));
@@ -184,7 +183,7 @@ class ClubControllerTest {
         autreAdmin.setVerified(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
         autreAdmin.setDate_naissance(LocalDate.of(1985, 1, 15));
-        autreAdmin.setDate_inscription(LocalDate.now().minusDays(20).atStartOfDay(ZoneOffset.UTC).toInstant());
+        autreAdmin.setDate_inscription(LocalDate.now().minusDays(20));
         autreAdmin.setTelephone("0505050505");
         membreRepository.saveAndFlush(autreAdmin);
     }

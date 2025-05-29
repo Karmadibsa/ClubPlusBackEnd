@@ -97,7 +97,7 @@ public class Membre {
     @NotNull // Assure qu'une date est présente lors de la persistance.
     @Column(nullable = false, updatable = false) // Non modifiable après création.
     @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
-    private Instant date_inscription = Instant.now(); // Initialisation par défaut, peut être surchargée.
+    private LocalDate date_inscription = LocalDate.now(); // Initialisation par défaut, peut être surchargée.
 
     // --- Contact ---
 
