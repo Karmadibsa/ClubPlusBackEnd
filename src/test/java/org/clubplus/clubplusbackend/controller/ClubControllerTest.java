@@ -117,7 +117,7 @@ class ClubControllerTest {
         clubTestAlpha.setActif(true);
         // Conversion de LocalDate en Instant (début du jour UTC)
         clubTestAlpha.setDate_creation(LocalDate.of(2020, 1, 15));
-        clubTestAlpha.setDate_inscription(LocalDate.now().minusYears(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        clubTestAlpha.setDate_inscription(LocalDate.now().minusYears(1));
         clubTestAlpha.setNumero_voie("1A");
         clubTestAlpha.setRue("Rue Alpha Test");
         clubTestAlpha.setCodepostal("75001");

@@ -76,7 +76,7 @@ public class MembreDaoTest {
         club1.setCodepostal("75001");
         club1.setVille("Paris");
         club1.setDate_creation(LocalDate.of(2010, 1, 15));
-        club1.setDate_inscription(Instant.now());
+        club1.setDate_inscription(LocalDate.now());
         entityManager.persistAndFlush(club1); // Persiste club1 et le rend visible pour les tests.
 
 
@@ -92,7 +92,7 @@ public class MembreDaoTest {
         club2.setCodepostal("75002");
         club2.setVille("Paris");
         club2.setDate_creation(LocalDate.of(2010, 1, 15));
-        club2.setDate_inscription(Instant.now());
+        club2.setDate_inscription(LocalDate.now());
         entityManager.persistAndFlush(club2);
     }
 

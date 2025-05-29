@@ -9,7 +9,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
-import java.time.ZoneOffset;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -50,7 +49,7 @@ class ClubTest {
         Club club = new Club();
         club.setNom("Club Sportif Valide");
         club.setDate_creation(LocalDate.of(2024, 1, 15));
-        club.setDate_inscription(LocalDate.now().minusMonths(11).atStartOfDay(ZoneOffset.UTC).toInstant());
+        club.setDate_inscription(LocalDate.now().minusMonths(11));
         club.setNumero_voie("12B");
         club.setRue("Rue Principale");
         club.setCodepostal("75001");
@@ -231,7 +230,7 @@ class ClubTest {
     @DisplayName("Date d'inscription dans le futur doit générer une violation")
     void quandDateInscriptionEstDansLeFutur_alorsViolation() {
         Club club = createValidClub();
-        club.setDate_inscription(LocalDate.now().plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant());
+        club.setDate_inscription(LocalDate.now().plusDays(1));
         Set<ConstraintViolation<Club>> violations = validator.validate(club);
         assertFalse(violations.isEmpty());
         assertTrue(violations.stream().anyMatch(v -> v.getPropertyPath().toString().equals("date_inscription") && v.getMessage().contains("La date d'inscription doit être dans le passé ou aujourd'hui.")));

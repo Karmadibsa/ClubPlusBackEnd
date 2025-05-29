@@ -136,7 +136,7 @@ class ClubServiceTest {
         clubTest.setCodeClub("CLUB-0001"); // Format respectant les contraintes (ex: 9 chars max)
         clubTest.setActif(true);
         clubTest.setDate_creation((LocalDate.of(2024, 1, 15)));
-        clubTest.setDate_inscription(oneYearAgoInstant);
+        clubTest.setDate_inscription((LocalDate.of(2024, 2, 15)));
         clubTest.setNumero_voie("1");
         clubTest.setRue("Rue Initiale");
         clubTest.setCodepostal("75000");
@@ -154,7 +154,7 @@ class ClubServiceTest {
         adminTest.setActif(true);
 
         LocalDate dateNaissanceApprox = LocalDate.now().minusYears(30);
-        
+
         // Initialisation d'un DTO pour la création de club, utilisant les setters
         CreateClubRequestDto.AdminInfo adminInfo = new CreateClubRequestDto.AdminInfo();
         adminInfo.setNom("AdminNomDto");
