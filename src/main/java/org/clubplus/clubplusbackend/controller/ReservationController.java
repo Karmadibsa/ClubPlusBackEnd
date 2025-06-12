@@ -269,7 +269,7 @@ public class ReservationController {
      * @see GlobalView.ReservationView
      * @see IsReservation
      */
-    @PutMapping("/uuid/{uuid}/use")
+    @PatchMapping("/uuid/{uuid}/use")
     @IsReservation // Requiert rôle RESERVATION ou ADMIN
     @JsonView(GlobalView.ReservationView.class) // Vue JSON pour la réservation mise à jour
     public ResponseEntity<Reservation> markReservationUsed(@PathVariable String uuid) {
@@ -279,7 +279,4 @@ public class ReservationController {
         return ResponseEntity.ok(updatedReservation);
     }
 
-    // Rappel : La gestion centralisée des exceptions via @ControllerAdvice est essentielle
-    // pour mapper les exceptions (EntityNotFoundException, AccessDeniedException, IllegalStateException,
-    // IllegalArgumentException) aux bonnes réponses HTTP (404, 403, 409, 400).
 }

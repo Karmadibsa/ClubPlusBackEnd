@@ -63,7 +63,7 @@ public interface ReservationDao extends JpaRepository<Reservation, Integer> {
      * spécifique, ayant un statut donné.
      *
      * @param membreId L'ID du {@link Membre}.
-     * @param eventId  L'ID de l'{@link Event}. (Note: le nom du 2ème paramètre était membreId1, corrigé en eventId pour la clarté).
+     * @param eventId  L'ID de l'{@link Event}.
      * @param status   Le {@link ReservationStatus} recherché.
      * @return Le nombre ({@code long}) de réservations correspondantes.
      */

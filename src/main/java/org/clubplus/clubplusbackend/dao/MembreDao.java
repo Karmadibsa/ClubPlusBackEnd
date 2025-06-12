@@ -69,9 +69,6 @@ public interface MembreDao extends JpaRepository<Membre, Integer> {
      */
     // Correction appliquée pour utiliser la chaîne 'ADMIN' ou un paramètre Enum
     @Query("SELECT m FROM Membre m JOIN m.adhesions a WHERE a.club.id = :clubId AND m.role = 'ADMIN'")
-    // Ou, si vous préférez passer l'Enum (recommandé) :
-    // @Query("SELECT m FROM Membre m JOIN m.adhesions a WHERE a.club.id = :clubId AND m.role = :roleAdmin")
-    // Optional<Membre> findAdminByClubId(@Param("clubId") Integer clubId, @Param("roleAdmin") Role roleAdmin); // Si vous utilisez la version avec paramètre
     Optional<Membre> findAdminByClubId(@Param("clubId") Integer clubId); // Version avec 'ADMIN' codé en dur
 
 

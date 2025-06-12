@@ -100,7 +100,7 @@ VALUES (1, 'AdminClub', 'Alice', '1988-03-10', '2024-01-10', '0601010101',
         'agilfoys@sun.com', '$2a$04$D4XWR/acmEbFwEiHwxUs/uKRD.1eT8HvtGz.MC27shFPqW/3YMp5y', 'MEMBRE', 'AMIS-000029', 1,
         NULL, 1),
        (30, 'Tomasine', 'Dyet', '1971-01-19', '2024-02-25', '947 843 2277',
-        'tdyett@earthlink.net', '$2a$04$HD7h7zFkzDGu/MAwDCt.IOCk0GTz9rZjEAmNTwNMEsVodF5n1scEW', 'MEMBRE', 'AMIS-000030',
+        'tdyett@earthlink.net', '$2y$10$A7.AsjGP0ptMeaRHIivES.8YyMXBSuCYy0T6F6.7Id1Ih5p/3hihG', 'ADMIN', 'AMIS-000030',
         1, NULL, 1);
 -- Ajout valeur
 
@@ -143,7 +143,7 @@ VALUES (1, 1, '2025-04-06 18:26:39'),
        (27, 1, '2025-04-10 13:14:44'),
        (28, 1, '2025-03-31 01:28:48'),
        (29, 1, '2025-02-06 02:33:17'),
-       (30, 1, '2025-03-20 06:47:32');
+       (30, 2, '2025-03-20 06:47:32');
 -- Karim -> Club 1
 
 -- 4. EVENTS (Dates Event 4 ajustées pour être en cours au 20 Avril)
@@ -208,7 +208,7 @@ VALUES (1, 'Tournoi Badminton CSC (Passé)', '2025-02-15 14:00:00', '2025-02-15 
        (25, 'nulla', '2025-02-09 08:33:11', '2025-02-09 09:33:11',
         'mauris morbi non lectus aliquam sit amet diam in magna bibendum', 'Terrain Principal', 1, 0,
         '2025-05-02 05:51:12'),
-       (26, 'eleifend donec ut', '2025-04-24 00:55:16', '2025-04-24 01:55:16',
+       (26, 'eleifend donec ut', '2026-04-24 00:55:16', '2026-04-24 01:55:16',
         'mi pede malesuada in imperdiet et commodo vulputate justo in blandit ultrices enim lorem ipsum dolor sit amet consectetuer adipiscing',
         'Salle Polyvalente', 1, 1, NULL),
        (27, 'viverra eget congue', '2025-05-20 14:10:43', '2025-05-20 15:10:43',
@@ -219,7 +219,7 @@ VALUES (1, 'Tournoi Badminton CSC (Passé)', '2025-02-15 14:00:00', '2025-02-15 
        (29, 'dictumst aliquam', '2025-06-14 03:54:32', '2025-06-14 04:54:32',
         'vel nisl duis ac nibh fusce lacus purus aliquet at feugiat non pretium quis lectus suspendisse potenti in eleifend quam',
         'Terrain Principal', 1, 1, NULL),
-       (30, 'molestie lorem', '2025-10-12 12:02:48', '2025-10-12 13:02:48',
+       (30, 'molestie lorem', '2026-10-12 12:02:48', '2026-10-12 13:02:48',
         'libero quis orci nullam molestie nibh in lectus pellentesque at', 'Gymnase', 1, 1, null);
 
 -- 5. CATEGORIES (Capacité Cat 5 ajustée pour Test 53)
@@ -324,23 +324,23 @@ VALUES -- Réservations pour MEMBREs uniquement
        (11, 10, 18, '2025-04-05 09:30:00', UUID(), 'UTILISE'),  -- Membre 11 @ Event 10 (Passé) / Cat 18
        (12, 11, 19, '2025-04-30 10:00:00', UUID(), 'CONFIRME'), -- Membre 12 @ Event 11 (Futur) / Cat 19
        (5, 11, 19, '2025-04-30 10:00:00', UUID(), 'CONFIRME'),  -- Membre 12 @ Event 11 (Futur) / Cat 19
-       (13, 12, 20, '2025-07-01 11:00:00', UUID(), 'CONFIRME'), -- Membre 13 @ Event 12 (Futur) / Cat 20
+       (13, 12, 20, '2025-05-01 11:00:00', UUID(), 'CONFIRME'), -- Membre 13 @ Event 12 (Futur) / Cat 20
        (14, 13, 21, '2025-03-25 18:00:00', UUID(), 'UTILISE'),  -- Membre 14 @ Event 13 (Passé) / Cat 21
-       (15, 14, 22, '2025-09-01 12:00:00', UUID(), 'CONFIRME'), -- Membre 15 @ Event 14 (Futur) / Cat 22
-       (16, 15, 23, '2025-06-10 13:00:00', UUID(), 'CONFIRME'), -- Membre 16 @ Event 15 (Futur) / Cat 23
-       (5, 15, 23, '2025-06-10 13:00:00', UUID(), 'CONFIRME'),  -- Membre 16 @ Event 15 (Futur) / Cat 23
+       (15, 14, 22, '2025-05-01 12:00:00', UUID(), 'CONFIRME'), -- Membre 15 @ Event 14 (Futur) / Cat 22
+       (16, 15, 23, '2025-06-10 10:00:00', UUID(), 'CONFIRME'), -- Membre 16 @ Event 15 (Futur) / Cat 23
+       (5, 15, 23, '2025-06-10 10:00:00', UUID(), 'CONFIRME'),  -- Membre 16 @ Event 15 (Futur) / Cat 23
        (17, 16, 24, '2025-02-15 14:00:00', UUID(), 'UTILISE'),  -- Membre 17 @ Event 16 (Passé) / Cat 24
        (18, 17, 26, '2025-04-20 15:00:00', UUID(), 'CONFIRME'), -- Membre 18 @ Event 17 (Futur) / Cat 26
        (19, 19, 28, '2025-05-05 16:00:00', UUID(), 'ANNULE'),   -- Membre 19 @ Event 19 (Futur, inactif) / Cat 28 - Annulé
        (20, 20, 30, '2025-03-01 17:00:00', UUID(), 'UTILISE'),  -- Membre 20 @ Event 20 (Passé) / Cat 30
-       (23, 23, 34, '2025-08-15 11:00:00', UUID(), 'CONFIRME'), -- Membre 23 @ Event 23 (Futur) / Cat 34
-       (24, 24, 35, '2025-09-05 12:00:00', UUID(), 'CONFIRME'), -- Membre 24 @ Event 24 (Futur) / Cat 35
-       (25, 25, 36, '2025-10-01 13:00:00', UUID(), 'CONFIRME'), -- Membre 25 @ Event 25 (Futur) / Cat 36
-       (26, 26, 37, '2025-11-10 14:00:00', UUID(), 'CONFIRME'), -- Membre 26 @ Event 26 (Futur) / Cat 37
-       (27, 27, 39, '2025-11-20 15:00:00', UUID(), 'CONFIRME'), -- Membre 27 @ Event 27 (Futur) / Cat 39
-       (28, 28, 40, '2025-12-01 16:00:00', UUID(), 'CONFIRME'), -- Membre 28 @ Event 28 (Futur) / Cat 40
-       (29, 29, 41, '2025-12-10 17:00:00', UUID(), 'CONFIRME'), -- Membre 29 @ Event 29 (Futur) / Cat 41
-       (30, 30, 43, '2025-12-15 18:00:00', UUID(), 'CONFIRME');
+       (23, 23, 34, '2025-05-15 11:00:00', UUID(), 'CONFIRME'), -- Membre 23 @ Event 23 (Futur) / Cat 34
+       (24, 24, 35, '2025-06-05 12:00:00', UUID(), 'CONFIRME'), -- Membre 24 @ Event 24 (Futur) / Cat 35
+       (25, 25, 36, '2025-06-01 13:00:00', UUID(), 'CONFIRME'), -- Membre 25 @ Event 25 (Futur) / Cat 36
+       (3, 26, 37, '2025-04-10 14:00:00', UUID(), 'CONFIRME'),  -- Membre 26 @ Event 26 (Futur) / Cat 37
+       (27, 27, 39, '2025-05-20 15:00:00', UUID(), 'CONFIRME'), -- Membre 27 @ Event 27 (Futur) / Cat 39
+       (28, 28, 40, '2025-06-01 16:00:00', UUID(), 'CONFIRME'), -- Membre 28 @ Event 28 (Futur) / Cat 40
+       (29, 29, 41, '2025-05-10 17:00:00', UUID(), 'CONFIRME'), -- Membre 29 @ Event 29 (Futur) / Cat 41
+       (30, 30, 43, '2025-05-15 18:00:00', UUID(), 'CONFIRME');
 -- Membre 30 @ Event 30 (Futur) / Cat 43
 
 -- Hélène @ Apéro
