@@ -16,32 +16,22 @@ import java.time.LocalDate;
 import java.util.*;
 
 /**
- * Entité JPA représentant un club sportif dans l'application ClubPlus.
- * Cette entité contient les informations principales du club, ses coordonnées,
- * ses adhésions, et les événements qu'il organise.
- *
- * <p>La suppression logique est gérée via le champ {@code actif} et la date de désactivation.
- * Une contrainte {@code @Where} filtre automatiquement les clubs désactivés dans les requêtes.</p>
- *
- * <p>Les relations vers {@link Adhesion} et {@link Event} sont chargées paresseusement
- * et gérées avec cascade et orphanRemoval pour assurer la cohérence des données.</p>
- *
- * @see Adhesion
- * @see Event
- * @see GlobalView
+ * Entité JPA représentant un club.
+ * <p>
+ * Gère les informations principales, les adhésions, les événements et la suppression logique (soft delete)
+ * via un champ 'actif'. L'annotation @Where filtre automatiquement les clubs inactifs des requêtes.
  */
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Where(clause = "actif = true") // Filtre automatique pour exclure les clubs désactivés
-@Table(name = "club") // Nom explicite de la table (ajuster si nécessaire)
+@Where(clause = "actif = true")
+@Table(name = "club")
 public class Club {
 
     /**
-     * Identifiant unique du club, généré automatiquement par la base de données.
-     * Visible dans la vue JSON de base.
+     * Identifiant unique du club, généré automatiquement.
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,8 +40,6 @@ public class Club {
 
     /**
      * Nom officiel du club.
-     * Ne peut pas être vide, doit contenir entre 2 et 100 caractères.
-     * Visible dans la vue JSON de base.
      */
     @NotBlank(message = "Le nom du club ne peut pas être vide.")
     @Size(min = 2, max = 100, message = "Le nom du club doit contenir entre 2 et 100 caractères.")
@@ -60,10 +48,7 @@ public class Club {
     private String nom;
 
     /**
-     * Date de création officielle du club.
-     * Doit être une date passée ou présente.
-     * Non modifiable après création.
-     * Visible dans la vue détaillée du club.
+     * Date de création officielle du club (fournie par l'utilisateur).
      */
     @NotNull(message = "La date de création est obligatoire.")
     @PastOrPresent(message = "La date de création doit être dans le passé ou aujourd'hui.")
@@ -73,11 +58,6 @@ public class Club {
 
     /**
      * Date d'inscription du club dans le système.
-     * Doit être une date passée ou présente.
-     * Non modifiable après création.
-     * Visible dans la vue détaillée du club.
-     *
-     * <p>À clarifier si différente de {@code date_creation} ou à fusionner.</p>
      */
     @NotNull(message = "La date d'inscription est obligatoire.")
     @PastOrPresent(message = "La date d'inscription doit être dans le passé ou aujourd'hui.")
@@ -120,20 +100,14 @@ public class Club {
     private String telephone;
 
     @NotBlank(message = "L'email du club est obligatoire.")
-    @Email(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", message = "Le format de l'email est invalide. Il doit contenir un domaine valide (ex: .com, .fr).")
+    @Email(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", message = "Le format de l'email est invalide.")
     @Size(max = 254, message = "L'email ne doit pas dépasser 254 caractères.")
     @Column(nullable = false, unique = true, length = 254)
     @JsonView({GlobalView.ClubView.class, GlobalView.ReservationView.class, GlobalView.ClubMembreView.class})
     private String email;
 
-
-    // --- Code Club ---
-
     /**
-     * Code unique généré automatiquement après persistance.
-     * Exemple : "CLUB-0001".
-     * Non modifiable.
-     * Visible dans les vues de base et détaillée du club.
+     * Code unique du club, généré automatiquement après la création.
      */
     @Column(unique = true, length = 9)
     @JsonView({GlobalView.Base.class, GlobalView.ClubView.class})
@@ -142,17 +116,14 @@ public class Club {
     // --- Soft Delete ---
 
     /**
-     * Indique si le club est actif.
-     * Utilisé pour la suppression logique.
-     * Ne peut pas être null.
+     * Indique si le club est actif (true) ou désactivé (false).
      */
-    @NotNull(message = "Le statut 'actif' du club est obligatoire et ne peut pas être nul.")
+    @NotNull
     @Column(nullable = false)
     private Boolean actif = true;
 
     /**
-     * Date et heure de désactivation du club.
-     * Null si le club est actif.
+     * Date de désactivation du club. Reste null tant que le club est actif.
      */
     @Column(name = "desactivation_date")
     private Instant desactivationDate;
@@ -160,10 +131,7 @@ public class Club {
     // --- Relations ---
 
     /**
-     * Ensemble des adhésions associées à ce club.
-     * Chargé paresseusement.
-     * Cascade et orphanRemoval assurent la cohérence.
-     * Ignoré en sérialisation JSON pour éviter les boucles infinies et fuites de données.
+     * Ensemble des adhésions à ce club. Ignoré en JSON pour éviter les boucles.
      */
     @OneToMany(mappedBy = "club",
             cascade = CascadeType.ALL,
@@ -174,9 +142,6 @@ public class Club {
 
     /**
      * Liste des événements organisés par ce club.
-     * Chargé paresseusement.
-     * Cascade et orphanRemoval assurent la cohérence.
-     * Visible dans la vue détaillée du club.
      */
     @OneToMany(mappedBy = "organisateur",
             cascade = CascadeType.ALL,
@@ -185,20 +150,12 @@ public class Club {
     @JsonView(GlobalView.ClubView.class)
     private List<Event> evenements = new ArrayList<>();
 
-    // --- Méthodes métier ---
-
     /**
-     * Prépare le club pour une désactivation (soft delete).
-     * Modifie le nom et l'email pour refléter l'état inactif,
-     * met à jour la date de désactivation.
-     * Ne modifie pas les relations (adhésions, événements),
-     * la gestion des événements futurs doit être faite au niveau service.
-     *
-     * @throws IllegalStateException si le club n'a pas d'ID persistant.
+     * Prépare le club à la désactivation en modifiant ses informations pour refléter son statut inactif.
      */
     public void prepareForDeactivation() {
         if (this.id == null) {
-            throw new IllegalStateException("Impossible de désactiver un club sans ID persistant.");
+            throw new IllegalStateException("Impossible de désactiver un club non persisté.");
         }
         if (!this.nom.startsWith("[Désactivé]")) {
             this.nom = "[Désactivé] " + this.nom;
@@ -207,8 +164,9 @@ public class Club {
         this.desactivationDate = Instant.now();
     }
 
-    // --- equals et hashCode basés sur l'ID ---
-
+    /**
+     * L'égalité est basée sur l'ID. Deux clubs sont égaux si leurs IDs sont les mêmes.
+     */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -216,8 +174,11 @@ public class Club {
         return id != null && id.equals(club.id);
     }
 
+    /**
+     * Le hashcode est basé sur l'ID pour les entités persistées.
+     */
     @Override
     public int hashCode() {
-        return id != null ? Objects.hashCode(id) : Objects.hashCode(getClass());
+        return id != null ? Objects.hashCode(id) : getClass().hashCode();
     }
 }

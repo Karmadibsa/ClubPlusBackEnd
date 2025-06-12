@@ -6,20 +6,20 @@ package org.clubplus.clubplusbackend.model;
  */
 public enum Statut {
     /**
-     * La demande d'ami a été envoyée par l'initiateur mais n'a pas encore
-     * été traitée (acceptée ou refusée) par le destinataire.
+     * La demande d'ami a été envoyée mais n'a pas encore été traitée
+     * (acceptée ou refusée) par le destinataire.
      */
     ATTENTE,
 
     /**
-     * La demande d'ami a été explicitement acceptée par le destinataire.
-     * Une relation d'amitié est établie entre les deux membres.
+     * La demande d'ami a été acceptée par le destinataire.
+     * Une relation d'amitié est maintenant établie.
      */
-    ACCEPTE,
+    ACCEPTEE,
 
     /**
-     * La demande d'ami a été explicitement refusée par le destinataire.
-     * Aucune relation d'amitié n'est établie suite à cette demande.
+     * La demande d'ami a été refusée par le destinataire.
+     * Aucune relation d'amitié n'est établie.
      */
     REFUSE
 }

@@ -17,38 +17,23 @@ import java.time.LocalDate;
 import java.util.*;
 
 /**
- * Entité JPA représentant un membre (utilisateur) de l'application ClubPlus.
- * Contient les informations personnelles, les coordonnées, le rôle, le statut (actif/anonymisé),
- * ainsi que les relations avec les clubs (via {@link Adhesion}), les événements (via {@link Reservation}),
- * les autres membres (amitiés via {@link DemandeAmi} et la table `amitie`), et les notations.
- *
- * <p>Une stratégie de suppression logique (soft delete) est implémentée via le champ {@code actif}
- * et la clause {@code @Where}, qui filtre automatiquement les membres inactifs des requêtes SELECT.
- * L'anonymisation des données est gérée par la méthode {@link #anonymizeData()}.</p>
- *
- * <p>L'égalité ({@code equals}) et le hachage ({@code hashCode}) sont basés sur l'identifiant unique {@code id}.</p>
- *
- * @see Role
- * @see Adhesion
- * @see Reservation
- * @see DemandeAmi
- * @see Notation
- * @see GlobalView
+ * Entité JPA représentant un membre (utilisateur) de l'application.
+ * <p>
+ * Gère les informations personnelles, le rôle, le statut (actif/inactif),
+ * ainsi que les relations avec les clubs, les amis et les événements.
+ * L'annotation @Where filtre automatiquement les membres inactifs des requêtes.
  */
-@Entity // Marque comme entité JPA.
-@Getter // Lombok: Génère les getters.
-@Setter // Lombok: Génère les setters.
-@NoArgsConstructor // Lombok: Constructeur sans argument (requis par JPA).
-@AllArgsConstructor // Lombok: Constructeur avec tous les arguments (utile pour les tests/fixtures).
-// Applique un filtre global pour exclure les membres inactifs (supprimés logiquement)
-// de TOUTES les requêtes SELECT par défaut effectuées via JPA/Hibernate sur cette entité.
+@Entity
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
 @Where(clause = "actif = true")
-@Table(name = "membre") // Nom explicite de la table.
+@Table(name = "membre")
 public class Membre {
 
     /**
      * Identifiant unique du membre, généré automatiquement.
-     * Visible dans la vue JSON de base.
      */
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -57,8 +42,6 @@ public class Membre {
 
     /**
      * Nom de famille du membre.
-     * Obligatoire, non vide, et de longueur contrainte.
-     * Visible dans la vue JSON de base.
      */
     @NotBlank(message = "Le nom ne peut pas être vide.")
     @Size(min = 2, max = 50, message = "Le nom doit contenir entre 2 et 50 caractères.")
@@ -68,8 +51,6 @@ public class Membre {
 
     /**
      * Prénom du membre.
-     * Obligatoire, non vide, et de longueur contrainte.
-     * Visible dans la vue JSON de base.
      */
     @NotBlank(message = "Le prénom ne peut pas être vide.")
     @Size(min = 2, max = 50, message = "Le prénom doit contenir entre 2 et 50 caractères.")
@@ -78,26 +59,21 @@ public class Membre {
     private String prenom;
 
     /**
-     * Date de naissance du membre.
-     * Obligatoire et doit être une date dans le passé.
-     * Visible dans les vues détaillées (MembreView, ProfilView).
+     * Date de naissance du membre. Doit être dans le passé.
      */
     @NotNull(message = "La date de naissance est obligatoire.")
-    @Past(message = "La date de naissance doit être dans le passé.") // Validation logique.
+    @Past(message = "La date de naissance doit être dans le passé.")
     @Column(nullable = false)
     @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
     private LocalDate date_naissance;
 
     /**
      * Date d'inscription du membre dans le système.
-     * Généralement définie par le système lors de la création.
-     * Doit être non nulle (contrainte BDD).
-     * Visible dans les vues détaillées (MembreView, ProfilView).
      */
-    @NotNull // Assure qu'une date est présente lors de la persistance.
-    @Column(nullable = false, updatable = false) // Non modifiable après création.
+    @NotNull
+    @Column(nullable = false, updatable = false)
     @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
-    private LocalDate date_inscription = LocalDate.now(); // Initialisation par défaut, peut être surchargée.
+    private LocalDate date_inscription = LocalDate.now();
 
     // --- Contact ---
 
@@ -112,12 +88,11 @@ public class Membre {
 
 
     /**
-     * Adresse email du membre.
-     * Utilisée comme identifiant unique pour la connexion.
-     * Doit être unique dans la base de données et au format email valide.
+     * Adresse email du membre, utilisée comme identifiant de connexion.
+     * Doit être unique.
      */
     @NotBlank(message = "L'email est obligatoire.")
-    @Email(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", message = "Le format de l'email est invalide. Il doit contenir un domaine valide (ex: .com, .fr).")
+    @Email(regexp = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$", message = "Le format de l'email est invalide.")
     @Size(max = 254, message = "L'email ne doit pas dépasser 254 caractères.")
     @Column(nullable = false, unique = true, length = 254)
     @JsonView({GlobalView.MembreView.class, GlobalView.ReservationView.class, GlobalView.ProfilView.class})
@@ -126,68 +101,67 @@ public class Membre {
     // --- Identifiants Système ---
 
     /**
-     * Code unique permettant aux autres membres d'envoyer une demande d'ami à cet utilisateur.
-     * Généré automatiquement après la première persistance de l'entité (via {@link #generateCodeAmi()}).
-     * Format: "AMIS-XXXXXX". Non modifiable.
-     * Visible dans la vue détaillée du profil de l'utilisateur.
+     * Code unique pour les demandes d'ami. Généré automatiquement après création.
      */
-    @Column(unique = true, length = 11) // Contraintes BDD: unique, taille fixe, non modifiable.
+    @Column(unique = true, length = 11)
     @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
     private String codeAmi;
 
     /**
      * Mot de passe du membre.
-     * Ce champ est destiné à recevoir le mot de passe en clair lors de l'inscription ou de la modification.
-     * Il est obligatoire et doit respecter une politique de complexité définie par le {@code @Pattern}.
-     * **IMPORTANT:** Il est marqué comme {@code WRITE_ONLY} par {@code @JsonProperty} pour empêcher
-     * sa sérialisation (son inclusion dans les réponses JSON). Il doit être haché (ex: avec BCrypt)
-     * par la couche service avant d'être persisté en base de données.
+     * Ce champ est uniquement utilisé pour l'écriture (inscription/modification).
+     * Il n'est jamais retourné dans les réponses API grâce à @JsonProperty(access = WRITE_ONLY).
      */
     @NotBlank(message = "Le mot de passe est obligatoire.")
     @Pattern(regexp = "^(?=.*[0-9])(?=.*[a-z])(?=.*[A-Z])(?=.*[!@#&()\\-\\[{}\\]:;',?/*~$^+=<>]).{8,100}$",
-            message = "Le mot de passe doit faire entre 8 et 100 caractères et contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial (!@#&()...)")
-    @Column(nullable = false, length = 100) // La longueur BDD doit accommoder le hash (BCrypt ~60 chars).
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY) // Sécurité: Empêche la fuite du hash dans les API.
+            message = "Le mot de passe doit faire entre 8 et 100 caractères et contenir au moins une majuscule, une minuscule, un chiffre et un caractère spécial.")
+    @Column(nullable = false, length = 100)
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
 
     // --- Rôle et Statut ---
 
     /**
-     * Rôle principal de l'utilisateur dans l'application (ex: MEMBRE, RESERVATION, ADMIN).
-     * Détermine les permissions d'accès. Stocké comme une chaîne de caractères en BDD.
-     * Visible dans les vues détaillées.
-     *
-     * @see Role
+     * Rôle de l'utilisateur (MEMBRE, RESERVATION, ADMIN), déterminant ses permissions.
      */
-    @Enumerated(EnumType.STRING) // Stocke le nom de l'enum (plus lisible).
-    @Column(nullable = false, length = 20) // Contrainte BDD: non null, taille pour les noms de rôle.
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
     @JsonView({GlobalView.MembreView.class, GlobalView.ProfilView.class})
     private Role role;
 
     /**
-     * Indicateur du statut actif du membre.
-     * {@code true} si le compte est actif, {@code false} s'il a été désactivé/anonymisé (soft delete).
-     * Utilisé par la clause {@code @Where} pour filtrer les membres actifs par défaut.
+     * Indique si le compte est actif (true) ou désactivé/anonymisé (false).
      */
-    @NotNull // Le statut doit toujours être défini.
+    @NotNull
     @Column(nullable = false)
-    private Boolean actif = true; // Initialisé à 'true' par défaut.
+    private Boolean actif = true;
 
     /**
-     * Date et heure auxquelles les données du membre ont été anonymisées.
-     * Reste {@code null} tant que le membre est actif.
+     * Date d'anonymisation du compte. Reste null tant que le membre est actif.
      */
     private Instant anonymizeDate;
 
+    /**
+     * Indique si l'email du membre a été vérifié.
+     */
     @Column(nullable = false)
     private boolean verified = false;
 
+    /**
+     * Token unique pour la vérification de l'email.
+     */
     @Column(unique = true)
     private String verificationToken;
 
+    /**
+     * Token unique pour la réinitialisation du mot de passe.
+     */
     @Column(unique = true)
     private String resetPasswordToken;
 
+    /**
+     * Date d'expiration du token de réinitialisation de mot de passe.
+     */
     private Instant resetPasswordTokenExpiryDate;
 
 
@@ -195,23 +169,13 @@ public class Membre {
 
     /**
      * Liste des réservations effectuées par ce membre.
-     * Relation One-to-Many : Un membre peut avoir plusieurs réservations.
-     * Chargement par défaut (EAGER possible ici si souvent nécessaire, mais LAZY reste plus sûr).
-     * Cascade ALL et orphanRemoval lient le cycle de vie des réservations à celui du membre.
-     * Visible dans la vue détaillée du membre.
-     *
-     * <p>Note: Charger cette liste peut être coûteux si un membre a beaucoup de réservations.</p>
      */
     @OneToMany(mappedBy = "membre", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    // Préférer LAZY
     @JsonView(GlobalView.MembreView.class)
     private List<Reservation> reservations = new ArrayList<>();
 
     /**
-     * Ensemble des adhésions de ce membre à différents clubs.
-     * Relation One-to-Many vers l'entité de jointure {@link Adhesion}.
-     * Chargement paresseux (LAZY). Cascade et orphanRemoval lient les adhésions au membre.
-     * Visible dans la vue détaillée du membre.
+     * Ensemble des adhésions de ce membre à des clubs.
      */
     @OneToMany(mappedBy = "membre", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonView(GlobalView.MembreView.class)
@@ -219,9 +183,7 @@ public class Membre {
 
     /**
      * Ensemble des demandes d'ami envoyées par ce membre.
-     * Relation One-to-Many vers {@link DemandeAmi}.
-     * Chargement paresseux (LAZY). Cascade et orphanRemoval assurent la suppression des demandes si le membre est supprimé.
-     * Ignoré par défaut en JSON pour éviter les boucles et la surcharge d'informations.
+     * Ignoré en JSON pour éviter les boucles.
      */
     @OneToMany(mappedBy = "envoyeur",
             cascade = CascadeType.ALL,
@@ -232,9 +194,7 @@ public class Membre {
 
     /**
      * Ensemble des demandes d'ami reçues par ce membre.
-     * Relation One-to-Many vers {@link DemandeAmi}.
-     * Chargement paresseux (LAZY). Cascade et orphanRemoval assurent la suppression des demandes si le membre est supprimé.
-     * Ignoré par défaut en JSON.
+     * Ignoré en JSON pour éviter les boucles.
      */
     @OneToMany(mappedBy = "recepteur",
             cascade = CascadeType.ALL,
@@ -244,39 +204,27 @@ public class Membre {
     private Set<DemandeAmi> demandesRecues = new HashSet<>();
 
     /**
-     * Ensemble des membres qui sont amis avec ce membre.
-     * Relation Many-to-Many réflexive, gérée via la table de jointure "amitie".
-     * Chargement paresseux (LAZY).
-     * Visible dans la vue détaillée du membre.
-     *
-     * <p>Les méthodes {@link #addAmi(Membre)} et {@link #removeAmi(Membre)} doivent être utilisées
-     * pour gérer correctement la bidirectionnalité de cette relation.</p>
+     * Ensemble des amis de ce membre. Relation bidirectionnelle gérée par une table de jointure.
      */
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
-            name = "amitie", // Nom de la table de jointure.
-            joinColumns = @JoinColumn(name = "membre_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_amitie_membre")), // Clé vers cette entité.
-            inverseJoinColumns = @JoinColumn(name = "ami_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_amitie_ami")) // Clé vers l'entité "ami".
+            name = "amitie",
+            joinColumns = @JoinColumn(name = "membre_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_amitie_membre")),
+            inverseJoinColumns = @JoinColumn(name = "ami_id", referencedColumnName = "id", foreignKey = @ForeignKey(name = "fk_amitie_ami"))
     )
     @JsonView(GlobalView.MembreView.class)
     private Set<Membre> amis = new HashSet<>();
 
     /**
-     * Liste des notations laissées par ce membre sur des événements.
-     * Relation One-to-Many vers {@link Notation}.
-     * Chargement paresseux (LAZY). Cascade et orphanRemoval lient les notations au membre.
-     * Ignoré par défaut en JSON.
+     * Liste des notations laissées par ce membre.
+     * Ignorée en JSON.
      */
     @OneToMany(mappedBy = "membre", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Notation> notations = new ArrayList<>();
 
-    // --- Méthodes de Cycle de Vie et Utilitaires ---
-
     /**
-     * Callback JPA exécuté après la première persistance de l'entité.
-     * Génère le {@code codeAmi} unique basé sur l'ID qui vient d'être assigné.
-     * Ne fait rien si l'ID est null ou si le codeAmi existe déjà.
+     * Callback JPA pour générer le code ami après la première sauvegarde.
      */
     @PostPersist
     public void generateCodeAmi() {
@@ -286,124 +234,76 @@ public class Membre {
     }
 
     /**
-     * Ajoute un membre à la liste d'amis de ce membre ET met à jour la liste d'amis de l'autre membre
-     * pour maintenir la bidirectionnalité de la relation {@code @ManyToMany}.
-     * Inclut des vérifications défensives pour les collections nulles.
+     * Ajoute un ami et maintient la relation bidirectionnelle.
      *
-     * @param ami Le {@link Membre} à ajouter comme ami. Ne doit pas être null.
+     * @param ami Le membre à ajouter comme ami.
      */
     public void addAmi(Membre ami) {
         Objects.requireNonNull(ami, "L'ami à ajouter ne peut pas être null.");
-        if (this.amis == null) this.amis = new HashSet<>();
-        if (ami.getAmis() == null) ami.setAmis(new HashSet<>()); // Important pour la bidirectionnalité
-
         this.amis.add(ami);
-        ami.getAmis().add(this); // Assure la relation dans l'autre sens.
+        ami.getAmis().add(this);
     }
 
     /**
-     * Retire un membre de la liste d'amis de ce membre ET met à jour la liste d'amis de l'autre membre
-     * pour maintenir la bidirectionnalité de la relation {@code @ManyToMany}.
+     * Retire un ami et maintient la relation bidirectionnelle.
      *
-     * @param ami Le {@link Membre} à retirer de la liste d'amis. Ne doit pas être null.
+     * @param ami Le membre à retirer des amis.
      */
     public void removeAmi(Membre ami) {
         Objects.requireNonNull(ami, "L'ami à retirer ne peut pas être null.");
-        if (this.amis != null) {
-            this.amis.remove(ami);
-        }
-        if (ami.getAmis() != null) {
-            ami.getAmis().remove(this); // Assure le retrait dans l'autre sens.
-        }
+        this.amis.remove(ami);
+        ami.getAmis().remove(this);
     }
 
-    // --- Méthode d'Anonymisation ---
-
     /**
-     * Anonymise les données personnelles identifiables de ce membre, définit son rôle à ANONYME,
-     * et nettoie les relations d'amitié et les demandes d'ami en attente.
-     * Cette méthode est une étape clé du processus de suppression logique (soft delete) conforme au RGPD.
-     * Elle modifie l'état de l'objet mais ne le persiste pas. Elle doit être appelée
-     * dans une transaction avant de sauvegarder l'entité avec {@code actif = false}.
-     *
-     * <p>Les relations comme les réservations, adhésions et notations sont conservées
-     * pour l'historique, mais seront difficiles à lier à un utilisateur spécifique
-     * en raison de l'anonymisation et du filtre {@code @Where}.</p>
-     *
-     * @throws IllegalStateException si le membre n'a pas encore été persisté ({@code id} est null),
-     *                               car l'ID est utilisé pour garantir l'unicité de l'email anonymisé.
+     * Anonymise les données personnelles identifiables de ce membre.
+     * Cette méthode est une étape clé du processus de suppression de compte (soft delete).
      */
     public void anonymizeData() {
         if (this.id == null) {
-            throw new IllegalStateException("Impossible d'anonymiser un membre non persisté (ID est null).");
+            throw new IllegalStateException("Impossible d'anonymiser un membre non persisté.");
         }
 
-        String anonymizedSuffix = "_id" + this.id; // Suffixe basé sur l'ID.
-
-        // 1. Anonymiser les informations personnelles identifiables
+        String anonymizedSuffix = "_id" + this.id;
         this.nom = "Utilisateur";
-        this.prenom = "Anonyme" + anonymizedSuffix; // Rend unique pour éviter collisions potentielles
+        this.prenom = "Anonyme" + anonymizedSuffix;
         this.date_naissance = LocalDate.of(1990, 1, 1);
-        this.telephone = "0000000000"; // Numéro invalide (ou null si BDD permet)
-        this.email = "anonymized_" + this.id + "@example.com"; // Email unique et manifestement invalide
-        this.password = "$2a$10$invalidHashPlaceholder." + UUID.randomUUID(); // Hash invalide/inutilisable
-        this.codeAmi = "ANON-" + this.id; // Code ami invalidé
-
-        // 2. Changer le rôle
-        this.role = Role.ANONYME; // Assigner un rôle spécifique pour les anonymisés.
-
-        // 3. Nettoyer les relations sociales
-        // Supprimer les demandes en attente (envoyées ou reçues)
-        if (this.demandesEnvoyees != null) this.demandesEnvoyees.clear();
-        if (this.demandesRecues != null) this.demandesRecues.clear();
-
-        // Supprimer les liens d'amitié (en respectant la bidirectionnalité)
-        if (this.amis != null && !this.amis.isEmpty()) {
-            // Copie pour itération sûre tout en modifiant la collection originale via removeAmi
-            Set<Membre> currentAmis = new HashSet<>(this.amis);
-            for (Membre ami : currentAmis) {
-                this.removeAmi(ami); // Gère les deux côtés de la relation
-            }
-        }
-        // Note: this.amis devrait être vide après la boucle.
-
-        // 4. Enregistrer la date d'anonymisation
+        this.telephone = "0000000000";
+        this.email = "anonymized_" + this.id + "@example.com";
+        this.password = "$2a$10$invalidHashPlaceholder." + UUID.randomUUID();
+        this.codeAmi = "ANON-" + this.id;
+        this.role = Role.ANONYME;
         this.anonymizeDate = Instant.now();
 
-        // Note: Le champ 'actif' doit être mis à 'false' par l'appelant (service) avant la sauvegarde.
+        // Nettoyer les relations sociales
+        if (this.demandesEnvoyees != null) this.demandesEnvoyees.clear();
+        if (this.demandesRecues != null) this.demandesRecues.clear();
+        if (this.amis != null && !this.amis.isEmpty()) {
+            new HashSet<>(this.amis).forEach(this::removeAmi);
+        }
     }
 
-    // --- equals & hashCode (Basés sur l'ID) ---
-
     /**
-     * Détermine si cet objet Membre est égal à un autre objet.
-     * L'égalité est basée sur l'identifiant ({@code id}) pour les entités persistées.
-     *
-     * @param o L'objet à comparer.
-     * @return {@code true} si les objets sont égaux (même instance ou même ID persisté), {@code false} sinon.
+     * L'égalité est basée sur l'ID. Deux membres sont égaux si leurs IDs sont les mêmes.
      */
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Membre membre)) return false; // Utilise pattern matching
-        // Deux membres sont égaux s'ils ont le même ID non null.
+        if (!(o instanceof Membre membre)) return false;
         return id != null && id.equals(membre.id);
     }
 
     /**
-     * Retourne un code de hachage pour cet objet Membre.
-     * Basé sur l'identifiant ({@code id}) si disponible, sinon utilise une valeur constante
-     * dérivée de la classe pour les instances non persistées.
-     *
-     * @return Le code de hachage.
+     * Le hashcode est basé sur l'ID pour les entités persistées.
      */
     @Override
     public int hashCode() {
-        // Cohérent avec equals.
         return id != null ? Objects.hashCode(id) : getClass().hashCode();
     }
 
-    // Optionnel: toString() pour le débogage, évitant de charger les relations LAZY
+    /**
+     * Représentation textuelle du membre pour le débogage.
+     */
     @Override
     public String toString() {
         return "Membre{" +
