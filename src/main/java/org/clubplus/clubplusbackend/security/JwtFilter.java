@@ -21,46 +21,25 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Filtre Spring Security exécuté une fois par requête pour traiter les tokens JWT (JSON Web Tokens).
- * Ce filtre intercepte les requêtes entrantes, recherche un token JWT dans l'en-tête "Authorization",
- * le valide, et si le token est valide, charge les détails de l'utilisateur correspondant
- * et configure le contexte de sécurité de Spring ({@link SecurityContextHolder}).
- * Cela permet aux mécanismes d'autorisation ultérieurs (ex: {@code @PreAuthorize}) de fonctionner
- * correctement pour les requêtes authentifiées via JWT.
- *
- * <p>Hérite de {@link OncePerRequestFilter} pour garantir une exécution unique par requête.</p>
- *
- * @see OncePerRequestFilter
- * @see SecurityUtils
- * @see AppUserDetailService
- * @see SecurityContextHolder
- * @see UsernamePasswordAuthenticationToken
+ * Filtre Spring Security qui intercepte chaque requête pour valider un token JWT.
+ * <p>
+ * Ce filtre recherche un token dans l'en-tête "Authorization", le valide, et si le token est correct,
+ * il authentifie l'utilisateur pour la durée de la requête en configurant le contexte de sécurité de Spring.
+ * Il s'assure d'être exécuté une seule fois par requête.
  */
-@Component // Marque cette classe comme un bean Spring, la rendant détectable et gérable par le conteneur.
+@Component
 public class JwtFilter extends OncePerRequestFilter {
 
-    // Logger SLF4j pour enregistrer les informations et erreurs liées au traitement JWT.
     private static final Logger log = LoggerFactory.getLogger(JwtFilter.class);
 
-    /**
-     * Utilitaire pour la validation et l'extraction d'informations à partir des tokens JWT.
-     *
-     * @see SecurityUtils
-     */
-    private final SecurityUtils jwtUtils; // Déclaré final pour l'immutabilité après construction
-
-    /**
-     * Service pour charger les {@link UserDetails} à partir de l'identifiant (email) extrait du token JWT.
-     *
-     * @see AppUserDetailService
-     */
+    private final SecurityUtils jwtUtils;
     private final AppUserDetailService appUserDetailService;
 
     /**
-     * Construit le filtre JWT avec les dépendances nécessaires injectées par Spring.
+     * Construit le filtre JWT avec les dépendances nécessaires.
      *
-     * @param jwtUtils             L'instance de {@link SecurityUtils} pour la manipulation des JWT.
-     * @param appUserDetailService L'instance de {@link AppUserDetailService} pour charger les utilisateurs.
+     * @param jwtUtils             L'utilitaire pour la manipulation des tokens JWT.
+     * @param appUserDetailService Le service pour charger les détails de l'utilisateur.
      */
     @Autowired
     public JwtFilter(SecurityUtils jwtUtils, AppUserDetailService appUserDetailService) {
@@ -69,18 +48,18 @@ public class JwtFilter extends OncePerRequestFilter {
     }
 
     /**
-     * Méthode principale du filtre, exécutée pour chaque requête entrante.
-     * Tente d'extraire et de valider un token JWT de l'en-tête "Authorization".
-     * Si un token valide est trouvé, charge les détails de l'utilisateur et configure
-     * le {@link SecurityContextHolder}. Si aucun token n'est présent, ou si le token est invalide,
-     * le contexte de sécurité n'est pas modifié (l'utilisateur reste non authentifié pour Spring Security
-     * à ce stade), et la requête continue dans la chaîne de filtres.
+     * Méthode principale du filtre, appliquée à chaque requête HTTP.
+     * <p>
+     * Elle extrait le token JWT de l'en-tête "Authorization". Si le token est présent et valide,
+     * elle charge les informations de l'utilisateur et met à jour le contexte de sécurité de Spring.
+     * La requête poursuit ensuite son chemin dans la chaîne de filtres, que l'authentification
+     * ait réussi ou non.
      *
-     * @param request     La requête HTTP entrante. Ne doit pas être null.
-     * @param response    La réponse HTTP sortante. Ne doit pas être null.
-     * @param filterChain La chaîne de filtres permettant de passer la requête au filtre suivant. Ne doit pas être null.
-     * @throws ServletException Si une erreur liée au servlet survient.
-     * @throws IOException      Si une erreur d'entrée/sortie survient.
+     * @param request     La requête HTTP.
+     * @param response    La réponse HTTP.
+     * @param filterChain La chaîne de filtres.
+     * @throws ServletException en cas d'erreur de servlet.
+     * @throws IOException      en cas d'erreur d'I/O.
      */
     @Override
     protected void doFilterInternal(@NonNull HttpServletRequest request,
@@ -90,60 +69,49 @@ public class JwtFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
         final String jwt;
-        final String userEmail; // Utiliser un nom plus descriptif que 'subject'
+        final String userEmail;
 
-        // Vérifie si l'en-tête Authorization est présent et commence par "Bearer "
+        // Si l'en-tête est absent ou ne commence pas par "Bearer ", on passe au filtre suivant.
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-            // Pas de token JWT ou format incorrect, on passe au filtre suivant sans rien faire.
             filterChain.doFilter(request, response);
-            return; // Important de retourner ici pour ne pas continuer le traitement JWT.
+            return;
         }
 
-        // Extrait le token JWT (la partie après "Bearer ")
+        // Extrait le token en retirant le préfixe "Bearer ".
         jwt = authHeader.substring(7);
 
         try {
-            // Extrait l'email (sujet) du token. Cette étape implique aussi une validation de base (signature, expiration).
+            // Valide le token et en extrait l'email (le "sujet").
             userEmail = jwtUtils.getSubjectFromJwt(jwt);
 
-            // Vérifie si l'utilisateur est déjà authentifié dans le contexte actuel
-            // (évite de recharger l'utilisateur inutilement si déjà fait par un filtre précédent, peu probable ici mais bonne pratique).
+            // Si l'email est extrait et que l'utilisateur n'est pas déjà authentifié dans le contexte actuel...
             if (userEmail != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // Charge les UserDetails correspondants à l'email extrait du token.
+                // On charge les détails de l'utilisateur depuis la base de données.
                 UserDetails userDetails = this.appUserDetailService.loadUserByUsername(userEmail);
 
-                // (Optionnel mais recommandé) Vérifier si le token est toujours valide selon la logique métier
-                // (ex: le token lui-même n'est pas expiré ET peut-être une vérification supplémentaire si nécessaire).
-                // Ici, getSubjectFromJwt a déjà validé la signature et l'expiration standard.
-
-                // Crée un objet Authentication pour Spring Security.
-                // Note: Le mot de passe est null car l'authentification est basée sur le token validé, pas sur un mdp fourni.
+                // On crée un objet d'authentification pour Spring Security.
                 UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                        userDetails, // Le principal (qui est l'objet UserDetails)
-                        null,        // Pas de credentials (mot de passe) ici
-                        userDetails.getAuthorities() // Les autorités (rôles) de l'utilisateur
+                        userDetails,
+                        null, // Pas de mot de passe ici, l'authentification est basée sur le token.
+                        userDetails.getAuthorities()
                 );
 
-                // Ajoute des détails supplémentaires à l'objet Authentication (ex: IP, session ID).
+                // On enrichit l'objet d'authentification avec les détails de la requête (IP, etc.).
                 authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                // Met à jour le SecurityContextHolder avec l'objet Authentication,
-                // authentifiant ainsi l'utilisateur pour la durée de cette requête.
+                // On place l'objet d'authentification dans le contexte de sécurité.
+                // L'utilisateur est maintenant considéré comme authentifié pour cette requête.
                 SecurityContextHolder.getContext().setAuthentication(authToken);
                 log.debug("Utilisateur '{}' authentifié avec succès via JWT.", userEmail);
             }
         } catch (ExpiredJwtException e) {
             log.warn("Tentative d'accès avec un token JWT expiré: {}", e.getMessage());
-            // Le contexte de sécurité reste null (non authentifié). Laisser la requête continuer
-            // pour que d'autres mécanismes (ex: autorisation d'accès public ou refus) s'appliquent.
         } catch (JwtException | UsernameNotFoundException | IllegalArgumentException e) {
-            // Capture les autres erreurs liées au JWT (malformé, signature invalide, etc.),
-            // ou si l'utilisateur du token n'existe plus, ou autre argument invalide.
-            log.warn("Échec de la validation du token JWT ou chargement utilisateur: {}", e.getMessage());
-            // Le contexte de sécurité reste null (non authentifié).
+            log.warn("Échec de la validation du token JWT : {}", e.getMessage());
         }
-        // Quoi qu'il arrive (token valide, invalide, ou absent), passe la requête au filtre suivant dans la chaîne.
+
+        // On passe la main au filtre suivant dans tous les cas.
         filterChain.doFilter(request, response);
     }
 }
