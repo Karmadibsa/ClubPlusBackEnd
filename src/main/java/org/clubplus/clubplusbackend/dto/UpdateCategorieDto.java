@@ -7,47 +7,35 @@ import lombok.Setter;
 import org.clubplus.clubplusbackend.model.Categorie;
 
 /**
- * DTO (Data Transfer Object) utilisé pour recevoir les données lors de la mise à jour
- * partielle d'une {@link Categorie} existante.
- * Les champs (nom, capacite) sont optionnels dans ce DTO : si un champ est fourni (non null),
- * il sera mis à jour ; s'il est null, la valeur existante dans l'entité sera conservée.
- * Des annotations de validation sont présentes pour s'assurer que *si* une valeur est fournie,
- * elle respecte les contraintes définies (taille pour le nom, minimum pour la capacité).
- *
- * @see Categorie
- * @see org.clubplus.clubplusbackend.controller.CategorieController#updateCategorie(Integer, Integer, UpdateCategorieDto)
+ * DTO (Data Transfer Object) pour la mise à jour partielle d'une {@link Categorie}.
+ * Les champs de ce DTO sont optionnels. Seuls les champs non nuls fournis dans la requête
+ * seront pris en compte pour la mise à jour.
  */
-@Getter // Lombok: Génère les getters.
-@Setter // Lombok: Génère les setters.
+@Getter
+@Setter
 public class UpdateCategorieDto {
 
     /**
-     * Le nouvel ID de la catégorie. Généralement non utilisé pour la mise à jour
-     * car l'ID est fourni via le chemin de l'URL, mais peut être utile dans certains contextes.
+     * Le nouvel ID de la catégorie. Ce champ est généralement ignoré lors d'une mise à jour
+     * via un endpoint RESTful standard, car l'ID est passé dans l'URL.
      */
-    private Integer id; // Optionnel, dépend de l'usage exact.
+    private Integer id;
 
     /**
-     * Le nouveau nom souhaité pour la catégorie.
-     * Ce champ est optionnel. S'il est fourni (non null), il doit avoir
-     * une longueur comprise entre 2 et 100 caractères. S'il est null, le nom
-     * actuel de la catégorie ne sera pas modifié.
+     * Le nouveau nom de la catégorie.
+     * S'il est fourni (non null), sa longueur doit être comprise entre 2 et 100 caractères.
+     * S'il est null, le nom actuel ne sera pas modifié.
      */
-    // Pas de @NotBlank car le champ est optionnel pour la mise à jour.
     @Size(min = 2, max = 100, message = "Si fourni, le nom doit contenir entre 2 et 100 caractères.")
     private String nom;
 
     /**
-     * La nouvelle capacité souhaitée pour la catégorie.
-     * Ce champ est optionnel. S'il est fourni (non null), il doit être
-     * supérieur ou égal à 0. S'il est null, la capacité actuelle ne sera pas modifiée.
-     * La logique métier (service) devra vérifier si la nouvelle capacité est suffisante
-     * par rapport aux réservations existantes.
+     * La nouvelle capacité de la catégorie.
+     * Si elle est fournie (non null), elle doit être supérieure ou égale à 0.
+     * S'il est null, la capacité actuelle ne sera pas modifiée.
+     * La logique métier doit vérifier si cette nouvelle capacité est compatible avec les réservations existantes.
      */
-    // Pas de @NotNull car le champ est optionnel.
     @Min(value = 0, message = "Si fournie, la capacité ne peut pas être négative.")
     private Integer capacite;
 
-    // L'ID de l'événement et l'ID de la catégorie à mettre à jour sont fournis
-    // via @PathVariable dans le contrôleur.
 }

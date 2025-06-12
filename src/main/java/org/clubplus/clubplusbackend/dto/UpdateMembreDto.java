@@ -8,60 +8,48 @@ import org.clubplus.clubplusbackend.model.Membre;
 import java.time.LocalDate;
 
 /**
- * DTO (Data Transfer Object) utilisé pour recevoir les données nécessaires à la mise à jour
- * du profil d'un {@link Membre} existant.
- * Permet de modifier les informations personnelles (nom, prénom, date naissance),
- * les informations de contact (email, téléphone), et l'adresse.
- *
- * <p>La plupart des champs sont marqués comme obligatoires ({@code @NotBlank}/{@code @NotNull}),
- * indiquant une mise à jour complète du profil modifiable. Si une mise à jour partielle était
- * souhaitée, ces annotations pourraient être ajustées.</p>
- *
- * <p>Ne contient pas de champ pour le mot de passe, le rôle, ou le statut actif, car
- * la modification de ces éléments est généralement gérée via des endpoints ou logiques spécifiques.</p>
- *
- * @see Membre
- * @see org.clubplus.clubplusbackend.controller.MembreController (où ce DTO serait utilisé)
+ * DTO (Data Transfer Object) pour la mise à jour du profil d'un {@link Membre}.
+ * <p>
+ * Ce DTO transporte les champs modifiables du profil utilisateur et valide leur contenu.
+ * Tous les champs sont obligatoires, impliquant une mise à jour complète de ces informations.
  */
-@Getter // Lombok: Génère les getters.
-@Setter // Lombok: Génère les setters.
+@Getter
+@Setter
 public class UpdateMembreDto {
 
-    // L'ID du membre à mettre à jour est fourni via @PathVariable ou déterminé par l'utilisateur authentifié.
-
     /**
-     * Le nouveau prénom du membre. Obligatoire.
+     * Le nouveau prénom du membre.
      */
     @NotBlank(message = "Le prénom est requis")
-    @Size(min = 2, max = 50, message = "Le prénom doit contenir entre 2 et 50 caractères.") // Ajout taille
+    @Size(min = 2, max = 50, message = "Le prénom doit contenir entre 2 et 50 caractères.")
     private String prenom;
 
     /**
-     * Le nouveau nom de famille du membre. Obligatoire.
+     * Le nouveau nom de famille du membre.
      */
     @NotBlank(message = "Le nom est requis")
-    @Size(min = 2, max = 50, message = "Le nom doit contenir entre 2 et 50 caractères.") // Ajout taille
+    @Size(min = 2, max = 50, message = "Le nom doit contenir entre 2 et 50 caractères.")
     private String nom;
 
     /**
-     * La nouvelle date de naissance. Obligatoire et doit être dans le passé.
+     * La nouvelle date de naissance du membre. Doit être dans le passé.
      */
     @NotNull(message = "La date de naissance est requise")
-    @Past(message = "La date de naissance doit être dans le passé.") // Validation ajoutée
+    @Past(message = "La date de naissance doit être dans le passé.")
     private LocalDate date_naissance;
 
     /**
-     * Le nouvel email du membre. Obligatoire, format valide. Doit être unique.
+     * Le nouvel email du membre, qui doit rester unique.
      */
     @NotBlank(message = "L'email est requis")
     @Email(message = "Format d'email invalide")
-    @Size(max = 254, message = "L'email ne doit pas dépasser 254 caractères.") // Ajout taille
+    @Size(max = 254, message = "L'email ne doit pas dépasser 254 caractères.")
     private String email;
 
     /**
-     * Le nouveau numéro de téléphone. Obligatoire.
+     * Le nouveau numéro de téléphone du membre.
      */
     @NotBlank(message = "Le téléphone est requis")
-    @Size(max = 20, message = "Le numéro de téléphone ne doit pas dépasser 20 caractères.") // Ajout taille
+    @Size(max = 20, message = "Le numéro de téléphone ne doit pas dépasser 20 caractères.")
     private String telephone;
 }

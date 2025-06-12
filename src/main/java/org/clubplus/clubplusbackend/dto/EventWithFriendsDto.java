@@ -7,35 +7,24 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.clubplus.clubplusbackend.model.Categorie;
 import org.clubplus.clubplusbackend.model.Club;
-import org.clubplus.clubplusbackend.model.Event;
-import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.view.GlobalView;
 
 import java.time.Instant;
 import java.util.List;
 
 /**
- * DTO (Data Transfer Object) représentant un {@link Event} enrichi avec des informations
- * contextuelles spécifiques à l'utilisateur consultant, notamment la liste de ses amis
- * qui participent également à cet événement.
- *
- * <p>Ce DTO est typiquement construit dans la couche Service lorsqu'il faut présenter
- * une vue personnalisée des événements à un utilisateur, en mettant en évidence l'aspect social.</p>
- *
- * <p>Il réutilise les annotations {@link JsonView @JsonView} pour contrôler la sérialisation
- * des champs hérités de l'entité Event, et ajoute un champ spécifique {@code amiParticipants}.</p>
- *
- * @see Event
- * @see Membre (pour la notion d'amis)
- * @see org.clubplus.clubplusbackend.service.EventService (où ce DTO serait construit)
+ * DTO (Data Transfer Object) représentant un événement enrichi avec la liste
+ * des amis de l'utilisateur qui y participent.
+ * <p>
+ * Ce DTO est utilisé pour fournir une vue personnalisée et sociale des événements.
  */
-@Data // Lombok: Ajoute Getters, Setters, toString, equals, hashCode.
-@NoArgsConstructor // Pour flexibilité (ex: mapping)
-@AllArgsConstructor // Pour création directe
-@Builder // Pour construction fluide
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class EventWithFriendsDto {
 
-    // --- Champs hérités/mappés de l'entité Event ---
+    // --- Champs de base de l'événement ---
 
     /**
      * ID unique de l'événement.
@@ -50,21 +39,21 @@ public class EventWithFriendsDto {
     private String nom;
 
     /**
-     * Date et heure de début.
+     * Date et heure de début de l'événement.
      */
     @JsonView(GlobalView.Base.class)
     private Instant startTime;
 
     /**
-     * Date et heure de fin.
+     * Date et heure de fin de l'événement.
      */
-    @JsonView(GlobalView.EventView.class) // Visible dans la vue détaillée de l'Event
+    @JsonView(GlobalView.EventView.class)
     private Instant endTime;
 
     /**
-     * Description détaillée.
+     * Description détaillée de l'événement.
      */
-    @JsonView(GlobalView.EventView.class) // Visible dans la vue détaillée de l'Event
+    @JsonView(GlobalView.EventView.class)
     private String description;
 
     /**
@@ -74,60 +63,54 @@ public class EventWithFriendsDto {
     private String location;
 
     /**
-     * Statut actif de l'événement (true = actif/prévu, false = annulé).
+     * Indique si l'événement est actif (true) ou annulé (false).
      */
     @JsonView(GlobalView.Base.class)
     private Boolean actif;
 
-    // --- Champs calculés hérités/mappés de l'entité Event (@Transient) ---
+    // --- Champs calculés sur les places ---
 
     /**
-     * Capacité totale de l'événement (somme des capacités des catégories).
+     * Capacité totale de l'événement (somme des capacités de ses catégories).
      */
     @JsonView({GlobalView.Base.class, GlobalView.EventView.class})
     private int placeTotal;
 
     /**
-     * Nombre total de places réservées (confirmées) pour l'événement.
+     * Nombre total de places actuellement réservées.
      */
     @JsonView({GlobalView.Base.class, GlobalView.EventView.class})
     private int placeReserve;
 
     /**
-     * Nombre total de places encore disponibles pour l'événement.
+     * Nombre de places encore disponibles.
      */
     @JsonView({GlobalView.Base.class, GlobalView.EventView.class})
     private int placeDisponible;
 
-    // --- Informations liées à l'Event ---
+    // --- Entités liées ---
 
     /**
-     * Liste des catégories associées à l'événement.
-     * Utilise directement l'entité {@link Categorie}. Envisager un DTO simple (CategorieBasicDto)
-     * pour ne pas exposer toute l'entité et éviter les problèmes de chargement LAZY non désirés.
-     * Visible dans la vue de base dans ce DTO.
-     */
-    @JsonView(GlobalView.Base.class) // Ou une vue plus spécifique si nécessaire
-    private List<Categorie> categories; // TODO: Utiliser un CategorieDto simple?
-
-    /**
-     * Le club organisateur de l'événement.
-     * Utilise directement l'entité {@link Club}. Envisager un DTO simple (ClubBasicDto)
-     * pour ne pas exposer toute l'entité et éviter les problèmes de chargement LAZY non désirés.
-     * Visible dans la vue de base dans ce DTO.
-     */
-    @JsonView(GlobalView.Base.class) // Ou une vue plus spécifique si nécessaire
-    private Club organisateur; // TODO: Utiliser un ClubDto simple?
-
-    // --- NOUVEAU CHAMP SPÉCIFIQUE À CE DTO ---
-
-    /**
-     * Liste des noms complets (Prénom Nom) des amis de l'utilisateur courant
-     * qui ont une réservation confirmée pour cet événement.
-     * Cette liste est calculée spécifiquement pour l'utilisateur qui consulte.
-     * Visible dans la vue de base dans ce DTO.
+     * Liste des catégories de l'événement.
+     * Note: Pour une meilleure isolation, l'utilisation d'un DTO simple (ex: CategorieBasicDto) serait préférable.
      */
     @JsonView(GlobalView.Base.class)
-    private List<String> amiParticipants; // Ex: ["Jean Dupont", "Marie Durand"]
+    private List<Categorie> categories;
+
+    /**
+     * Le club qui organise l'événement.
+     * Note: Pour une meilleure isolation, l'utilisation d'un DTO simple (ex: ClubBasicDto) serait préférable.
+     */
+    @JsonView(GlobalView.Base.class)
+    private Club organisateur;
+
+    // --- Champ spécifique à ce DTO ---
+
+    /**
+     * Liste des noms des amis de l'utilisateur courant qui participent à cet événement.
+     * Ce champ est calculé spécifiquement pour l'utilisateur effectuant la requête.
+     */
+    @JsonView(GlobalView.Base.class)
+    private List<String> amiParticipants;
 
 }

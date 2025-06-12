@@ -3,33 +3,27 @@ package org.clubplus.clubplusbackend.dto;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
-import org.clubplus.clubplusbackend.controller.AuthController;
 
 /**
- * DTO (Data Transfer Object) utilisé pour recevoir les informations d'identification
- * (email et mot de passe) d'un utilisateur lors d'une tentative de connexion via l'API.
- * Contient les annotations de validation pour s'assurer que les champs sont présents et valides.
- *
- * @see AuthController#connexion(LoginRequestDto)
+ * DTO (Data Transfer Object) pour une requête de connexion.
+ * Ce DTO valide et transporte l'email et le mot de passe fournis par l'utilisateur
+ * lors d'une tentative d'authentification.
  */
-@Data // Lombok: Raccourci pour @Getter, @Setter, @ToString, @EqualsAndHashCode, @RequiredArgsConstructor.
+@Data
 public class LoginRequestDto {
 
     /**
-     * Adresse email de l'utilisateur tentant de se connecter.
-     * Obligatoire et doit être un format d'email valide.
+     * L'adresse email de l'utilisateur.
+     * Doit être une adresse email bien formée et ne peut pas être vide.
      */
-    @NotBlank(message = "L'email est obligatoire.") // Ne peut pas être null ou vide.
-    @Email(message = "Le format de l'email est invalide.") // Doit respecter le format email standard.
+    @NotBlank(message = "L'email est obligatoire.")
+    @Email(message = "Le format de l'email est invalide.")
     private String email;
 
     /**
-     * Mot de passe fourni par l'utilisateur pour la connexion.
-     * Obligatoire. La validation de la longueur ou de la complexité n'est généralement
-     * pas faite ici, mais lors de l'inscription. Le service d'authentification
-     * comparera ce mot de passe (après hachage si nécessaire côté client, bien que non recommandé)
-     * avec le hash stocké en base de données.
+     * Le mot de passe de l'utilisateur.
+     * Ne peut pas être vide.
      */
-    @NotBlank(message = "Le mot de passe est obligatoire.") // Ne peut pas être null ou vide.
+    @NotBlank(message = "Le mot de passe est obligatoire.")
     private String password;
 }

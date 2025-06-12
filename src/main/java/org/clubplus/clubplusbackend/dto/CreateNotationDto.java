@@ -8,24 +8,16 @@ import lombok.Setter;
 import org.clubplus.clubplusbackend.model.Notation;
 
 /**
- * DTO (Data Transfer Object) utilisé pour recevoir les données d'une nouvelle
- * {@link Notation} soumise par un utilisateur pour un événement.
- * Contient les notes pour chaque critère défini (ambiance, propreté, etc.).
- * Inclut des annotations de validation pour s'assurer que chaque note est fournie
- * et se situe dans la plage autorisée (typiquement 1 à 5).
- *
- * @see Notation
- * @see org.clubplus.clubplusbackend.controller.NotationController (où ce DTO serait probablement utilisé)
+ * DTO (Data Transfer Object) pour la création d'une nouvelle {@link Notation} d'événement.
+ * Ce DTO valide et transporte les notes attribuées par un utilisateur pour différents critères.
  */
-@Getter // Lombok: Génère les getters.
-@Setter // Lombok: Génère les setters.
+@Getter
+@Setter
 public class CreateNotationDto {
 
-    // Les IDs de l'événement et du membre qui note sont généralement fournis
-    // via @PathVariable ou déterminés par l'utilisateur authentifié, pas dans ce DTO.
-
     /**
-     * Note pour l'ambiance. Obligatoire, entre 1 et 5.
+     * Note pour l'ambiance générale de l'événement.
+     * Doit être comprise entre 1 et 5.
      */
     @NotNull(message = "La note d'ambiance est obligatoire.")
     @Min(value = 1, message = "La note d'ambiance doit être au minimum 1")
@@ -33,7 +25,8 @@ public class CreateNotationDto {
     private Integer ambiance;
 
     /**
-     * Note pour la propreté. Obligatoire, entre 1 et 5.
+     * Note pour la propreté des lieux.
+     * Doit être comprise entre 1 et 5.
      */
     @NotNull(message = "La note de propreté est obligatoire.")
     @Min(value = 1, message = "La note de propreté doit être au minimum 1")
@@ -41,7 +34,8 @@ public class CreateNotationDto {
     private Integer proprete;
 
     /**
-     * Note pour l'organisation. Obligatoire, entre 1 et 5.
+     * Note pour l'organisation de l'événement.
+     * Doit être comprise entre 1 et 5.
      */
     @NotNull(message = "La note d'organisation est obligatoire.")
     @Min(value = 1, message = "La note d'organisation doit être au minimum 1")
@@ -49,7 +43,8 @@ public class CreateNotationDto {
     private Integer organisation;
 
     /**
-     * Note pour le fair-play. Obligatoire, entre 1 et 5.
+     * Note pour le fair-play des participants.
+     * Doit être comprise entre 1 et 5.
      */
     @NotNull(message = "La note de fair-play est obligatoire.")
     @Min(value = 1, message = "La note de fair-play doit être au minimum 1")
@@ -57,7 +52,8 @@ public class CreateNotationDto {
     private Integer fairPlay;
 
     /**
-     * Note pour le niveau des joueurs. Obligatoire, entre 1 et 5.
+     * Note pour le niveau général des joueurs.
+     * Doit être comprise entre 1 et 5.
      */
     @NotNull(message = "La note du niveau des joueurs est obligatoire.")
     @Min(value = 1, message = "La note du niveau des joueurs doit être au minimum 1")
