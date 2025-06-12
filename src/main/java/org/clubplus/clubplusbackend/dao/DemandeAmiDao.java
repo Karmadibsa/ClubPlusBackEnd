@@ -1,7 +1,6 @@
 package org.clubplus.clubplusbackend.dao;
 
 import org.clubplus.clubplusbackend.model.DemandeAmi;
-import org.clubplus.clubplusbackend.model.Membre;
 import org.clubplus.clubplusbackend.model.Statut;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -12,33 +11,22 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Interface Repository pour l'entité {@link DemandeAmi}.
- * Fournit les méthodes CRUD de base via {@link JpaRepository} et des méthodes
- * personnalisées pour gérer les demandes d'amitié, vérifier les relations existantes,
- * et lister les demandes ou les amis selon différents critères.
- *
- * @see DemandeAmi
- * @see Membre
- * @see Statut
- * @see JpaRepository
+ * Repository pour l'entité {@link DemandeAmi}.
+ * Fournit les opérations CRUD et des requêtes pour gérer les relations d'amitié.
  */
-@Repository // Indique un bean Repository géré par Spring.
+@Repository
 public interface DemandeAmiDao extends JpaRepository<DemandeAmi, Integer> {
 
     /**
-     * Vérifie s'il existe une demande d'amitié, soit en attente ({@code statusAttente})
-     * soit déjà acceptée ({@code statusAccepte}), entre deux utilisateurs spécifiés,
-     * indépendamment de qui a envoyé la demande initiale (vérification bidirectionnelle).
+     * Vérifie s'il existe une demande d'amitié en attente ou acceptée entre deux utilisateurs.
      * <p>
-     * Utile pour empêcher l'envoi d'une nouvelle demande si une est déjà en cours ou si
-     * les utilisateurs sont déjà amis.
-     * </p>
+     * La vérification est bidirectionnelle pour empêcher les doublons.
      *
      * @param user1Id       L'ID du premier utilisateur.
      * @param user2Id       L'ID du second utilisateur.
-     * @param statusAttente Le statut représentant une demande en attente (ex: {@code Statut.ATTENTE}).
-     * @param statusAccepte Le statut représentant une demande acceptée (ex: {@code Statut.ACCEPTEE}).
-     * @return {@code true} si une telle demande existe, {@code false} sinon.
+     * @param statusAttente Le statut {@code ATTENTE}.
+     * @param statusAccepte Le statut {@code ACCEPTEE}.
+     * @return {@code true} si une demande correspondante existe, {@code false} sinon.
      */
     @Query("SELECT CASE WHEN COUNT(d) > 0 THEN true ELSE false END FROM DemandeAmi d " +
             "WHERE (d.statut = :statusAttente OR d.statut = :statusAccepte) AND " +
@@ -47,24 +35,19 @@ public interface DemandeAmiDao extends JpaRepository<DemandeAmi, Integer> {
     boolean existsPendingOrAcceptedRequestBetween(
             @Param("user1Id") Integer user1Id,
             @Param("user2Id") Integer user2Id,
-            @Param("statusAttente") Statut statusAttente, // Ex: Statut.ATTENTE
-            @Param("statusAccepte") Statut statusAccepte  // Ex: Statut.ACCEPTEE
+            @Param("statusAttente") Statut statusAttente,
+            @Param("statusAccepte") Statut statusAccepte
     );
 
     /**
-     * Recherche l'entité {@link DemandeAmi} spécifique qui représente une relation d'amitié
-     * **acceptée** entre deux utilisateurs donnés, indépendamment de qui a envoyé la demande
-     * initiale (vérification bidirectionnelle).
+     * Recherche la demande d'amitié acceptée entre deux utilisateurs.
      * <p>
-     * Utilisé principalement pour retrouver l'enregistrement représentant une amitié existante,
-     * par exemple avant de la supprimer.
-     * </p>
+     * La recherche est bidirectionnelle. Utile pour retrouver l'entité représentant une amitié.
      *
      * @param user1Id L'ID du premier utilisateur.
      * @param user2Id L'ID du second utilisateur.
-     * @param statut  Le statut recherché (doit être {@code Statut.ACCEPTEE} lors de l'appel).
-     * @return Un {@link Optional} contenant l'entité {@link DemandeAmi} de l'amitié acceptée si trouvée,
-     * sinon un Optional vide.
+     * @param statut  Le statut de la demande (doit être {@code Statut.ACCEPTEE}).
+     * @return Un {@link Optional} contenant la demande si elle est trouvée.
      */
     @Query("SELECT d FROM DemandeAmi d WHERE d.statut = :statut AND " +
             "((d.envoyeur.id = :user1Id AND d.recepteur.id = :user2Id) OR " +
@@ -72,68 +55,55 @@ public interface DemandeAmiDao extends JpaRepository<DemandeAmi, Integer> {
     Optional<DemandeAmi> findAcceptedFriendshipBetween(
             @Param("user1Id") Integer user1Id,
             @Param("user2Id") Integer user2Id,
-            @Param("statut") Statut statut // Passer Statut.ACCEPTEE ici
+            @Param("statut") Statut statut
     );
 
     /**
-     * Recherche toutes les demandes d'amitié reçues par un membre spécifique
-     * et ayant un statut donné (ex: ATTENTE, ACCEPTEE).
+     * Recherche les demandes d'amitié par destinataire et par statut.
      *
-     * @param recepteurId L'ID du {@link Membre} destinataire des demandes.
-     * @param statut      Le {@link Statut} des demandes à rechercher.
-     * @return Une liste de {@link DemandeAmi} correspondantes.
+     * @param recepteurId L'ID du membre destinataire.
+     * @param statut      Le statut des demandes à rechercher (ex: ATTENTE).
+     * @return Une liste de demandes correspondantes.
      */
     List<DemandeAmi> findByRecepteurIdAndStatut(Integer recepteurId, Statut statut);
 
     /**
-     * Recherche toutes les demandes d'amitié envoyées par un membre spécifique
-     * et ayant un statut donné (ex: ATTENTE).
+     * Recherche les demandes d'amitié par envoyeur et par statut.
      *
-     * @param envoyeurId L'ID du {@link Membre} expéditeur des demandes.
-     * @param statut     Le {@link Statut} des demandes à rechercher.
-     * @return Une liste de {@link DemandeAmi} correspondantes.
+     * @param envoyeurId L'ID du membre expéditeur.
+     * @param statut     Le statut des demandes à rechercher (ex: ATTENTE).
+     * @return Une liste de demandes correspondantes.
      */
     List<DemandeAmi> findByEnvoyeurIdAndStatut(Integer envoyeurId, Statut statut);
 
-    // --- Requêtes optimisées pour lister les amis ---
-
     /**
-     * Récupère uniquement les identifiants (IDs) des membres qui sont amis avec l'utilisateur spécifié.
-     * L'amitié est définie par une {@link DemandeAmi} ayant le statut fourni (normalement {@code Statut.ACCEPTEE}).
-     * La requête sélectionne l'ID de l'"autre" membre dans la relation (celui qui n'est pas {@code userId}).
+     * Récupère les IDs des amis d'un utilisateur.
      * <p>
-     * C'est une requête optimisée car elle évite de charger les entités {@link Membre} complètes.
-     * </p>
+     * Requête optimisée qui ne charge pas les entités Membre complètes.
      *
-     * @param userId L'ID de l'utilisateur dont on veut les amis.
-     * @param statut Le statut définissant une amitié (doit être {@code Statut.ACCEPTEE} lors de l'appel).
-     * @return Une liste d'{@link Integer} représentant les IDs des amis de l'utilisateur.
+     * @param userId L'ID de l'utilisateur.
+     * @param statut Le statut définissant une amitié (doit être {@code Statut.ACCEPTEE}).
+     * @return Une liste d'IDs des amis.
      */
     @Query("SELECT CASE WHEN d.envoyeur.id = :userId THEN d.recepteur.id ELSE d.envoyeur.id END " +
             "FROM DemandeAmi d WHERE d.statut = :statut AND (d.envoyeur.id = :userId OR d.recepteur.id = :userId)")
-    List<Integer> findFriendIdsOfUser(@Param("userId") Integer userId, @Param("statut") Statut statut); // Passer Statut.ACCEPTEE ici
-
-    // --- Méthodes par défaut (Commodité) ---
+    List<Integer> findFriendIdsOfUser(@Param("userId") Integer userId, @Param("statut") Statut statut);
 
     /**
-     * Méthode de commodité (via {@code default} dans l'interface) pour trouver les demandes d'ami
-     * reçues par un utilisateur qui sont actuellement en attente (statut = {@code Statut.ATTENTE}).
-     * Appelle {@link #findByRecepteurIdAndStatut(Integer, Statut)}.
+     * Méthode de commodité pour trouver les demandes reçues en attente.
      *
      * @param recepteurId L'ID du membre destinataire.
-     * @return Une liste des {@link DemandeAmi} en attente reçues.
+     * @return Une liste des demandes en attente reçues.
      */
     default List<DemandeAmi> findPendingReceivedRequests(Integer recepteurId) {
         return findByRecepteurIdAndStatut(recepteurId, Statut.ATTENTE);
     }
 
     /**
-     * Méthode de commodité (via {@code default} dans l'interface) pour trouver les demandes d'ami
-     * envoyées par un utilisateur qui sont actuellement en attente (statut = {@code Statut.ATTENTE}).
-     * Appelle {@link #findByEnvoyeurIdAndStatut(Integer, Statut)}.
+     * Méthode de commodité pour trouver les demandes envoyées en attente.
      *
      * @param envoyeurId L'ID du membre expéditeur.
-     * @return Une liste des {@link DemandeAmi} en attente envoyées.
+     * @return Une liste des demandes en attente envoyées.
      */
     default List<DemandeAmi> findPendingSentRequests(Integer envoyeurId) {
         return findByEnvoyeurIdAndStatut(envoyeurId, Statut.ATTENTE);

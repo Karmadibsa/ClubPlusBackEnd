@@ -1,8 +1,6 @@
 package org.clubplus.clubplusbackend.dao;
 
-import org.clubplus.clubplusbackend.model.Club;
 import org.clubplus.clubplusbackend.model.Membre;
-import org.clubplus.clubplusbackend.model.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -12,87 +10,84 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Interface Repository pour l'entité {@link Membre}.
- * Fournit les méthodes CRUD de base via {@link JpaRepository} et des méthodes
- * personnalisées pour rechercher des membres par email, code ami, appartenance à un club,
- * ou rôle spécifique (admin), ainsi que pour vérifier l'unicité de l'email.
- *
- * <p>Note: L'entité {@code Membre} étant annotée avec {@code @Where(clause = "actif = true")},
- * la plupart des méthodes de recherche excluront par défaut les membres marqués comme inactifs.</p>
- *
- * @see Membre
- * @see JpaRepository
+ * Repository pour l'entité {@link Membre}.
+ * Fournit les opérations CRUD et des requêtes pour trouver des membres par critères uniques.
+ * <p>
+ * Note: L'annotation {@code @Where(clause = "actif = true")} sur l'entité {@code Membre}
+ * filtre la plupart des requêtes pour ne retourner que les membres actifs.
+ * </p>
  */
-@Repository // Indique un bean Repository géré par Spring.
+@Repository
 public interface MembreDao extends JpaRepository<Membre, Integer> {
 
     /**
-     * Recherche un membre (actif par défaut) par son adresse email exacte.
-     * Principalement utilisé pour le processus de connexion et pour vérifier si un email existe déjà.
+     * Recherche un membre par son adresse email.
+     * <p>
+     * Utilisé pour la connexion et pour vérifier l'existence d'un email.
      *
-     * @param email L'adresse email du membre à rechercher.
-     * @return Un {@link Optional} contenant le {@link Membre} si trouvé (et actif), sinon un Optional vide.
+     * @param email L'adresse email du membre.
+     * @return Un {@link Optional} contenant le membre s'il est trouvé.
      */
     Optional<Membre> findByEmail(String email);
 
     /**
-     * Vérifie de manière optimisée si un membre (actif ou inactif, selon l'implémentation exacte de @Where vs exists)
-     * existe déjà avec l'adresse email spécifiée.
-     * Utile lors de la création d'un nouveau membre pour garantir l'unicité de l'email.
+     * Vérifie si un email est déjà utilisé.
      *
      * @param email L'adresse email à vérifier.
-     * @return {@code true} si l'email est déjà utilisé, {@code false} sinon.
+     * @return {@code true} si l'email existe, {@code false} sinon.
      */
     boolean existsByEmail(String email);
 
     /**
-     * Vérifie s'il existe un *autre* membre (ayant un ID différent de celui fourni)
-     * qui possède déjà l'adresse email spécifiée.
-     * Très utile pour valider l'unicité de l'email lors de la mise à jour du profil d'un membre existant.
+     * Vérifie si un email est déjà utilisé par un autre membre (ID différent).
+     * <p>
+     * Utile pour la validation lors de la mise à jour d'un profil.
      *
      * @param email L'adresse email à vérifier.
-     * @param id    L'ID du membre que l'on met à jour (à exclure de la vérification).
-     * @return {@code true} si un autre membre utilise déjà cet email, {@code false} sinon.
+     * @param id    L'ID du membre à exclure de la recherche.
+     * @return {@code true} si l'email est utilisé par un autre membre, {@code false} sinon.
      */
     boolean existsByEmailAndIdNot(String email, Integer id);
 
     /**
-     * Recherche le membre unique qui a le rôle {@code ADMIN} et qui est associé
-     * (via une {@link org.clubplus.clubplusbackend.model.Adhesion}) au club spécifié.
-     * <p>
-     * Suppose qu'il ne peut y avoir qu'un seul administrateur par club selon ce modèle.
-     * </p>
+     * Recherche l'administrateur (rôle ADMIN) d'un club spécifique.
      *
-     * @param clubId L'ID du {@link Club} dont on cherche l'administrateur.
-     * @return Un {@link Optional} contenant le {@link Membre} administrateur si trouvé, sinon un Optional vide.
-     * @see Role#ADMIN
+     * @param clubId L'ID du club.
+     * @return Un {@link Optional} contenant le membre administrateur.
      */
-    // Correction appliquée pour utiliser la chaîne 'ADMIN' ou un paramètre Enum
     @Query("SELECT m FROM Membre m JOIN m.adhesions a WHERE a.club.id = :clubId AND m.role = 'ADMIN'")
-    Optional<Membre> findAdminByClubId(@Param("clubId") Integer clubId); // Version avec 'ADMIN' codé en dur
+    Optional<Membre> findAdminByClubId(@Param("clubId") Integer clubId);
 
 
     /**
-     * Recherche tous les membres (actifs par défaut) qui ont une adhésion au club spécifié.
-     * Méthode dérivée automatiquement par Spring Data JPA basée sur le nom et la structure des entités.
+     * Recherche tous les membres d'un club spécifique.
      *
-     * @param clubId L'ID du {@link Club}.
-     * @return Une liste des {@link Membre}s appartenant au club.
+     * @param clubId L'ID du club.
+     * @return Une liste des membres du club.
      */
     List<Membre> findByAdhesionsClubId(Integer clubId);
 
     /**
-     * Recherche un membre (actif par défaut) par son code ami unique.
+     * Recherche un membre par son code ami unique.
      *
-     * @param codeAmi Le code ami unique à rechercher (ex: "AMIS-000123").
-     * @return Un {@link Optional} contenant le {@link Membre} si trouvé (et actif), sinon un Optional vide.
+     * @param codeAmi Le code ami à rechercher.
+     * @return Un {@link Optional} contenant le membre s'il est trouvé.
      */
     Optional<Membre> findByCodeAmi(String codeAmi);
 
-
+    /**
+     * Recherche un membre par son token de vérification d'email.
+     *
+     * @param verificationToken Le token de vérification.
+     * @return Un {@link Optional} contenant le membre associé au token.
+     */
     Optional<Membre> findByVerificationToken(String verificationToken);
 
+    /**
+     * Recherche un membre par son token de réinitialisation de mot de passe.
+     *
+     * @param resetPasswordToken Le token de réinitialisation.
+     * @return Un {@link Optional} contenant le membre associé au token.
+     */
     Optional<Membre> findByResetPasswordToken(String resetPasswordToken);
-
 }
-

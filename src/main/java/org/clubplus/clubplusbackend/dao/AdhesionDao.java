@@ -14,62 +14,46 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- * Interface Repository pour l'entité {@link Adhesion}.
- * Fournit les méthodes CRUD de base via {@link JpaRepository} ainsi que des méthodes
- * personnalisées pour interroger les données d'adhésion, vérifier l'existence,
- * et récupérer des statistiques.
- *
- * @see Adhesion
- * @see JpaRepository
+ * Repository pour l'entité {@link Adhesion}.
+ * Fournit les opérations CRUD et des requêtes personnalisées pour la gestion des adhésions.
  */
-@Repository // Indique que c'est un bean Repository géré par Spring.
+@Repository
 public interface AdhesionDao extends JpaRepository<Adhesion, Integer> {
 
     /**
-     * Recherche l'adhésion unique (si elle existe) entre un membre spécifique et un club spécifique.
-     * Utilise les identifiants du membre et du club.
+     * Recherche une adhésion spécifique entre un membre et un club.
      *
      * @param membreId L'ID du {@link Membre}.
      * @param clubId   L'ID du {@link Club}.
-     * @return Un {@link Optional} contenant l'{@link Adhesion} si trouvée, sinon un Optional vide.
-     * Utile pour vérifier si une adhésion existe déjà avant d'en créer une nouvelle.
+     * @return Un {@link Optional} contenant l'adhésion si elle existe.
      */
     Optional<Adhesion> findByMembreIdAndClubId(Integer membreId, Integer clubId);
 
     /**
-     * Vérifie de manière optimisée si une adhésion existe entre un membre spécifique et un club spécifique.
-     * Préférable à {@code findByMembreIdAndClubId().isPresent()} si seul le test d'existence est requis.
+     * Vérifie si une adhésion existe entre un membre et un club.
+     * <p>
+     * Plus performant que {@code findByMembreIdAndClubId().isPresent()} pour un simple test d'existence.
      *
      * @param membreId L'ID du {@link Membre}.
      * @param clubId   L'ID du {@link Club}.
-     * @return {@code true} si une adhésion existe pour cette paire membre/club, {@code false} sinon.
-     * Très utilisé dans les logiques de contrôle d'accès (ex: {@code SecurityService}).
+     * @return {@code true} si une adhésion existe, {@code false} sinon.
      */
     boolean existsByMembreIdAndClubId(Integer membreId, Integer clubId);
 
     /**
-     * Compte le nombre total d'adhésions (donc de clubs) pour un membre spécifique.
+     * Compte le nombre de clubs auxquels un membre adhère.
      *
      * @param membreId L'ID du {@link Membre}.
-     * @return Le nombre total ({@code long}) de clubs auxquels le membre adhère.
+     * @return Le nombre total d'adhésions.
      */
     long countByMembreId(Integer membreId);
 
     /**
-     * Récupère le décompte mensuel des nouvelles adhésions pour un club spécifique,
-     * à partir d'une date donnée.
-     * Utilise les fonctions SQL {@code YEAR} et {@code MONTH} (via {@code FUNCTION}) pour agréger les résultats.
-     * Les résultats sont groupés par année et par mois, puis triés chronologiquement.
+     * Calcule le décompte mensuel des nouvelles adhésions pour un club depuis une date donnée.
      *
-     * @param clubId    L'ID du {@link Club} pour lequel compter les adhésions.
-     * @param startDate La date et heure à partir desquelles inclure les adhésions (inclusive).
-     * @return Une liste de tableaux d'objets ({@code List<Object[]>}). Chaque tableau contient :
-     * <ul>
-     *     <li>Index 0: L'année ({@link Integer})</li>
-     *     <li>Index 1: Le mois ({@link Integer}, 1-12)</li>
-     *     <li>Index 2: Le nombre d'adhésions pour ce mois/année ({@link Number}, typiquement Long ou BigInteger)</li>
-     * </ul>
-     * La liste est vide si aucune adhésion n'est trouvée pour la période/club.
+     * @param clubId    L'ID du club.
+     * @param startDate La date de début pour le calcul.
+     * @return Une liste de tableaux d'objets [année (Integer), mois (Integer), nombre (Number)].
      */
     @Query("SELECT FUNCTION('YEAR', a.dateAdhesion), FUNCTION('MONTH', a.dateAdhesion), COUNT(a.id) " +
             "FROM Adhesion a " +
@@ -79,49 +63,42 @@ public interface AdhesionDao extends JpaRepository<Adhesion, Integer> {
     List<Object[]> findMonthlyAdhesionsToClubSince(@Param("clubId") Integer clubId, @Param("startDate") Instant startDate);
 
     /**
-     * Récupère uniquement les identifiants (IDs) des clubs auxquels un membre spécifique adhère.
-     * C'est une requête optimisée qui évite de charger les entités {@link Club} complètes
-     * lorsque seuls les IDs sont nécessaires.
+     * Récupère les IDs de tous les clubs auxquels un membre adhère.
+     * <p>
+     * Requête optimisée qui ne charge pas les entités Club complètes.
      *
-     * @param membreId L'ID du {@link Membre}.
-     * @return Une liste d'{@link Integer} représentant les IDs des clubs du membre.
-     * La liste est vide si le membre n'a aucune adhésion.
+     * @param membreId L'ID du membre.
+     * @return Une liste d'IDs de clubs.
      */
     @Query("SELECT a.club.id FROM Adhesion a WHERE a.membre.id = :membreId")
     List<Integer> findClubIdsByMembreId(@Param("membreId") Integer membreId);
 
     /**
-     * Compte le nombre de membres **actifs** ({@code membre.actif = true}) dans un club spécifique.
+     * Compte le nombre de membres actifs dans un club.
      *
-     * @param clubId L'ID du {@link Club}.
-     * @return Le nombre total ({@code long}) de membres actifs dans le club.
+     * @param clubId L'ID du club.
+     * @return Le nombre de membres actifs.
      */
     @Query("SELECT COUNT(a) FROM Adhesion a JOIN a.membre m WHERE a.club.id = :clubId AND m.actif = true")
     long countActiveMembersByClubId(@Param("clubId") Integer clubId);
 
     /**
-     * Récupère les identifiants (IDs) des clubs **actifs** ({@code club.actif = true})
-     * auxquels un membre spécifique adhère.
-     * Filtre les clubs qui auraient pu être désactivés après l'adhésion du membre.
+     * Récupère les IDs des clubs actifs auxquels un membre adhère.
      *
-     * @param membreId L'ID du {@link Membre}.
-     * @return Une liste d'{@link Integer} représentant les IDs des clubs actifs du membre.
+     * @param membreId L'ID du membre.
+     * @return Une liste d'IDs de clubs actifs.
      */
     @Query("SELECT a.club.id FROM Adhesion a WHERE a.membre.id = :membreId AND a.club.actif = true")
     List<Integer> findActiveClubIdsByMembreId(@Param("membreId") Integer membreId);
 
     /**
-     * Récupère les adhésions les plus récentes pour un club donné, en ne considérant
-     * que les membres actuellement actifs ({@code membre.actif = true}).
-     * Utilise {@code JOIN FETCH} pour charger également les données des membres associés
-     * dans la même requête (optimisation EAGER pour ce cas d'usage).
-     * Les résultats sont triés par date d'adhésion décroissante (les plus récents d'abord).
-     * Le nombre de résultats retournés est limité par le paramètre {@code limit}.
+     * Récupère les adhésions les plus récentes de membres actifs pour un club, avec une limite.
+     * <p>
+     * Utilise {@code JOIN FETCH} pour charger les membres associés et éviter le N+1 select.
      *
-     * @param clubId L'ID du {@link Club}.
-     * @param limit  Un objet {@link Limit} spécifiant le nombre maximum d'adhésions à retourner.
-     * @return Une liste d'{@link Adhesion} (avec les {@link Membre}s associés chargés), limitée en taille.
-     * @see Limit
+     * @param clubId L'ID du club.
+     * @param limit  Le nombre maximum de résultats à retourner.
+     * @return Une liste limitée des adhésions les plus récentes.
      */
     @Query("SELECT a FROM Adhesion a JOIN FETCH a.membre m WHERE a.club.id = :clubId AND m.actif = true ORDER BY a.dateAdhesion DESC")
     List<Adhesion> findLatestActiveMembersAdhesionsWithLimit(@Param("clubId") Integer clubId, Limit limit);
