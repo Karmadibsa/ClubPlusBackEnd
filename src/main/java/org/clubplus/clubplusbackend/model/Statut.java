@@ -21,5 +21,5 @@ public enum Statut {
      * La demande d'ami a été refusée par le destinataire.
      * Aucune relation d'amitié n'est établie.
      */
-    REFUSE
+    REFUSEE
 }

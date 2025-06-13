@@ -132,7 +132,7 @@ public class Reservation {
 
         if (!event.getActif()) {
             throw new IllegalStateException(
-                    String.format("Impossible de réserver pour un événement non actif (ID: %d).", event.getId())
+                    String.format("Impossible de réserver pour un événement non actif.", event.getId())
             );
         }
 

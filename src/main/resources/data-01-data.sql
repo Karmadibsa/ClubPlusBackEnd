@@ -353,48 +353,48 @@ VALUES -- Interactions entre MEMBREs uniquement
        -- Ajoutez ces lignes après vos `VALUES` existants pour la table `demande_ami`
 
        -- Demandes impliquant Bob (ID 3)
-       (3, 5, 'ATTENTE', '2025-04-28 10:00:00'),   -- Bob (3) redemande Eva (5) (précédente refusée)
-       (3, 6, 'ATTENTE', '2025-04-29 11:00:00'),   -- Bob (3) demande Ethelda (6)
-       (3, 7, 'ATTENTE', '2025-04-30 12:00:00'),   -- Bob (3) demande Arnoldo (7)
-       (3, 8, 'ACCEPTE', '2025-04-15 09:00:00'),   -- Bob (3) avait demandé Goran (8) (Accepté)
-       (3, 9, 'REFUSE', '2025-04-16 10:00:00'),    -- Bob (3) avait demandé Christoph (9) (Refusé)
-       (3, 10, 'ACCEPTE', '2025-04-17 11:00:00'),  -- Bob (3) avait demandé Perceval (10) (Accepté)
+       (3, 5, 'ATTENTE', '2025-04-28 10:00:00'),    -- Bob (3) redemande Eva (5) (précédente refusée)
+       (3, 6, 'ATTENTE', '2025-04-29 11:00:00'),    -- Bob (3) demande Ethelda (6)
+       (3, 7, 'ATTENTE', '2025-04-30 12:00:00'),    -- Bob (3) demande Arnoldo (7)
+       (3, 8, 'ACCEPTEE', '2025-04-15 09:00:00'),   -- Bob (3) avait demandé Goran (8) (Accepté)
+       (3, 9, 'REFUSEE', '2025-04-16 10:00:00'),    -- Bob (3) avait demandé Christoph (9) (Refusé)
+       (3, 10, 'ACCEPTEE', '2025-04-17 11:00:00'),  -- Bob (3) avait demandé Perceval (10) (Accepté)
        -- Note: (3, 11, ...) est déjà dans votre liste en ATTENTE, on peut le laisser ou le modifier plus tard
-       (3, 12, 'ATTENTE', '2025-05-01 08:00:00'),  -- Bob (3) demande Lorene (12)
-       (3, 14, 'ATTENTE', '2025-05-01 09:00:00'),  -- Bob (3) demande Winslow (14)
-       (3, 16, 'ATTENTE', '2025-05-01 10:00:00'),  -- Bob (3) demande Jillene (16)
-       (3, 20, 'ATTENTE', '2025-05-01 11:00:00'),  -- Bob (3) demande Rafaello (20)
-       (3, 25, 'ATTENTE', '2025-05-01 12:00:00'),  -- Bob (3) demande Lisa (25)
-       (18, 3, 'ATTENTE', '2025-05-02 09:00:00'),  -- Mortimer (18) demande Bob (3)
-       (21, 3, 'ACCEPTE', '2025-04-20 10:00:00'),  -- Bron (21) avait demandé Bob (3) (Accepté)
-       (28, 3, 'ATTENTE', '2025-05-02 11:00:00'),  -- Vincent (28) demande Bob (3)
-       (30, 3, 'REFUSE', '2025-04-22 13:00:00'),   -- Tomasine (30) avait demandé Bob (3) (Refusé)
+       (3, 12, 'ATTENTE', '2025-05-01 08:00:00'),   -- Bob (3) demande Lorene (12)
+       (3, 14, 'ATTENTE', '2025-05-01 09:00:00'),   -- Bob (3) demande Winslow (14)
+       (3, 16, 'ATTENTE', '2025-05-01 10:00:00'),   -- Bob (3) demande Jillene (16)
+       (3, 20, 'ATTENTE', '2025-05-01 11:00:00'),   -- Bob (3) demande Rafaello (20)
+       (3, 25, 'ATTENTE', '2025-05-01 12:00:00'),   -- Bob (3) demande Lisa (25)
+       (18, 3, 'ATTENTE', '2025-05-02 09:00:00'),   -- Mortimer (18) demande Bob (3)
+       (21, 3, 'ACCEPTEE', '2025-04-20 10:00:00'),  -- Bron (21) avait demandé Bob (3) (Accepté)
+       (28, 3, 'ATTENTE', '2025-05-02 11:00:00'),   -- Vincent (28) demande Bob (3)
+       (30, 3, 'REFUSEE', '2025-04-22 13:00:00'),   -- Tomasine (30) avait demandé Bob (3) (Refusé)
 
        -- Autres demandes variées (IDs 4-30)
-       (4, 6, 'ACCEPTE', '2025-03-20 10:00:00'),   -- David (4) et Ethelda (6) sont amis
-       (4, 7, 'ATTENTE', '2025-04-30 14:00:00'),   -- David (4) demande Arnoldo (7)
-       (5, 6, 'REFUSE', '2025-04-01 09:00:00'),    -- Eva (5) a refusé Ethelda (6)
-       (5, 8, 'ATTENTE', '2025-05-01 13:00:00'),   -- Eva (5) demande Goran (8)
-       (6, 9, 'ATTENTE', '2025-04-28 15:00:00'),   -- Ethelda (6) demande Christoph (9)
-       (7, 10, 'ACCEPTE', '2025-04-05 16:00:00'),  -- Arnoldo (7) et Perceval (10) sont amis
-       (8, 11, 'ATTENTE', '2025-04-29 17:00:00'),  -- Goran (8) demande Maryl (11)
-       (9, 12, 'REFUSE', '2025-04-11 18:00:00'),   -- Christoph (9) a refusé Lorene (12)
-       (10, 13, 'ATTENTE', '2025-04-30 19:00:00'), -- Perceval (10) demande Lilias (13)
-       (11, 14, 'ACCEPTE', '2025-04-15 20:00:00'), -- Maryl (11) et Winslow (14) sont amis
-       (12, 15, 'ATTENTE', '2025-05-01 21:00:00'), -- Lorene (12) demande Mary (15)
-       (13, 16, 'REFUSE', '2025-04-18 08:00:00'),  -- Lilias (13) a refusé Jillene (16)
-       (14, 17, 'ATTENTE', '2025-05-02 09:30:00'), -- Winslow (14) demande Kara (17)
-       (15, 18, 'ACCEPTE', '2025-04-22 10:30:00'), -- Mary (15) et Mortimer (18) sont amis
-       (16, 19, 'ATTENTE', '2025-05-02 11:30:00'), -- Jillene (16) demande Dagmar (19)
-       (17, 20, 'REFUSE', '2025-04-25 12:30:00'),  -- Kara (17) a refusé Rafaello (20)
-       (19, 21, 'ATTENTE', '2025-05-02 13:30:00'), -- Dagmar (19) demande Bron (21)
-       (20, 22, 'ACCEPTE', '2025-04-28 14:30:00'), -- Rafaello (20) et Codee (22) sont amis
-       (22, 23, 'ATTENTE', '2025-05-02 15:30:00'), -- Codee (22) demande Tandie (23)
-       (23, 24, 'REFUSE', '2025-04-30 16:30:00'),  -- Tandie (23) a refusé Herminia (24)
-       (24, 25, 'ATTENTE', '2025-05-02 17:30:00'), -- Herminia (24) demande Lisa (25)
-       (25, 26, 'ACCEPTE', '2025-05-01 18:30:00'), -- Lisa (25) et Skye (26) sont amis
-       (26, 27, 'ATTENTE', '2025-05-02 19:30:00'), -- Skye (26) demande Chalmers (27)
-       (27, 29, 'REFUSE', '2025-05-01 20:30:00'),  -- Chalmers (27) a refusé Aidan (29)
+       (4, 6, 'ACCEPTEE', '2025-03-20 10:00:00'),   -- David (4) et Ethelda (6) sont amis
+       (4, 7, 'ATTENTE', '2025-04-30 14:00:00'),    -- David (4) demande Arnoldo (7)
+       (5, 6, 'REFUSEE', '2025-04-01 09:00:00'),    -- Eva (5) a refusé Ethelda (6)
+       (5, 8, 'ATTENTE', '2025-05-01 13:00:00'),    -- Eva (5) demande Goran (8)
+       (6, 9, 'ATTENTE', '2025-04-28 15:00:00'),    -- Ethelda (6) demande Christoph (9)
+       (7, 10, 'ACCEPTEE', '2025-04-05 16:00:00'),  -- Arnoldo (7) et Perceval (10) sont amis
+       (8, 11, 'ATTENTE', '2025-04-29 17:00:00'),   -- Goran (8) demande Maryl (11)
+       (9, 12, 'REFUSEE', '2025-04-11 18:00:00'),   -- Christoph (9) a refusé Lorene (12)
+       (10, 13, 'ATTENTE', '2025-04-30 19:00:00'),  -- Perceval (10) demande Lilias (13)
+       (11, 14, 'ACCEPTEE', '2025-04-15 20:00:00'), -- Maryl (11) et Winslow (14) sont amis
+       (12, 15, 'ATTENTE', '2025-05-01 21:00:00'),  -- Lorene (12) demande Mary (15)
+       (13, 16, 'REFUSEE', '2025-04-18 08:00:00'),  -- Lilias (13) a refusé Jillene (16)
+       (14, 17, 'ATTENTE', '2025-05-02 09:30:00'),  -- Winslow (14) demande Kara (17)
+       (15, 18, 'ACCEPTEE', '2025-04-22 10:30:00'), -- Mary (15) et Mortimer (18) sont amis
+       (16, 19, 'ATTENTE', '2025-05-02 11:30:00'),  -- Jillene (16) demande Dagmar (19)
+       (17, 20, 'REFUSEE', '2025-04-25 12:30:00'),  -- Kara (17) a refusé Rafaello (20)
+       (19, 21, 'ATTENTE', '2025-05-02 13:30:00'),  -- Dagmar (19) demande Bron (21)
+       (20, 22, 'ACCEPTEE', '2025-04-28 14:30:00'), -- Rafaello (20) et Codee (22) sont amis
+       (22, 23, 'ATTENTE', '2025-05-02 15:30:00'),  -- Codee (22) demande Tandie (23)
+       (23, 24, 'REFUSEE', '2025-04-30 16:30:00'),  -- Tandie (23) a refusé Herminia (24)
+       (24, 25, 'ATTENTE', '2025-05-02 17:30:00'),  -- Herminia (24) demande Lisa (25)
+       (25, 26, 'ACCEPTEE', '2025-05-01 18:30:00'), -- Lisa (25) et Skye (26) sont amis
+       (26, 27, 'ATTENTE', '2025-05-02 19:30:00'),  -- Skye (26) demande Chalmers (27)
+       (27, 29, 'REFUSEE', '2025-05-01 20:30:00'),  -- Chalmers (27) a refusé Aidan (29)
        (29, 30, 'ATTENTE', '2025-05-02 21:30:00');
 -- Aidan (29) demande Tomasine (30)
 

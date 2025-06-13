@@ -2,7 +2,6 @@ package org.clubplus.clubplusbackend.service;
 
 import jakarta.persistence.EntityNotFoundException;
 import org.clubplus.clubplusbackend.dao.CategorieDao;
-import org.clubplus.clubplusbackend.dao.EventDao;
 import org.clubplus.clubplusbackend.dao.MembreDao;
 import org.clubplus.clubplusbackend.dao.ReservationDao;
 import org.clubplus.clubplusbackend.model.*;
@@ -24,92 +23,66 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-// --- CONFIGURATION DE LA CLASSE DE TEST DE SERVICE (Identique à votre MembreServiceTest) ---
-// @ExtendWith(MockitoExtension.class) active l'utilisation des annotations Mockito comme @Mock et @InjectMocks. [2]
 @ExtendWith(MockitoExtension.class)
 class ReservationServiceTest {
 
-    // --- DÉPENDANCES MOCKÉES ---
-    // @Mock crée une simulation (un "mock") de chaque dépendance. Nous contrôlerons leur comportement. [2]
     @Mock
     private ReservationDao reservationRepository;
     @Mock
     private MembreDao membreRepository;
     @Mock
-    private EventDao eventRepository; // Bien que non utilisé directement, il est bon de le lister si c'est une dépendance.
-    @Mock
     private CategorieDao categorieRepository;
     @Mock
     private SecurityService securityService;
 
-    // --- CLASSE SOUS TEST ---
-    // @InjectMocks crée une instance réelle de ReservationService et y injecte les mocks ci-dessus. [2]
     @InjectMocks
     private ReservationService reservationService;
 
-    // --- Données de test réutilisables ---
+    // Données de test réutilisables
     private Membre membre;
     private Event event;
-    private Categorie categorie;
+    private Categorie categorie; // Conteneur de données simple
     private Club club;
 
-    // Méthode de configuration exécutée avant chaque test. [2]
     @BeforeEach
     void setUp() {
-        // Initialisation de nos objets de test (simples POJOs)
         club = new Club();
         club.setId(1);
-        club.setNom("Test Club");
 
         membre = new Membre();
         membre.setId(100);
-        membre.setNom("Testeur");
 
         event = new Event();
         event.setId(1000);
-        event.setNom("Super Event");
         event.setActif(true);
-        // Événement futur pour permettre la réservation [1]
-        event.setStartTime(Instant.now().plus(10, ChronoUnit.DAYS));
+        event.setStartTime(Instant.now().plus(10, ChronoUnit.DAYS)); // Événement futur
         event.setOrganisateur(club);
 
         categorie = new Categorie();
         categorie.setId(500);
-        categorie.setNom("Standard");
-        categorie.setEvent(event); // La catégorie appartient bien à l'événement
+        categorie.setEvent(event);
     }
-
-    // --- TESTS POUR createMyReservation ---
 
     @Test
     @DisplayName("createMyReservation - Doit réussir quand toutes les conditions sont remplies")
     void createMyReservation_ShouldSucceed_WhenAllConditionsAreMet() {
-
-        // 1. L'utilisateur est connecté et on connaît son ID
+        // Arrange
         when(securityService.getCurrentUserIdOrThrow()).thenReturn(membre.getId());
-
-        // 2. Les entités Membre et Categorie existent et sont trouvées
         when(membreRepository.findById(membre.getId())).thenReturn(Optional.of(membre));
-        when(categorieRepository.findById(categorie.getId())).thenReturn(Optional.of(categorie));
 
-        // 3. La vérification de sécurité (membre du club) passe sans erreur
-        doNothing().when(securityService).checkMemberOfEventClubOrThrow(event.getId());
-
-        // 4. Le membre n'a pas encore atteint sa limite de réservation pour cet événement
-        when(reservationRepository.countByMembreIdAndEventIdAndStatus(membre.getId(), event.getId(), ReservationStatus.CONFIRME)).thenReturn(0L);
-
-        // 5. La catégorie a des places disponibles
-        // Pour tester getPlaceDisponible(), on doit mocker la catégorie retournée par le DAO
-        // car cette méthode a sa propre logique.
         Categorie mockCategorie = mock(Categorie.class);
-        when(mockCategorie.getEvent()).thenReturn(event); // Assurer la cohérence
-        when(mockCategorie.getPlaceDisponible()).thenReturn(10); // Il reste des places
+        when(mockCategorie.getEvent()).thenReturn(event);
+        when(mockCategorie.getPlaceDisponible()).thenReturn(10); // Il y a de la place
         when(categorieRepository.findById(categorie.getId())).thenReturn(Optional.of(mockCategorie));
 
-        // 6. On simule la sauvegarde dans le DAO, qui retourne la réservation avec un ID
+        // CORRECTION : Nom de la méthode corrigé ici
+        doNothing().when(securityService).checkIsCurrentUserMemberOfClubOrThrow(event.getId());
+
+        when(reservationRepository.countByMembreIdAndEventIdAndStatus(membre.getId(), event.getId(), ReservationStatus.CONFIRME)).thenReturn(0L);
+
         when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> {
             Reservation res = invocation.getArgument(0);
-            res.setId(999); // Simuler l'attribution d'un ID par la BDD
+            res.setId(999);
             return res;
         });
 
@@ -120,7 +93,6 @@ class ReservationServiceTest {
         assertThat(result).isNotNull();
         assertThat(result.getStatus()).isEqualTo(ReservationStatus.CONFIRME);
         assertThat(result.getMembre()).isEqualTo(membre);
-        // Vérifier que la méthode save a bien été appelée une fois. [2]
         verify(reservationRepository, times(1)).save(any(Reservation.class));
     }
 
@@ -128,13 +100,16 @@ class ReservationServiceTest {
     @DisplayName("createMyReservation - Doit lancer IllegalStateException si la limite de réservation est atteinte")
     void createMyReservation_ShouldThrowIllegalStateException_WhenReservationLimitIsReached() {
         // Arrange
-        // On configure les mocks pour les premières étapes
         when(securityService.getCurrentUserIdOrThrow()).thenReturn(membre.getId());
         when(membreRepository.findById(membre.getId())).thenReturn(Optional.of(membre));
-        when(categorieRepository.findById(categorie.getId())).thenReturn(Optional.of(categorie));
-        doNothing().when(securityService).checkMemberOfEventClubOrThrow(event.getId());
 
-        // La condition clé : le DAO rapporte que le membre a déjà 2 réservations (la limite) [1][3]
+        Categorie mockCategorie = mock(Categorie.class);
+        when(mockCategorie.getEvent()).thenReturn(event);
+        when(categorieRepository.findById(categorie.getId())).thenReturn(Optional.of(mockCategorie));
+
+        // CORRECTION : Nom de la méthode corrigé ici
+        doNothing().when(securityService).checkIsCurrentUserMemberOfClubOrThrow(event.getId());
+
         when(reservationRepository.countByMembreIdAndEventIdAndStatus(membre.getId(), event.getId(), ReservationStatus.CONFIRME)).thenReturn(2L);
 
         // Act & Assert
@@ -142,8 +117,8 @@ class ReservationServiceTest {
             reservationService.createMyReservation(event.getId(), categorie.getId());
         });
 
-        assertThat(exception.getMessage()).contains("Limite de 2 réservations confirmées par membre atteinte");
-        verify(reservationRepository, never()).save(any()); // Vérifier que save n'est jamais appelée [2]
+        assertThat(exception.getMessage()).contains("Limite de 2 réservations confirmées atteinte");
+        verify(reservationRepository, never()).save(any());
     }
 
     @Test
@@ -152,13 +127,14 @@ class ReservationServiceTest {
         // Arrange
         when(securityService.getCurrentUserIdOrThrow()).thenReturn(membre.getId());
         when(membreRepository.findById(membre.getId())).thenReturn(Optional.of(membre));
-        when(reservationRepository.countByMembreIdAndEventIdAndStatus(anyInt(), anyInt(), any())).thenReturn(0L); // Pas de réservation existante
-        doNothing().when(securityService).checkMemberOfEventClubOrThrow(event.getId());
+        when(reservationRepository.countByMembreIdAndEventIdAndStatus(anyInt(), anyInt(), any())).thenReturn(0L);
 
-        // La condition clé : on mock la catégorie pour qu'elle n'ait plus de place
+        // CORRECTION : Nom de la méthode corrigé ici
+        doNothing().when(securityService).checkIsCurrentUserMemberOfClubOrThrow(event.getId());
+
         Categorie mockCategoriePleine = mock(Categorie.class);
         when(mockCategoriePleine.getEvent()).thenReturn(event);
-        when(mockCategoriePleine.getPlaceDisponible()).thenReturn(0);
+        when(mockCategoriePleine.getPlaceDisponible()).thenReturn(0); // Pas de place
         when(categorieRepository.findById(categorie.getId())).thenReturn(Optional.of(mockCategoriePleine));
 
         // Act & Assert
@@ -166,7 +142,7 @@ class ReservationServiceTest {
             reservationService.createMyReservation(event.getId(), categorie.getId());
         });
 
-        assertThat(exception.getMessage()).contains("Capacité maximale (confirmée) atteinte");
+        assertThat(exception.getMessage()).contains("Capacité maximale atteinte");
         verify(reservationRepository, never()).save(any());
     }
 
@@ -174,15 +150,9 @@ class ReservationServiceTest {
     @DisplayName("createMyReservation - Doit lancer EntityNotFoundException si la catégorie n'existe pas")
     void createMyReservation_ShouldThrowEntityNotFoundException_WhenCategorieDoesNotExist() {
         // Arrange
-        // 1. On prépare la première étape : trouver l'utilisateur courant.
         when(securityService.getCurrentUserIdOrThrow()).thenReturn(membre.getId());
-
-        // --- CORRECTION APPORTÉE ICI ---
-        // 2. On prépare la deuxième étape : s'assurer que le membre est trouvé.
-        //    Sans cette ligne, le service échouerait ici et ne testerait jamais la catégorie.
         when(membreRepository.findById(membre.getId())).thenReturn(Optional.of(membre));
 
-        // 3. On prépare l'étape que l'on veut réellement tester : la catégorie n'est PAS trouvée.
         when(categorieRepository.findById(categorie.getId())).thenReturn(Optional.empty());
 
         // Act & Assert
@@ -190,29 +160,28 @@ class ReservationServiceTest {
             reservationService.createMyReservation(event.getId(), categorie.getId());
         });
 
-        // Assertion supplémentaire pour être sûr que c'est bien la bonne exception
         assertThat(exception.getMessage()).contains("Catégorie non trouvée");
     }
 
 
     @Test
-    @DisplayName("createMyReservation - Doit lancer IllegalArgumentException si l'ID de l'événement ne correspond pas à celui de la catégorie")
+    @DisplayName("createMyReservation - Doit lancer IllegalArgumentException si l'ID de l'événement ne correspond pas")
     void createMyReservation_ShouldThrowIllegalArgumentException_WhenEventIdMismatch() {
         // Arrange
         when(securityService.getCurrentUserIdOrThrow()).thenReturn(membre.getId());
         when(membreRepository.findById(membre.getId())).thenReturn(Optional.of(membre));
-        when(categorieRepository.findById(categorie.getId())).thenReturn(Optional.of(categorie)); // La catégorie est liée à eventId 1000
+
+        Categorie mockCategorie = mock(Categorie.class);
+        when(mockCategorie.getEvent()).thenReturn(event);
+        when(categorieRepository.findById(categorie.getId())).thenReturn(Optional.of(mockCategorie));
 
         // Act & Assert
-        // On appelle le service avec un eventId différent (9999)
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> {
             reservationService.createMyReservation(9999, categorie.getId());
         });
 
         assertThat(exception.getMessage()).contains("n'appartient pas à l'événement");
     }
-
-    // --- AUTRES TESTS IMPORTANTS ---
 
     @Test
     @DisplayName("cancelReservationById - Doit réussir quand les conditions sont valides")

@@ -17,222 +17,158 @@ import java.time.Instant;
 import java.util.List;
 
 /**
- * Service gérant la logique métier pour les entités {@link Categorie}.
- * Fournit des opérations CRUD (Créer, Lire, Mettre à jour, Supprimer) pour les catégories,
- * en appliquant les règles métier et les vérifications de sécurité contextuelles nécessaires.
- * Toutes les opérations publiques sont transactionnelles par défaut grâce à l'annotation
- * {@link Transactional @Transactional} au niveau de la classe. Les opérations de lecture
- * sont optimisées avec {@code readOnly = true}.
- *
- * @see Categorie
- * @see CategorieDao
- * @see EventDao
- * @see SecurityService
- * @see CreateCategorieDto
- * @see UpdateCategorieDto
+ * Service gérant la logique métier pour les {@link Categorie}s d'événements.
+ * <p>
+ * Ce service assure les opérations CRUD pour les catégories, en appliquant
+ * les règles métier (ex: unicité du nom, statut de l'événement) et les
+ * vérifications de sécurité (ex: droits de l'utilisateur).
  */
 @Service
-@RequiredArgsConstructor // Lombok: Injecte les dépendances final via le constructeur.
-@Transactional // Gestion transactionnelle par défaut pour toutes les méthodes publiques.
+@RequiredArgsConstructor
+@Transactional
 public class CategorieService {
 
-    /**
-     * DAO pour l'accès aux données des catégories.
-     */
     private final CategorieDao categorieRepository;
-    /**
-     * DAO pour l'accès aux données des événements (nécessaire pour lier/vérifier les événements parents).
-     */
     private final EventDao eventRepository;
-    /**
-     * Service pour effectuer les vérifications de sécurité contextuelles (rôles, appartenance).
-     */
     private final SecurityService securityService;
 
     /**
-     * Récupère la liste de toutes les catégories associées à un événement spécifique.
+     * Récupère toutes les catégories d'un événement spécifique.
      * <p>
-     * Sécurité : Vérifie que l'utilisateur actuellement authentifié est au moins membre
-     * du club organisateur de l'événement (via {@link SecurityService#checkIsCurrentUserMemberOfClubOrThrow}).
-     * </p>
+     * <b>Sécurité :</b> Vérifie que l'utilisateur courant est membre du club organisateur.
      *
-     * @param eventId L'identifiant unique de l'{@link Event} dont les catégories sont recherchées.
-     * @return Une {@code List<Categorie>} contenant toutes les catégories de l'événement.
-     * Retourne une liste vide si l'événement n'a pas de catégories.
-     * @throws EntityNotFoundException si aucun événement n'est trouvé pour l'{@code eventId} fourni (Statut HTTP 404).
-     * @throws AccessDeniedException   si l'utilisateur courant n'est pas membre du club organisateur (Statut HTTP 403).
+     * @param eventId L'ID de l'événement.
+     * @return La liste des catégories de l'événement.
+     * @throws EntityNotFoundException si l'événement n'est pas trouvé.
+     * @throws AccessDeniedException   si l'utilisateur n'est pas membre du club.
      */
-    @Transactional(readOnly = true) // Optimisation pour une opération de lecture seule.
+    @Transactional(readOnly = true)
     public List<Categorie> findCategoriesByEventId(Integer eventId) {
-        // 1. Vérifier l'existence de l'événement parent.
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Événement non trouvé avec l'ID : " + eventId));
 
-        // 2. Vérifier les droits d'accès de l'utilisateur au club organisateur.
-        // Récupère l'ID du club depuis l'événement chargé. Suppose que event.getOrganisateur() ne retourne pas null.
         Integer clubId = event.getOrganisateur().getId();
-        securityService.checkIsCurrentUserMemberOfClubOrThrow(clubId); // Lance AccessDeniedException si non autorisé.
+        securityService.checkIsCurrentUserMemberOfClubOrThrow(clubId);
 
-        // 3. Si les vérifications passent, récupérer et retourner les catégories.
         return categorieRepository.findByEventId(eventId);
     }
 
     /**
-     * Récupère une catégorie spécifique par son ID, en vérifiant qu'elle appartient bien
-     * à l'événement spécifié par {@code eventId}.
+     * Récupère une catégorie par son ID, en s'assurant qu'elle appartient à l'événement spécifié.
      * <p>
-     * Sécurité : Vérifie que l'utilisateur actuellement authentifié est au moins membre
-     * du club organisateur de l'événement (via {@link SecurityService#checkIsCurrentUserMemberOfClubOrThrow}).
-     * </p>
+     * <b>Sécurité :</b> Vérifie que l'utilisateur courant est membre du club organisateur.
      *
-     * @param eventId     L'identifiant de l'{@link Event} parent attendu.
-     * @param categorieId L'identifiant de la {@link Categorie} à récupérer.
-     * @return L'entité {@link Categorie} correspondante.
-     * @throws EntityNotFoundException si la catégorie n'est pas trouvée ou n'appartient pas
-     *                                 à l'événement spécifié (Statut HTTP 404).
-     * @throws AccessDeniedException   si l'utilisateur courant n'est pas membre du club organisateur (Statut HTTP 403).
+     * @param eventId     L'ID de l'événement parent.
+     * @param categorieId L'ID de la catégorie à récupérer.
+     * @return L'entité {@link Categorie} trouvée.
+     * @throws EntityNotFoundException si la catégorie ou sa liaison à l'événement n'est pas trouvée.
+     * @throws AccessDeniedException   si l'utilisateur n'est pas membre du club.
      */
     @Transactional(readOnly = true)
     public Categorie getCategorieByIdAndEventIdWithSecurityCheck(Integer eventId, Integer categorieId) {
-        // 1. Récupérer la catégorie en vérifiant l'appartenance à l'événement via le DAO.
         Categorie categorie = categorieRepository.findByIdAndEventId(categorieId, eventId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         String.format("Catégorie ID %d non trouvée ou n'appartient pas à l'événement ID %d", categorieId, eventId)
                 ));
 
-        // 2. Vérifier les droits d'accès de l'utilisateur au club organisateur.
-        // Récupère l'ID du club depuis la catégorie chargée (via sa relation event).
         Integer clubId = categorie.getEvent().getOrganisateur().getId();
-        securityService.checkIsCurrentUserMemberOfClubOrThrow(clubId); // Lance AccessDeniedException si non autorisé.
+        securityService.checkIsCurrentUserMemberOfClubOrThrow(clubId);
 
-        // 3. Retourner la catégorie trouvée et validée.
         return categorie;
     }
 
     /**
-     * Ajoute une nouvelle catégorie à un événement existant.
+     * Ajoute une nouvelle catégorie à un événement.
      * <p>
-     * Sécurité : Vérifie que l'utilisateur actuellement authentifié a les droits de gestion
-     * (rôle ADMIN ou RESERVATION) sur le club organisateur de l'événement
-     * (via {@link SecurityService#checkManagerOfClubOrThrow}).
-     * </p>
+     * <b>Sécurité :</b> Vérifie que l'utilisateur courant a un rôle de gestionnaire (ADMIN ou RESERVATION) dans le club.
      * <p>
-     * Règles métier :
+     * <b>Règles métier :</b>
      * <ul>
-     *     <li>L'événement parent doit exister et être actif (non terminé et {@code actif = true}).</li>
-     *     <li>Le nom de la nouvelle catégorie doit être unique au sein de cet événement (insensible à la casse).</li>
-     *     <li>La capacité fournie doit être positive ou nulle (selon la validation DTO/service).</li>
+     * <li>L'événement doit être actif et ne doit pas être terminé.</li>
+     * <li>Le nom de la catégorie doit être unique pour cet événement.</li>
      * </ul>
      *
-     * @param eventId      L'identifiant de l'{@link Event} auquel ajouter la catégorie.
-     * @param categorieDto Le DTO {@link CreateCategorieDto} contenant les informations de la catégorie à créer.
-     * @return La nouvelle entité {@link Categorie} persistée.
-     * @throws EntityNotFoundException  si l'événement parent n'est pas trouvé (Statut HTTP 404).
-     * @throws IllegalStateException    si l'événement est terminé, inactif, ou si une catégorie du même nom existe déjà
-     *                                  pour cet événement (Statut HTTP 409 Conflict).
-     * @throws IllegalArgumentException si la capacité fournie est invalide (ex: négative), bien que cela
-     *                                  devrait être idéalement intercepté par la validation du DTO (Statut HTTP 400 Bad Request).
-     * @throws AccessDeniedException    si l'utilisateur n'a pas les droits de gestion requis (Statut HTTP 403).
+     * @param eventId      L'ID de l'événement parent.
+     * @param categorieDto Le DTO contenant les informations de la nouvelle catégorie.
+     * @return La nouvelle catégorie persistée.
+     * @throws EntityNotFoundException si l'événement n'est pas trouvé.
+     * @throws IllegalStateException   si l'événement est terminé, inactif, ou si le nom de la catégorie est déjà pris.
+     * @throws AccessDeniedException   si l'utilisateur n'a pas les droits de gestion.
      */
-    @Transactional // Assure l'atomicité de l'opération (vérifications + sauvegarde). Read-write.
     public Categorie addCategorieToEvent(Integer eventId, CreateCategorieDto categorieDto) {
-        // 1. Vérifier l'existence et le statut de l'événement parent.
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new EntityNotFoundException("Impossible d'ajouter la catégorie: Événement non trouvé (ID: " + eventId + ")"));
 
-        // Vérification métier: l'événement ne doit pas être terminé.
-        if (event.getEndTime() != null && event.getEndTime().isBefore(Instant.now())) {
-            throw new IllegalStateException("Impossible d'ajouter une catégorie à un événement qui est déjà terminé (ID: " + eventId + ").");
+        if (event.getEndTime().isBefore(Instant.now())) {
+            throw new IllegalStateException("Impossible d'ajouter une catégorie à un événement déjà terminé (ID: " + eventId + ").");
         }
-        // Vérification métier: l'événement doit être actif.
-        if (event.getActif() == null || !event.getActif()) {
+        if (!event.getActif()) {
             throw new IllegalStateException("Impossible d'ajouter une catégorie à un événement inactif ou annulé (ID: " + eventId + ").");
         }
 
-        // 2. Vérifier les droits de gestion de l'utilisateur sur le club organisateur.
-        Integer clubId = event.getOrganisateur().getId();
-        securityService.checkManagerOfClubOrThrow(clubId); // Lance AccessDeniedException si non autorisé.
+        securityService.checkManagerOfClubOrThrow(event.getOrganisateur().getId());
 
-        // 3. Vérifier l'unicité du nom de la catégorie pour cet événement.
         categorieRepository.findByEventIdAndNomIgnoreCase(eventId, categorieDto.getNom())
                 .ifPresent(existing -> {
-                    // Lance une exception de conflit si le nom est déjà pris.
                     throw new IllegalStateException("Une catégorie nommée '" + categorieDto.getNom() + "' existe déjà pour cet événement.");
                 });
 
-        // 4. Vérification de la capacité (sécurité supplémentaire).
         if (categorieDto.getCapacite() == null || categorieDto.getCapacite() < 0) {
-            // Normalement géré par @Valid @Min sur le DTO, mais double vérification ici.
             throw new IllegalArgumentException("La capacité de la catégorie doit être un nombre positif ou nul.");
         }
 
-        // 5. Créer et peupler la nouvelle entité Categorie.
         Categorie newCategorie = new Categorie();
         newCategorie.setNom(categorieDto.getNom());
         newCategorie.setCapacite(categorieDto.getCapacite());
-        newCategorie.setEvent(event); // Lier à l'événement parent.
+        newCategorie.setEvent(event);
 
-        // 6. Persister la nouvelle catégorie.
         return categorieRepository.save(newCategorie);
     }
 
     /**
-     * Met à jour une catégorie existante (nom et/ou capacité).
+     * Met à jour une catégorie existante.
      * <p>
-     * Sécurité : Vérifie que l'utilisateur actuellement authentifié a les droits de gestion
-     * (rôle ADMIN ou RESERVATION) sur le club organisateur de l'événement
-     * (via {@link SecurityService#checkManagerOfClubOrThrow}).
-     * </p>
+     * <b>Sécurité :</b> Vérifie que l'utilisateur est un gestionnaire du club organisateur.
      * <p>
-     * Règles métier :
+     * <b>Règles métier :</b>
      * <ul>
-     *     <li>La catégorie et l'événement parent doivent exister.</li>
-     *     <li>L'événement parent doit être actif et non terminé.</li>
-     *     <li>Si le nom est modifié, il doit rester unique au sein de l'événement.</li>
-     *     <li>Si la capacité est modifiée, elle ne peut pas être inférieure au nombre de réservations déjà confirmées.</li>
+     * <li>L'événement doit être actif et non terminé.</li>
+     * <li>Le nouveau nom, s'il est fourni, doit rester unique.</li>
+     * <li>La nouvelle capacité ne peut être inférieure au nombre de réservations confirmées.</li>
      * </ul>
      *
-     * @param eventId     L'identifiant de l'{@link Event} parent.
-     * @param categorieId L'identifiant de la {@link Categorie} à mettre à jour.
-     * @param dto         Le DTO {@link UpdateCategorieDto} contenant les nouvelles valeurs (partielles ou complètes).
-     * @return L'entité {@link Categorie} mise à jour et persistée.
-     * @throws EntityNotFoundException  si la catégorie n'est pas trouvée ou n'appartient pas à l'événement (Statut HTTP 404).
-     * @throws IllegalStateException    si l'événement est terminé/inactif, si le nouveau nom est déjà pris par une autre catégorie
-     *                                  du même événement, ou si la nouvelle capacité est insuffisante (Statut HTTP 409 Conflict).
-     * @throws IllegalArgumentException si une nouvelle capacité négative est fournie (Statut HTTP 400 Bad Request).
-     * @throws AccessDeniedException    si l'utilisateur n'a pas les droits de gestion requis (Statut HTTP 403).
+     * @param eventId     L'ID de l'événement parent.
+     * @param categorieId L'ID de la catégorie à mettre à jour.
+     * @param dto         Le DTO contenant les nouvelles valeurs.
+     * @return La catégorie mise à jour.
+     * @throws EntityNotFoundException si la catégorie ou sa liaison à l'événement n'est pas trouvée.
+     * @throws IllegalStateException   si une règle métier est violée (événement terminé, nom dupliqué, capacité insuffisante).
+     * @throws AccessDeniedException   si l'utilisateur n'a pas les droits de gestion.
      */
-    @Transactional // Read-write.
     public Categorie updateCategorie(Integer eventId, Integer categorieId, UpdateCategorieDto dto) {
-        // 1. Récupérer la catégorie existante, vérifiant l'appartenance à l'événement.
         Categorie existingCategorie = categorieRepository.findByIdAndEventId(categorieId, eventId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         String.format("Catégorie ID %d non trouvée ou n'appartient pas à l'événement ID %d", categorieId, eventId)
                 ));
-        Event event = existingCategorie.getEvent(); // Récupère l'événement lié.
+        Event event = existingCategorie.getEvent();
 
-        // 2. Vérifier le statut/date de l'événement parent.
-        if (event.getEndTime() != null && event.getEndTime().isBefore(Instant.now())) {
-            throw new IllegalStateException("Impossible de modifier une catégorie d'un événement qui est déjà terminé (ID: " + eventId + ").");
+        if (event.getEndTime().isBefore(Instant.now())) {
+            throw new IllegalStateException("Impossible de modifier une catégorie d'un événement déjà terminé (ID: " + eventId + ").");
         }
-        if (event.getActif() == null || !event.getActif()) {
+        if (!event.getActif()) {
             throw new IllegalStateException("Impossible de modifier une catégorie d'un événement inactif ou annulé (ID: " + eventId + ").");
         }
 
-        // 3. Vérifier les droits de gestion de l'utilisateur.
-        Integer clubId = event.getOrganisateur().getId();
-        securityService.checkManagerOfClubOrThrow(clubId);
+        securityService.checkManagerOfClubOrThrow(event.getOrganisateur().getId());
 
-        boolean updated = false; // Indicateur pour savoir si une sauvegarde est nécessaire.
+        boolean updated = false;
 
-        // 4. Traiter la mise à jour du nom, si fourni dans le DTO.
+        // Mise à jour du nom
         String newNom = dto.getNom();
-        if (newNom != null) { // Le client souhaite potentiellement changer le nom.
+        if (newNom != null) {
             String trimmedNom = newNom.trim();
-            // Vérifie si le nouveau nom est valide, différent de l'ancien, et unique.
             if (!trimmedNom.isEmpty() && !trimmedNom.equalsIgnoreCase(existingCategorie.getNom())) {
                 categorieRepository.findByEventIdAndNomIgnoreCase(eventId, trimmedNom)
-                        // Exclut la catégorie actuelle de la vérification d'unicité.
                         .filter(conflict -> !conflict.getId().equals(categorieId))
                         .ifPresent(conflict -> {
                             throw new IllegalStateException("Une autre catégorie nommée '" + trimmedNom + "' existe déjà pour cet événement.");
@@ -242,17 +178,13 @@ public class CategorieService {
             }
         }
 
-        // 5. Traiter la mise à jour de la capacité, si fournie dans le DTO.
+        // Mise à jour de la capacité
         Integer newCapacite = dto.getCapacite();
-        if (newCapacite != null) { // Le client souhaite potentiellement changer la capacité.
-            // Validation de base (négatif). Devrait être attrapé par @Valid sur le DTO.
+        if (newCapacite != null) {
             if (newCapacite < 0) {
                 throw new IllegalArgumentException("La nouvelle capacité ne peut pas être négative.");
             }
-            // Met à jour seulement si la capacité a réellement changé.
             if (!newCapacite.equals(existingCategorie.getCapacite())) {
-                // Règle métier : la nouvelle capacité ne peut être inférieure aux places déjà réservées (confirmées).
-                // Utilise la méthode calculée de l'entité qui compte les réservations confirmées.
                 int placesConfirmees = existingCategorie.getPlaceReserve();
                 if (newCapacite < placesConfirmees) {
                     throw new IllegalStateException(String.format(
@@ -265,60 +197,45 @@ public class CategorieService {
             }
         }
 
-        // 6. Sauvegarder si des changements ont eu lieu.
         if (updated) {
             return categorieRepository.save(existingCategorie);
-        } else {
-            return existingCategorie; // Retourne l'entité non modifiée si aucun changement.
         }
+        return existingCategorie;
     }
 
     /**
-     * Supprime une catégorie existante.
+     * Supprime une catégorie.
      * <p>
-     * Sécurité : Vérifie que l'utilisateur actuellement authentifié a les droits de gestion
-     * (rôle ADMIN ou RESERVATION) sur le club organisateur de l'événement
-     * (via {@link SecurityService#checkManagerOfClubOrThrow}).
-     * </p>
+     * <b>Sécurité :</b> Vérifie que l'utilisateur est un gestionnaire du club organisateur.
      * <p>
-     * Règles métier :
+     * <b>Règles métier :</b>
      * <ul>
-     *     <li>La catégorie et l'événement parent doivent exister.</li>
-     *     <li>L'événement parent doit être actif et non terminé.</li>
-     *     <li>La catégorie ne peut être supprimée si elle contient des réservations confirmées.</li>
+     * <li>L'événement doit être actif et non terminé.</li>
+     * <li>La catégorie ne peut être supprimée si elle contient des réservations confirmées.</li>
      * </ul>
      *
-     * @param eventId     L'identifiant de l'{@link Event} parent.
-     * @param categorieId L'identifiant de la {@link Categorie} à supprimer.
-     * @throws EntityNotFoundException si la catégorie n'est pas trouvée ou n'appartient pas à l'événement (Statut HTTP 404).
-     * @throws IllegalStateException   si l'événement est terminé/inactif, ou si la catégorie contient
-     *                                 des réservations confirmées (Statut HTTP 409 Conflict).
-     * @throws AccessDeniedException   si l'utilisateur n'a pas les droits de gestion requis (Statut HTTP 403).
+     * @param eventId     L'ID de l'événement parent.
+     * @param categorieId L'ID de la catégorie à supprimer.
+     * @throws EntityNotFoundException si la catégorie ou sa liaison à l'événement n'est pas trouvée.
+     * @throws IllegalStateException   si une règle métier est violée.
+     * @throws AccessDeniedException   si l'utilisateur n'a pas les droits de gestion.
      */
-    @Transactional // Read-write.
     public void deleteCategorie(Integer eventId, Integer categorieId) {
-        // 1. Récupérer la catégorie en chargeant impérativement les réservations (JOIN FETCH).
-        // Ceci est crucial pour vérifier s'il y a des réservations sans erreur de lazy loading.
         Categorie categorieToDelete = categorieRepository.findByIdAndEventIdFetchingReservations(categorieId, eventId)
                 .orElseThrow(() -> new EntityNotFoundException(
                         String.format("Catégorie ID %d non trouvée ou n'appartient pas à l'événement ID %d", categorieId, eventId)
                 ));
-        Event event = categorieToDelete.getEvent(); // Récupère l'événement lié.
+        Event event = categorieToDelete.getEvent();
 
-        // 2. Vérifier le statut/date de l'événement parent.
-        if (event.getEndTime() != null && event.getEndTime().isBefore(Instant.now())) {
-            throw new IllegalStateException("Impossible de supprimer une catégorie d'un événement qui est déjà terminé (ID: " + eventId + ").");
+        if (event.getEndTime().isBefore(Instant.now())) {
+            throw new IllegalStateException("Impossible de supprimer une catégorie d'un événement déjà terminé (ID: " + eventId + ").");
         }
-        if (event.getActif() == null || !event.getActif()) {
+        if (!event.getActif()) {
             throw new IllegalStateException("Impossible de supprimer une catégorie d'un événement inactif ou annulé (ID: " + eventId + ").");
         }
 
-        // 3. Vérifier les droits de gestion de l'utilisateur.
-        Integer clubId = event.getOrganisateur().getId();
-        securityService.checkManagerOfClubOrThrow(clubId);
+        securityService.checkManagerOfClubOrThrow(event.getOrganisateur().getId());
 
-        // 4. Vérification métier : La catégorie contient-elle des réservations confirmées ?
-        // Utilise la méthode @Transient getPlaceReserve() qui compte les CONFIRME.
         int placesConfirmees = categorieToDelete.getPlaceReserve();
         if (placesConfirmees > 0) {
             throw new IllegalStateException(String.format(
@@ -327,9 +244,6 @@ public class CategorieService {
             ));
         }
 
-        // 5. Si toutes les vérifications sont passées, supprimer la catégorie.
-        // La cascade configurée sur Categorie.reservations (si présente) gèrerait les résas,
-        // mais ici on s'assure qu'il n'y en a pas de confirmées.
         categorieRepository.delete(categorieToDelete);
     }
 }

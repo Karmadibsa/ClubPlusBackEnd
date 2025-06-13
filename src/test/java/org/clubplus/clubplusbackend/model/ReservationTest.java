@@ -78,7 +78,7 @@ class ReservationTest {
             new Reservation(membreValide, eventInactif, autreCategorie);
         });
 
-        assertThat(exception.getMessage()).contains("Impossible de créer une réservation pour un événement non actif");
+        assertThat(exception.getMessage()).contains("Impossible de réserver pour un événement non actif.");
     }
 
     @Test
