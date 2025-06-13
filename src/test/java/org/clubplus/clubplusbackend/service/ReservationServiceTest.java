@@ -75,8 +75,6 @@ class ReservationServiceTest {
         when(mockCategorie.getPlaceDisponible()).thenReturn(10); // Il y a de la place
         when(categorieRepository.findById(categorie.getId())).thenReturn(Optional.of(mockCategorie));
 
-        // CORRECTION : Nom de la méthode corrigé ici
-        doNothing().when(securityService).checkIsCurrentUserMemberOfClubOrThrow(event.getId());
 
         when(reservationRepository.countByMembreIdAndEventIdAndStatus(membre.getId(), event.getId(), ReservationStatus.CONFIRME)).thenReturn(0L);
 
@@ -107,8 +105,6 @@ class ReservationServiceTest {
         when(mockCategorie.getEvent()).thenReturn(event);
         when(categorieRepository.findById(categorie.getId())).thenReturn(Optional.of(mockCategorie));
 
-        // CORRECTION : Nom de la méthode corrigé ici
-        doNothing().when(securityService).checkIsCurrentUserMemberOfClubOrThrow(event.getId());
 
         when(reservationRepository.countByMembreIdAndEventIdAndStatus(membre.getId(), event.getId(), ReservationStatus.CONFIRME)).thenReturn(2L);
 
@@ -129,8 +125,6 @@ class ReservationServiceTest {
         when(membreRepository.findById(membre.getId())).thenReturn(Optional.of(membre));
         when(reservationRepository.countByMembreIdAndEventIdAndStatus(anyInt(), anyInt(), any())).thenReturn(0L);
 
-        // CORRECTION : Nom de la méthode corrigé ici
-        doNothing().when(securityService).checkIsCurrentUserMemberOfClubOrThrow(event.getId());
 
         Categorie mockCategoriePleine = mock(Categorie.class);
         when(mockCategoriePleine.getEvent()).thenReturn(event);
