@@ -175,15 +175,15 @@ class ClubTest {
         Set<ConstraintViolation<Club>> violations = validator.validate(club);
 
         // Assert
-        // On vérifie d'abord qu'il y a bien au moins une violation
+        // On vérifie qu'il y a bien au moins une violation
         assertFalse(violations.isEmpty(), "Le champ 'actif' nul devrait générer une violation.");
 
-        // Ensuite, on vérifie la violation spécifique
-        assertTrue(violations.stream().anyMatch(v ->
-                v.getPropertyPath().toString().equals("actif") &&
-                        // CORRECTION : On vérifie le message par défaut, plus robuste.
-                        v.getMessage().equals("ne doit pas être nul")
-        ), "La violation pour 'actif' nul n'a pas été trouvée ou le message ne correspond pas.");
+        // CORRECTION : On ne vérifie plus le message exact, seulement le champ concerné.
+        // Ce test passera maintenant partout, peu importe la langue.
+        assertTrue(violations.stream()
+                        .anyMatch(v -> v.getPropertyPath().toString().equals("actif")),
+                "Une violation sur le champ 'actif' était attendue mais n'a pas été trouvée."
+        );
     }
 
 
